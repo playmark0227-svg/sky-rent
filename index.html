@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sky Rent | レンタカー予約</title>
+  <meta name="description" content="Sky Rent のレンタカーオンライン予約ページ。ご希望の日時から空車を検索し、その場でご予約いただけます。">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <span class="logo-mark">✈</span>
+        <span class="logo-text">Sky Rent</span>
+      </a>
+      <nav class="site-nav">
+        <a href="#feature">特徴</a>
+        <a href="#search">予約する</a>
+        <a href="#access">店舗情報</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero-inner">
+      <h1 class="hero-title">空(そら)へ、自由を。<br>Sky Rent.</h1>
+      <p class="hero-lead">Googleカレンダーと連動した、新しいレンタカー予約。</p>
+      <a href="#search" class="btn btn-primary btn-lg">空車を検索する</a>
+    </div>
+  </section>
+
+  <section id="feature" class="section">
+    <div class="container">
+      <h2 class="section-title">Sky Rent の特徴</h2>
+      <div class="features">
+        <div class="feature-card">
+          <div class="feature-icon">📅</div>
+          <h3>カレンダー自動照合</h3>
+          <p>Googleカレンダーの予定と店舗の在庫を自動で突き合わせ、リアルタイムに空き状況を表示。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>その場で予約完了</h3>
+          <p>面倒な電話・メールのやり取り不要。Web上で完結する24時間予約システム。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>二重予約を防止</h3>
+          <p>予約確定時に再度照合 + ロック処理。同時アクセス時のダブルブッキングを防ぎます。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="search" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">ご予約</h2>
+
+      <!-- Step 1: 日時選択 -->
+      <div id="step-search" class="step-pane active">
+        <div class="step-header">
+          <span class="step-num">STEP 1</span>
+          <h3>ご利用日時を選択</h3>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="start">貸出 (受取)</label>
+            <input type="datetime-local" id="start" required>
+          </div>
+          <div class="form-group">
+            <label for="end">返却</label>
+            <input type="datetime-local" id="end" required>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button id="btn-search" class="btn btn-primary">空車を検索 →</button>
+        </div>
+        <p id="search-error" class="error-text" hidden></p>
+      </div>
+
+      <!-- Step 2: 車両選択 -->
+      <div id="step-vehicles" class="step-pane">
+        <div class="step-header">
+          <span class="step-num">STEP 2</span>
+          <h3>車両を選択</h3>
+          <button class="btn-link" data-back="search">← 日時を変更</button>
+        </div>
+        <p id="search-summary" class="search-summary"></p>
+        <div id="vehicle-list" class="vehicle-list"></div>
+      </div>
+
+      <!-- Step 3: お客様情報 -->
+      <div id="step-form" class="step-pane">
+        <div class="step-header">
+          <span class="step-num">STEP 3</span>
+          <h3>お客様情報を入力</h3>
+          <button class="btn-link" data-back="vehicles">← 車両を変更</button>
+        </div>
+
+        <div class="reservation-summary">
+          <h4>ご予約内容</h4>
+          <dl id="summary-dl"></dl>
+        </div>
+
+        <form id="reservation-form" class="form-grid">
+          <div class="form-group">
+            <label for="customerName">お名前 <span class="req">*</span></label>
+            <input type="text" id="customerName" name="customerName" required maxlength="60">
+          </div>
+          <div class="form-group">
+            <label for="customerEmail">メールアドレス <span class="req">*</span></label>
+            <input type="email" id="customerEmail" name="customerEmail" required>
+          </div>
+          <div class="form-group">
+            <label for="customerPhone">電話番号</label>
+            <input type="tel" id="customerPhone" name="customerPhone" placeholder="090-1234-5678">
+          </div>
+          <div class="form-group full">
+            <label for="note">備考</label>
+            <textarea id="note" name="note" rows="3" placeholder="ご要望などあればご記入ください"></textarea>
+          </div>
+          <div class="form-actions full">
+            <button type="submit" class="btn btn-primary btn-lg">この内容で予約する</button>
+          </div>
+        </form>
+        <p id="submit-error" class="error-text" hidden></p>
+      </div>
+
+      <!-- Step 4: 完了 -->
+      <div id="step-complete" class="step-pane">
+        <div class="complete-card">
+          <div class="complete-icon">✓</div>
+          <h3>ご予約ありがとうございました</h3>
+          <p>ご登録のメールアドレス宛に予約確認メールをお送りしました。</p>
+          <dl id="complete-dl" class="complete-dl"></dl>
+          <a href="index.html" class="btn btn-secondary">トップに戻る</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="access" class="section">
+    <div class="container">
+      <h2 class="section-title">店舗情報</h2>
+      <div class="access-grid">
+        <div>
+          <h3>Sky Rent 本店</h3>
+          <p>営業時間: 9:00 - 19:00 (年中無休)<br>
+             TEL: 0000-00-0000<br>
+             ※詳細はお問合せください</p>
+        </div>
+        <div class="access-note">
+          <p>※このサイトはデモです。実店舗情報は各自で書き換えてください。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 Sky Rent</p>
+    </div>
+  </footer>
+
+  <!-- ローディングオーバーレイ -->
+  <div id="loading" class="loading" hidden>
+    <div class="spinner"></div>
+    <p id="loading-text">処理中...</p>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
