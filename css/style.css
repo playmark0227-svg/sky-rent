@@ -4,6 +4,8 @@ body, h1, h2, h3, h4, p, ul, dl, dd { margin: 0; padding: 0; }
 ul { list-style: none; }
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
+/* HTML hidden 属性は display 指定より優先させる */
+[hidden] { display: none !important; }
 
 :root {
   --color-primary: #0a6ebd;
