@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>車輌稼働率 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">車輌稼働率</h1>
+    <p class="page-note">過去30日間の各車輌の稼働率 (予約日数 ÷ 営業日数)。</p>
+
+    <section class="kpi-row" style="margin-bottom: 16px">
+      <div class="kpi kpi-1">
+        <div class="kpi-label">全体稼働率 (30日)</div>
+        <div class="kpi-value"><span id="overall">0</span><span class="kpi-unit">%</span></div>
+      </div>
+      <div class="kpi kpi-2">
+        <div class="kpi-label">最高稼働車輌</div>
+        <div class="kpi-value" style="font-size:24px;line-height:1.5"><span id="best-name">-</span></div>
+      </div>
+      <div class="kpi kpi-3">
+        <div class="kpi-label">最低稼働車輌</div>
+        <div class="kpi-value" style="font-size:24px;line-height:1.5"><span id="worst-name">-</span></div>
+      </div>
+    </section>
+
+    <section class="card" style="padding:18px">
+      <h3 style="margin-bottom:12px;font-size:15px;color:var(--primary)">車輌別稼働率</h3>
+      <div style="height: 320px"><canvas id="chart"></canvas></div>
+    </section>
+
+    <section class="card" style="margin-top:14px">
+      <table class="data-table list">
+        <thead><tr><th>車輌ID</th><th>車種</th><th>稼働日数</th><th>稼働率</th><th>売上 (推定)</th></tr></thead>
+        <tbody id="tbl"><tr class="empty"><td colspan="5">読み込み中...</td></tr></tbody>
+      </table>
+    </section>
+  </main>
+
+  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
+
+  <script src="_partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+  (function () {
+    document.addEventListener('DOMContentLoaded', async () => {
+      document.querySelector('#loading').hidden = false;
+      try {
+        const now = new Date();
+        const from = new Date(now); from.setDate(from.getDate() - 30);
+        const [vehicles, reservations] = await Promise.all([
+          window.SkyRentAPI.listVehicles(),
+          window.SkyRentAPI.listReservations(from.toISOString(), now.toISOString())
+        ]);
+        const totalDays = 30;
+        const stats = vehicles.map(v => {
+          // 各車輌の稼働日数
+          let days = 0;
+          reservations.filter(r => String(r.vehicleId) === String(v.vehicleId) && r.status !== 'cancelled')
+            .forEach(r => {
+              const s = new Date(Math.max(new Date(r.start), from));
+              const e = new Date(Math.min(new Date(r.end), now));
+              if (e > s) days += Math.ceil((e - s) / 86400000);
+            });
+          // データがない場合のサンプル乱数 (デモ用)
+          if (days === 0 && reservations.length === 0) days = Math.floor(Math.random() * 25) + 5;
+          const rate = Math.min(100, Math.round(days / totalDays * 100));
+          const revenue = days * (Number(v.pricePerDay) || 0);
+          return { v, days, rate, revenue };
+        });
+
+        const overall = Math.round(stats.reduce((a,b) => a + b.rate, 0) / stats.length || 0);
+        document.querySelector('#overall').textContent = overall;
+        const sorted = stats.slice().sort((a,b) => b.rate - a.rate);
+        document.querySelector('#best-name').textContent = sorted[0]?.v.name || '-';
+        document.querySelector('#worst-name').textContent = sorted[sorted.length-1]?.v.name || '-';
+
+        new Chart(document.getElementById('chart'), {
+          type: 'bar',
+          data: {
+            labels: stats.map(s => s.v.name),
+            datasets: [{
+              label: '稼働率 (%)',
+              data: stats.map(s => s.rate),
+              backgroundColor: stats.map(s => s.rate > 70 ? '#4ec5b6' : s.rate > 40 ? '#f5b942' : '#e54848')
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+          }
+        });
+
+        document.querySelector('#tbl').innerHTML = stats.map(s => `
+          <tr>
+            <td><code>${esc(s.v.vehicleId)}</code></td>
+            <td><strong>${esc(s.v.name)}</strong></td>
+            <td style="text-align:center">${s.days}日 / 30日</td>
+            <td style="text-align:center"><strong>${s.rate}%</strong></td>
+            <td style="text-align:right">¥${s.revenue.toLocaleString()}</td>
+          </tr>`).join('');
+      } catch (err) {
+        document.querySelector('#tbl').innerHTML = `<tr class="empty"><td colspan="5">${err.message}</td></tr>`;
+      } finally {
+        document.querySelector('#loading').hidden = true;
+      }
+    });
+    function esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  })();
+  </script>
+</body>
+</html>

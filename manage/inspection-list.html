@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>点検予約一覧 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">点検予約一覧</h1>
+    <p class="page-note">日常点検・3ヶ月点検・6ヶ月点検の予定を管理します。</p>
+
+    <section class="card filter-bar">
+      <div class="filter-group">
+        <label>点検種別</label>
+        <select id="type">
+          <option value="">すべて</option>
+          <option value="daily">日常点検</option>
+          <option value="3m">3ヶ月点検</option>
+          <option value="6m">6ヶ月点検</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>状態</label>
+        <select id="status">
+          <option value="">すべて</option>
+          <option value="planned">予定</option>
+          <option value="done">完了</option>
+        </select>
+      </div>
+      <button class="btn btn-primary">検 索</button>
+    </section>
+
+    <section class="card">
+      <table class="data-table list">
+        <thead>
+          <tr><th>点検ID</th><th>車輌</th><th>点検種別</th><th>予定日</th><th>担当者</th><th>状態</th></tr>
+        </thead>
+        <tbody id="tbl"><tr class="empty"><td colspan="6">読み込み中...</td></tr></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="_partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+  (function () {
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const vehicles = await window.SkyRentAPI.listVehicles();
+        const types = ['日常点検', '3ヶ月点検', '6ヶ月点検'];
+        const rows = vehicles.flatMap((v, i) => types.slice(0, (i % 3) + 1).map((t, j) => {
+          const d = new Date(); d.setDate(d.getDate() + i*5 + j*15);
+          const done = j === 0 && i % 2 === 0;
+          return { id: 'IN' + (i*10+j+1).toString().padStart(4,'0'), v, type: t, date: d, done };
+        }));
+        document.querySelector('#tbl').innerHTML = rows.map(r => `
+          <tr>
+            <td><code>${r.id}</code></td>
+            <td>${esc(r.v.name)} (${esc(r.v.vehicleId)})</td>
+            <td>${r.type}</td>
+            <td>${r.date.getFullYear()}/${String(r.date.getMonth()+1).padStart(2,'0')}/${String(r.date.getDate()).padStart(2,'0')}</td>
+            <td>${i => '田中 整備士'}</td>
+            <td><span class="status ${r.done?'status-confirmed':'status-soon'}">${r.done?'完了':'予定'}</span></td>
+          </tr>`).join('');
+      } catch (err) {
+        document.querySelector('#tbl').innerHTML = `<tr class="empty"><td colspan="6">${err.message}</td></tr>`;
+      }
+    });
+    function esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  })();
+  </script>
+</body>
+</html>

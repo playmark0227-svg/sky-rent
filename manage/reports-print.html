@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>定期報告書類の印刷 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">定期報告書類の印刷</h1>
+    <p class="page-note">運輸支局・税務署・経営管理用の各種帳票を印刷します。</p>
+
+    <section class="card filter-bar">
+      <div class="filter-group">
+        <label>対象期間</label>
+        <select id="period">
+          <option value="month">当月</option>
+          <option value="quarter">四半期</option>
+          <option value="half">半期</option>
+          <option value="year">年間</option>
+          <option value="custom">期間指定</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>開始日</label>
+        <input type="date" id="from">
+      </div>
+      <div class="filter-group">
+        <label>終了日</label>
+        <input type="date" id="to">
+      </div>
+    </section>
+
+    <section class="card">
+      <table class="data-table list">
+        <thead><tr><th>帳票名</th><th>内容</th><th>提出先</th><th>対象期間</th><th></th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>貸渡実績報告書</strong></td>
+            <td>レンタカー貸渡の月次実績</td>
+            <td>運輸支局</td>
+            <td>毎月</td>
+            <td><button class="btn btn-primary" onclick="window.print()">印刷</button></td>
+          </tr>
+          <tr>
+            <td><strong>事故記録簿</strong></td>
+            <td>期間中の事故・トラブル一覧</td>
+            <td>社内・保険会社</td>
+            <td>必要時</td>
+            <td><button class="btn btn-primary" onclick="window.print()">印刷</button></td>
+          </tr>
+          <tr>
+            <td><strong>整備記録</strong></td>
+            <td>車輌ごとの整備実績</td>
+            <td>運輸支局</td>
+            <td>毎月</td>
+            <td><button class="btn btn-primary" onclick="window.print()">印刷</button></td>
+          </tr>
+          <tr>
+            <td><strong>売上明細書</strong></td>
+            <td>期間中の売上一覧 (顧客別/車輌別)</td>
+            <td>税務署 (青色申告)</td>
+            <td>四半期</td>
+            <td><button class="btn btn-primary" onclick="window.print()">印刷</button></td>
+          </tr>
+          <tr>
+            <td><strong>稼働率レポート</strong></td>
+            <td>車輌別稼働率と収益</td>
+            <td>経営管理</td>
+            <td>月次・年次</td>
+            <td><button class="btn btn-primary" onclick="window.print()">印刷</button></td>
+          </tr>
+          <tr>
+            <td><strong>顧客台帳</strong></td>
+            <td>顧客情報・利用履歴</td>
+            <td>社内</td>
+            <td>都度</td>
+            <td><button class="btn btn-primary" onclick="window.print()">印刷</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <script src="_partials.js"></script>
+</body>
+</html>

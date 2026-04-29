@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GoogleAnalytics連携設定 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">GoogleAnalytics連携設定</h1>
+    <p class="page-note">予約サイトへのアクセス解析を有効化。GA4 のトラッキングID (G-XXXXXXX) を入力してください。</p>
+
+    <section class="card" style="padding:24px">
+      <div class="form-row">
+        <label>GA4 測定ID</label>
+        <input type="text" class="form-input" placeholder="G-XXXXXXXXXX" value="">
+      </div>
+      <div class="form-row">
+        <label>Universal Analytics ID</label>
+        <input type="text" class="form-input" placeholder="UA-XXXXXXXXX-X (旧版・任意)" value="">
+      </div>
+      <div class="form-row">
+        <label>イベント計測</label>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+          <label class="chk"><input type="checkbox" checked> 予約完了 (purchase)</label>
+          <label class="chk"><input type="checkbox" checked> 車種ページ閲覧 (view_item)</label>
+          <label class="chk"><input type="checkbox"> 検索イベント (search)</label>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>クロスドメイン</label>
+        <input type="text" class="form-input" placeholder="example.com,example.jp">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="alert('（デモ） 保存しました')">保存する</button>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:14px;padding:24px">
+      <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">Google Search Console 連携</h3>
+      <div class="form-row">
+        <label>所有権確認用メタタグ</label>
+        <input type="text" class="form-input" placeholder='<meta name="google-site-verification" content="..." />'>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="alert('（デモ） 保存しました')">保存する</button>
+      </div>
+    </section>
+  </main>
+  <style>.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer}</style>
+  <script src="_partials.js"></script>
+</body>
+</html>

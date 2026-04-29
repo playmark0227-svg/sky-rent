@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>料金プラン管理 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">料金プラン管理</h1>
+    <p class="page-note">時期や利用条件に応じた料金プラン。早割・連泊割・タイムセールなどを設定できます。</p>
+
+    <section class="card">
+      <table class="data-table list">
+        <thead>
+          <tr><th>プランID</th><th>プラン名</th><th>適用期間</th><th>割引内容</th><th>対象クラス</th><th>状態</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>P001</code></td><td><strong>早割30</strong></td><td>30日前〜</td><td>15%OFF</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>P002</code></td><td><strong>早割7</strong></td><td>7日前〜</td><td>5%OFF</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>P003</code></td><td><strong>3連泊割引</strong></td><td>3泊以上</td><td>10%OFF</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>P004</code></td><td><strong>平日割</strong></td><td>月〜木曜出発</td><td>8%OFF</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>P005</code></td><td><strong>GW特別料金</strong></td><td>2026/04/29〜05/06</td><td>+30%</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>P006</code></td><td><strong>夏休みプラン</strong></td><td>2026/07/20〜08/31</td><td>+20%</td><td>全クラス</td><td><span class="status status-cancelled">準備中</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+        </tbody>
+      </table>
+    </section>
+    <div style="text-align:right;margin-top:12px"><button class="btn btn-primary">+ 新規プラン</button></div>
+  </main>
+  <script src="_partials.js"></script>
+</body>
+</html>

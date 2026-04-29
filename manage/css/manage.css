@@ -478,6 +478,27 @@ html, body {
 }
 .status-confirmed { background: #e3f5ec; color: #1e8a4a; }
 .status-cancelled { background: #fde8e6; color: #c0392b; }
+.status-soon { background: #fff4e0; color: #d18514; }
+
+/* 現在ページのトグルを白文字でアクティブ表示 */
+.topnav-item.current .topnav-toggle {
+  background: var(--topbar-dark);
+  position: relative;
+}
+.topnav-item.current .topnav-toggle::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #fff;
+}
+.topnav-menu a.active {
+  background: #f0f6fb;
+  color: var(--primary);
+  font-weight: 700;
+}
 
 /* フォーム */
 .form-row {

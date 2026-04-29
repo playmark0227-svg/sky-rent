@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>お知らせ管理 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">お知らせ管理</h1>
+    <p class="page-note">予約サイトのトップに表示するお知らせ・ニュース。</p>
+
+    <section class="card filter-bar">
+      <div class="filter-group">
+        <label>状態</label>
+        <select><option>すべて</option><option>公開中</option><option>下書き</option><option>期限切れ</option></select>
+      </div>
+      <div class="filter-group">
+        <label>キーワード</label>
+        <input type="text" placeholder="タイトルで検索">
+      </div>
+      <button class="btn btn-primary">検 索</button>
+    </section>
+
+    <section class="card">
+      <table class="data-table list">
+        <thead><tr><th>掲載日</th><th>NEW</th><th>タイトル</th><th>カテゴリ</th><th>公開期限</th><th>状態</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>2026/04/29</td><td><span class="badge-new sm">NEW</span></td><td><strong>管理画面をリニューアルしました</strong></td><td>システム</td><td>2026/05/29</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td>2026/04/15</td><td>-</td><td><strong>春のキャンペーン開始のお知らせ</strong></td><td>キャンペーン</td><td>2026/06/30</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td>2026/04/10</td><td>-</td><td><strong>GW期間の営業時間変更</strong></td><td>お知らせ</td><td>2026/05/06</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td>2026/03/20</td><td>-</td><td><strong>新車種追加のお知らせ</strong></td><td>お知らせ</td><td>無期限</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td>2026/05/15</td><td>-</td><td><strong>夏休みキャンペーン (準備中)</strong></td><td>キャンペーン</td><td>-</td><td><span class="status status-cancelled">下書き</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+        </tbody>
+      </table>
+    </section>
+    <div style="text-align:right;margin-top:12px"><button class="btn btn-primary">+ お知らせを追加</button></div>
+  </main>
+  <script src="_partials.js"></script>
+</body>
+</html>

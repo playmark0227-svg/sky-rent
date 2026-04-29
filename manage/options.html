@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>オプション管理 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">オプション管理</h1>
+    <p class="page-note">予約時に追加できるオプション品目。チャイルドシート・ETC・カーナビなど。</p>
+
+    <section class="card">
+      <table class="data-table list">
+        <thead><tr><th>ID</th><th>名称</th><th>料金</th><th>課金単位</th><th>在庫</th><th>必須</th><th>状態</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><code>OP01</code></td><td><strong>チャイルドシート</strong></td><td>¥1,100</td><td>1回</td><td>10個</td><td>-</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>OP02</code></td><td><strong>ジュニアシート</strong></td><td>¥1,100</td><td>1回</td><td>5個</td><td>-</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>OP03</code></td><td><strong>ETCカード貸出</strong></td><td>¥330</td><td>1日</td><td>20枚</td><td>-</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>OP04</code></td><td><strong>スタッドレスタイヤ</strong></td><td>¥2,200</td><td>1日</td><td>4台分</td><td>-</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>OP05</code></td><td><strong>免責補償(CDW)</strong></td><td>¥1,650</td><td>1日</td><td>無制限</td><td>推奨</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>OP06</code></td><td><strong>NOC補償</strong></td><td>¥550</td><td>1日</td><td>無制限</td><td>-</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>OP07</code></td><td><strong>ペット同乗</strong></td><td>¥3,300</td><td>1回</td><td>-</td><td>-</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+        </tbody>
+      </table>
+    </section>
+    <div style="text-align:right;margin-top:12px"><button class="btn btn-primary">+ オプション追加</button></div>
+  </main>
+  <script src="_partials.js"></script>
+</body>
+</html>

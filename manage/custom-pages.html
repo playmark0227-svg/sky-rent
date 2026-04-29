@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>カスタムページ管理 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">カスタムページ管理</h1>
+    <p class="page-note">予約サイトに任意の固定ページを追加できます (利用規約、プライバシーポリシー、よくある質問など)。</p>
+
+    <section class="card">
+      <table class="data-table list">
+        <thead><tr><th>ページID</th><th>タイトル</th><th>URL</th><th>更新日</th><th>状態</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><code>P01</code></td><td><strong>利用規約</strong></td><td>/terms</td><td>2026/04/15</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>P02</code></td><td><strong>プライバシーポリシー</strong></td><td>/privacy</td><td>2026/04/15</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>P03</code></td><td><strong>よくあるご質問</strong></td><td>/faq</td><td>2026/04/20</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>P04</code></td><td><strong>会社概要</strong></td><td>/company</td><td>2026/04/01</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>P05</code></td><td><strong>キャンセル規定</strong></td><td>/cancel-policy</td><td>2026/04/10</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>P06</code></td><td><strong>特定商取引法に基づく表記</strong></td><td>/legal</td><td>2026/04/01</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+          <tr><td><code>P07</code></td><td><strong>キャンペーン情報</strong></td><td>/campaign</td><td>2026/04/25</td><td><span class="status status-cancelled">下書き</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
+        </tbody>
+      </table>
+    </section>
+    <div style="text-align:right;margin-top:12px"><button class="btn btn-primary">+ 新規ページ作成</button></div>
+  </main>
+  <script src="_partials.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>定休日管理 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">定休日管理</h1>
+    <p class="page-note">店舗休業日。この日は予約サイトから受付不可になります。</p>
+
+    <section class="card" style="padding: 20px">
+      <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">定例休業日</h3>
+      <div class="form-row">
+        <label>毎週の定休曜日</label>
+        <div style="display:flex;gap:14px">
+          <label class="chk"><input type="checkbox"> 月</label>
+          <label class="chk"><input type="checkbox"> 火</label>
+          <label class="chk"><input type="checkbox"> 水</label>
+          <label class="chk"><input type="checkbox"> 木</label>
+          <label class="chk"><input type="checkbox"> 金</label>
+          <label class="chk"><input type="checkbox"> 土</label>
+          <label class="chk"><input type="checkbox"> 日</label>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>祝日</label>
+        <label class="chk"><input type="checkbox" checked> 国民の祝日は営業</label>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:14px">
+      <table class="data-table list">
+        <thead><tr><th>日付</th><th>曜日</th><th>理由</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>2026/05/03</td><td>日</td><td>GW振替休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
+          <tr><td>2026/08/13</td><td>木</td><td>夏季休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
+          <tr><td>2026/08/14</td><td>金</td><td>夏季休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
+          <tr><td>2026/08/15</td><td>土</td><td>夏季休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
+          <tr><td>2026/12/30</td><td>水</td><td>年末休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
+          <tr><td>2026/12/31</td><td>木</td><td>年末休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
+          <tr><td>2027/01/01</td><td>金</td><td>元旦</td><td><a href="#" class="detail-link">削除</a></td></tr>
+          <tr><td>2027/01/02</td><td>土</td><td>正月休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
+          <tr><td>2027/01/03</td><td>日</td><td>正月休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
+        </tbody>
+      </table>
+    </section>
+    <div style="text-align:right;margin-top:12px"><button class="btn btn-primary">+ 臨時休業日を追加</button></div>
+  </main>
+  <style>
+    .chk { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border: 1px solid var(--border); border-radius: 3px; }
+  </style>
+  <script src="_partials.js"></script>
+</body>
+</html>
