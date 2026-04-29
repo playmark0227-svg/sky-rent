@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ログイン | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body class="login-page">
+  <main class="login-wrap">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="brand-mark" style="width:64px;height:64px;font-size:36px;margin:0 auto 12px">空</div>
+        <h1 style="font-size:24px;margin-bottom:4px">Sky Rent</h1>
+        <p style="font-size:12px;color:#666">管理画面 (簡易版)</p>
+      </div>
+      <form id="login-form" style="margin-top:24px">
+        <div class="form-row" style="border:none;padding:8px 0">
+          <input type="text" class="form-input" name="userId" placeholder="事業者コード or メールアドレス" required style="text-align:center">
+        </div>
+        <div class="form-row" style="border:none;padding:8px 0">
+          <input type="password" class="form-input" name="password" placeholder="パスワード" required style="text-align:center">
+        </div>
+        <div style="margin:14px 0">
+          <label class="chk" style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <input type="checkbox" name="remember" checked> ログイン状態を保持する
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px">ログイン</button>
+        <div style="text-align:center;margin-top:14px;font-size:12px">
+          <a href="#" id="btn-forgot" style="color:var(--link)">パスワードをお忘れですか?</a>
+        </div>
+      </form>
+      <div style="margin-top:16px;padding:10px;background:#fff8d6;border:1px solid #f0e0a0;border-radius:3px;font-size:12px;color:#666">
+        💡 デモ環境: 任意の値でログインできます。
+      </div>
+    </div>
+  </main>
+  <style>
+    body.login-page { background: linear-gradient(135deg, #1c4a7a, #15375d); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .login-wrap { width: 100%; max-width: 400px; }
+    .login-card { background: #fff; padding: 36px 32px; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .login-brand { text-align: center; }
+    .brand-mark { display: inline-flex !important; align-items: center; justify-content: center; background: var(--primary); color: #fff; border-radius: 50%; font-family: "Yu Mincho",serif; }
+  </style>
+  <script>
+    document.querySelector('#login-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      sessionStorage.setItem('sky-rent.session', JSON.stringify({
+        userId: fd.get('userId'),
+        loginAt: new Date().toISOString()
+      }));
+      if (fd.get('remember')) localStorage.setItem('sky-rent.remember', '1');
+      window.location.href = 'dashboard.html';
+    });
+    document.querySelector('#btn-forgot').addEventListener('click', e => {
+      e.preventDefault();
+      const email = prompt('登録メールアドレスを入力してください');
+      if (email) alert('✓ パスワード再設定リンクを ' + email + ' へ送信しました\n(届かない場合は support@sky-rent.example.com までご連絡ください)');
+    });
+    // 既ログインなら自動でダッシュボードへ
+    if (sessionStorage.getItem('sky-rent.session')) {
+      // window.location.href = 'dashboard.html';  // ループ防止のためコメントアウト
+    }
+  </script>
+</body>
+</html>

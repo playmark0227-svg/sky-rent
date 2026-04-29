@@ -11,7 +11,11 @@
 
   <main class="main">
     <h1 class="page-title">車輌管理</h1>
-    <p class="page-note">車輌の追加・編集は Google スプレッドシート「車両マスタ」シートで行います。本画面は閲覧専用です。</p>
+    <p class="page-note">登録車輌の追加・編集・削除を行います。ここで編集した内容は予約サイトの空車検索にも即反映されます。</p>
+
+    <div style="text-align:right;margin-bottom:10px">
+      <button id="btn-add" class="btn btn-primary">+ 車輌追加</button>
+    </div>
 
     <section class="card">
       <table class="data-table list">
@@ -24,48 +28,42 @@
             <th>定員</th>
             <th>料金/日</th>
             <th>状態</th>
+            <th></th>
           </tr>
         </thead>
-        <tbody id="tbl"><tr class="empty"><td colspan="7">読み込み中...</td></tr></tbody>
+        <tbody id="tbl"></tbody>
       </table>
     </section>
   </main>
 
-  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
-
   <script src="partials.js"></script>
-  <script src="../js/config.js"></script>
-  <script src="../js/api.js"></script>
+  <script src="js/crud.js"></script>
   <script>
-  (function () {
-    document.addEventListener('DOMContentLoaded', async () => {
-      const tbl = document.querySelector('#tbl');
-      document.querySelector('#loading').hidden = false;
-      try {
-        const rows = await window.SkyRentAPI.listVehicles();
-        if (!rows.length) {
-          tbl.innerHTML = '<tr class="empty"><td colspan="7">車輌が登録されていません</td></tr>';
-        } else {
-          tbl.innerHTML = rows.map(v => `
-            <tr>
-              <td><code>${esc(v.vehicleId)}</code></td>
-              <td><strong>${esc(v.name)}</strong></td>
-              <td>${esc(v.class||'')}</td>
-              <td>${esc(v.plate||'')}</td>
-              <td style="text-align:center">${v.capacity || '-'}名</td>
-              <td>¥${(Number(v.pricePerDay)||0).toLocaleString()}</td>
-              <td><span class="status status-confirmed">稼働中</span></td>
-            </tr>
-          `).join('');
-        }
-      } catch (err) {
-        tbl.innerHTML = `<tr class="empty"><td colspan="7">読み込み失敗: ${err.message}</td></tr>`;
-      } finally {
-        document.querySelector('#loading').hidden = true;
-      }
-    });
-    function esc(str) { return String(str==null?'':str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-  })();
+  SkyRentCRUD.init({
+    storageKey: 'vehicles',
+    idPrefix: 'V',
+    columns: [
+      { key: 'vehicleId', label: '車輌ID', code: true, readonly: true },
+      { key: 'name', label: '車種', bold: true, required: true },
+      { key: 'class', label: 'クラス', type: 'select', options: ['コンパクト','ミドル','ミニバン','SUV','軽自動車','バン','トラック','マイクロバス','二輪'] },
+      { key: 'plate', label: 'ナンバー' },
+      { key: 'capacity', label: '定員', type: 'number', center: true,
+        format: v => v ? v + '名' : '-' },
+      { key: 'pricePerDay', label: '料金/日', type: 'number',
+        format: SkyRentCRUD.helpers.yen },
+      { key: 'active', label: '状態', type: 'status',
+        statusLabel: v => v === true || v === 'true' ? '稼働中' : '休止中' }
+    ],
+    defaults: [
+      { vehicleId: 'V001', name: 'コンパクト (ヴィッツ等)', class: 'コンパクト', plate: '札幌 500 あ 1234', capacity: 5, pricePerDay: 5500,  active: true },
+      { vehicleId: 'V002', name: 'ミドル (カローラ等)',     class: 'ミドル',     plate: '札幌 500 あ 5678', capacity: 5, pricePerDay: 7700,  active: true },
+      { vehicleId: 'V003', name: 'ミニバン (ノア等)',       class: 'ミニバン',   plate: '札幌 500 あ 9012', capacity: 7, pricePerDay: 11000, active: true },
+      { vehicleId: 'V004', name: 'SUV (ハリアー等)',        class: 'SUV',        plate: '札幌 500 あ 3456', capacity: 5, pricePerDay: 13200, active: true }
+    ]
+  });
+
+  // 注: storageKey が 'vehicles' なので localStorage の sky-rent.vehicles に保存
+  // js/api.js の listVehicles() が同じキーを参照するため、予約サイトに即反映される
   </script>
 </body>
 </html>

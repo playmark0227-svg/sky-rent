@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>よくあるご質問 (FAQ) | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">よくあるご質問 (FAQ)</h1>
+    <p class="page-note">Sky Rent システムの使い方に関する FAQ。検索ボックスで絞り込めます。</p>
+
+    <section class="card filter-bar">
+      <div class="filter-group" style="flex:1">
+        <label>キーワード検索</label>
+        <input type="text" id="kw" placeholder="質問内容で絞り込み" style="flex:1">
+      </div>
+      <div class="filter-group">
+        <label>カテゴリ</label>
+        <select id="cat-filter">
+          <option value="">すべて</option>
+          <option>予約管理</option>
+          <option>車輌管理</option>
+          <option>顧客管理</option>
+          <option>料金・支払</option>
+          <option>システム</option>
+          <option>陸運局報告</option>
+        </select>
+      </div>
+    </section>
+
+    <section id="faq-list" class="faq-list"></section>
+  </main>
+
+  <style>
+    .faq-list { display: grid; gap: 8px; }
+    .faq-item { background: #fff; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+    .faq-q {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 14px 18px; cursor: pointer; user-select: none;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: #f7faff; }
+    .faq-cat { font-size: 11px; padding: 2px 8px; background: var(--primary); color: #fff; border-radius: 2px; flex-shrink: 0; margin-top: 2px; }
+    .faq-q-text { flex: 1; font-weight: 600; }
+    .faq-toggle { font-size: 18px; color: var(--primary); }
+    .faq-a {
+      padding: 0 18px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease, padding 0.25s ease;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #444;
+      background: #f9fbff;
+      border-top: 1px solid transparent;
+    }
+    .faq-item.open .faq-a {
+      max-height: 600px;
+      padding: 14px 18px;
+      border-top-color: var(--border);
+    }
+    .faq-item.open .faq-toggle { transform: rotate(180deg); }
+  </style>
+
+  <script src="partials.js"></script>
+  <script>
+    const FAQ = [
+      { cat: '予約管理', q: '予約のキャンセル方法を教えてください', a: '管理画面 > 予約管理 > 予約一覧 から該当予約の「編集」をクリックし、状態を「キャンセル」に変更します。Googleカレンダーのイベントは自動的に削除されません(別途削除が必要)。' },
+      { cat: '予約管理', q: 'ガントチャートで予約バーが表示されません', a: '貸渡予約表ページで「表示開始日」「表示日数」を設定して「表示」ボタンを押してください。デフォルトでは今日から14日間が表示されます。' },
+      { cat: '予約管理', q: 'Googleカレンダーと連動しないのですが', a: 'js/config.js の GAS_URL が設定されていない可能性があります。デフォルトはモード(モック動作)になっています。GAS デプロイ後の URL を貼り付けてください。' },
+      { cat: '車輌管理', q: '車輌情報の追加方法は?', o: '管理画面 > 各種管理 > 車輌管理 から「+ 車輌追加」をクリックして登録してください。または GAS を使用している場合はスプレッドシート「車両マスタ」シートに直接追加することもできます。' },
+      { cat: '車輌管理', q: '車検の期限を確認したい', a: '管理画面 > 予約管理 > 車検予約一覧 で車輌ごとの車検満了日と残日数を確認できます。期限間近の車輌が KPI でハイライトされます。' },
+      { cat: '顧客管理', q: '顧客情報はどこで編集できますか?', a: '管理画面 > 各種管理 > 顧客管理 から検索・閲覧できます。顧客情報は予約データから自動生成されるため、直接編集はできません(個別の予約から修正してください)。' },
+      { cat: '料金・支払', q: '料金プランを変更したい', a: '管理画面 > 各種管理 > 料金プラン管理 から既存プランの編集または新規追加が可能です。「+ 新規プラン」をクリックしてください。' },
+      { cat: '料金・支払', q: '繁忙期(GW・お盆など)の料金を上げたい', a: '管理画面 > 各種管理 > ハイシーズン管理 から期間と倍率を設定できます。例: GW期間 ×1.30 で30%増。' },
+      { cat: '料金・支払', q: 'クレジットカード決済を有効化したい', a: '管理画面 > 予約サイト設定 > 予約サイト設定 から「支払方法」で「クレジットカード」にチェックを入れて保存してください。' },
+      { cat: 'システム', q: 'データのバックアップは?', a: 'すべてのデータは Google Sheets に保存されています(GAS連携時)。Google Drive 上で自動バックアップされます。設定値はブラウザの localStorage に保存されているため、ブラウザを変える場合はエクスポート機能をご利用ください。' },
+      { cat: 'システム', q: '複数のスタッフでログインしたい', a: '管理画面 > 社内管理 > 従業員管理 から従業員アカウントを追加できます。権限は 4 種類 (管理者/店舗スタッフ/整備担当/閲覧のみ) から選択。' },
+      { cat: 'システム', q: 'パスワードを忘れた', a: 'ログイン画面の「パスワードをお忘れですか?」リンク、または support@sky-rent.example.com まで本人確認情報とともにご連絡ください。' },
+      { cat: '陸運局報告', q: '貸渡実績報告書はどこから出せますか?', a: '管理画面 > 社内管理 > 貸渡実績報告書(陸運局) から、年度を選択して「📄 公式様式エクセルをダウンロード」をクリック。国土交通省公式様式 (xlsx) として出力され、そのまま提出可能です。' },
+      { cat: '陸運局報告', q: '報告書の提出先メールアドレスは?', a: 'hqt-rentacar.report@ki.mlit.go.jp が国土交通省指定のアドレスです。または管轄の運輸支局へ持参/郵送してください。' },
+      { cat: '陸運局報告', q: '提出期限はいつまでですか?', a: '毎年4月30日までです。報告対象期間は前年度の4月1日〜3月31日。' }
+    ];
+
+    function render(rows) {
+      const html = rows.map((f, i) => `
+        <div class="faq-item" data-idx="${i}">
+          <div class="faq-q">
+            <span class="faq-cat">${f.cat}</span>
+            <span class="faq-q-text">Q. ${escapeHtml(f.q)}</span>
+            <span class="faq-toggle">▼</span>
+          </div>
+          <div class="faq-a">A. ${escapeHtml(f.a || f.o || '')}</div>
+        </div>`).join('');
+      document.querySelector('#faq-list').innerHTML = html || '<p style="text-align:center;color:#888;padding:24px">該当する質問はありません</p>';
+      document.querySelectorAll('.faq-q').forEach(q => {
+        q.addEventListener('click', () => q.parentElement.classList.toggle('open'));
+      });
+    }
+    function filter() {
+      const kw = document.querySelector('#kw').value.trim().toLowerCase();
+      const cat = document.querySelector('#cat-filter').value;
+      let rows = FAQ.slice();
+      if (cat) rows = rows.filter(f => f.cat === cat);
+      if (kw) rows = rows.filter(f =>
+        (f.q || '').toLowerCase().includes(kw) ||
+        (f.a || f.o || '').toLowerCase().includes(kw));
+      render(rows);
+    }
+    function escapeHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    document.querySelector('#kw').addEventListener('input', filter);
+    document.querySelector('#cat-filter').addEventListener('change', filter);
+    render(FAQ);
+  </script>
+</body>
+</html>

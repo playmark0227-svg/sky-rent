@@ -6,6 +6,56 @@
   <title>Sky Rent | レンタカー予約</title>
   <meta name="description" content="Sky Rent のレンタカーオンライン予約ページ。ご希望の日時から空車を検索し、その場でご予約いただけます。">
   <link rel="stylesheet" href="css/style.css">
+  <script>
+    // ===== 管理画面で設定したコンテンツ・テーマカラーを反映 =====
+    (function() {
+      try {
+        const content = JSON.parse(localStorage.getItem('sky-rent.settings.content') || '{}');
+        const seo = JSON.parse(localStorage.getItem('sky-rent.settings.seo') || '{}');
+        const site = JSON.parse(localStorage.getItem('sky-rent.settings.site') || '{}');
+        // SEO反映
+        if (seo.title) document.title = seo.title;
+        if (seo.description) {
+          const m = document.querySelector('meta[name="description"]');
+          if (m) m.setAttribute('content', seo.description);
+        }
+        if (seo.keywords) {
+          let kw = document.querySelector('meta[name="keywords"]');
+          if (!kw) { kw = document.createElement('meta'); kw.name = 'keywords'; document.head.appendChild(kw); }
+          kw.setAttribute('content', seo.keywords);
+        }
+        // テーマカラー反映
+        if (site.themeColor) {
+          const s = document.createElement('style');
+          s.textContent = `:root { --color-primary: ${site.themeColor} !important; --color-primary-dark: ${shadeColor(site.themeColor, -15)} !important; }`;
+          document.head.appendChild(s);
+        }
+        // GA4 タグ動的注入
+        const ga = JSON.parse(localStorage.getItem('sky-rent.settings.ga') || '{}');
+        if (ga.ga4Id && /^G-/.test(ga.ga4Id)) {
+          const s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://www.googletagmanager.com/gtag/js?id=' + ga.ga4Id;
+          document.head.appendChild(s);
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', ga.ga4Id);
+          window.gtag = gtag;
+        }
+
+        function shadeColor(hex, percent) {
+          const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+          if (!m) return hex;
+          let r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+          r = Math.max(0, Math.min(255, r + Math.round(r * percent / 100)));
+          g = Math.max(0, Math.min(255, g + Math.round(g * percent / 100)));
+          b = Math.max(0, Math.min(255, b + Math.round(b * percent / 100)));
+          return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+        }
+      } catch (e) { console.warn('Settings apply failed:', e); }
+    })();
+  </script>
 </head>
 <body>
   <header class="site-header">
@@ -147,17 +197,38 @@
       <h2 class="section-title">店舗情報</h2>
       <div class="access-grid">
         <div>
-          <h3>Sky Rent 本店</h3>
-          <p>営業時間: 9:00 - 19:00 (年中無休)<br>
-             TEL: 0000-00-0000<br>
-             ※詳細はお問合せください</p>
+          <h3 id="store-name">Sky Rent 本店</h3>
+          <p id="store-info">営業時間: <span id="store-hours">9:00 - 19:00 (年中無休)</span><br>
+             TEL: <span id="store-tel">0000-00-0000</span><br>
+             <span id="store-address"></span></p>
         </div>
         <div class="access-note">
-          <p>※このサイトはデモです。実店舗情報は各自で書き換えてください。</p>
+          <p id="store-intro">※詳細はお問合せください</p>
         </div>
       </div>
     </div>
   </section>
+
+  <script>
+    // 管理画面で設定したコンテンツを反映
+    (function() {
+      try {
+        const c = JSON.parse(localStorage.getItem('sky-rent.settings.content') || '{}');
+        if (c.catchCopy) {
+          const el = document.querySelector('.hero-title');
+          if (el) el.innerHTML = c.catchCopy.replace(/。/g, '。<br>');
+        }
+        if (c.subCopy) {
+          const el = document.querySelector('.hero-lead');
+          if (el) el.textContent = c.subCopy;
+        }
+        if (c.businessHours) document.querySelector('#store-hours').textContent = c.businessHours;
+        if (c.phone) document.querySelector('#store-tel').textContent = c.phone;
+        if (c.address) document.querySelector('#store-address').textContent = c.address;
+        if (c.storeIntro) document.querySelector('#store-intro').textContent = c.storeIntro;
+      } catch (e) {}
+    })();
+  </script>
 
   <footer class="site-footer">
     <div class="container">

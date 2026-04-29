@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プロフィール | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">プロフィール</h1>
+    <p class="page-note">ログインユーザーの情報を編集します。</p>
+
+    <section class="card" style="padding:24px">
+      <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">基本情報</h3>
+      <div class="form-row">
+        <label>氏名</label>
+        <input type="text" class="form-input" data-setting="name" value="山田 太郎">
+      </div>
+      <div class="form-row">
+        <label>メールアドレス</label>
+        <input type="email" class="form-input" data-setting="email" value="yamada@sky-rent.example.com">
+      </div>
+      <div class="form-row">
+        <label>権限</label>
+        <input type="text" class="form-input" value="管理者" readonly style="background:#f5f5f5">
+      </div>
+      <div class="form-row">
+        <label>事業者コード</label>
+        <input type="text" class="form-input" value="c00000-000001" readonly style="background:#f5f5f5">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" data-save>変更を保存</button>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:14px;padding:24px">
+      <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">パスワード変更</h3>
+      <div class="form-row">
+        <label>現在のパスワード</label>
+        <input type="password" class="form-input" id="cur-pw">
+      </div>
+      <div class="form-row">
+        <label>新しいパスワード</label>
+        <input type="password" class="form-input" id="new-pw" minlength="8">
+      </div>
+      <div class="form-row">
+        <label>確認 (再入力)</label>
+        <input type="password" class="form-input" id="new-pw2">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="btn-pw">パスワードを変更</button>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:14px;padding:24px;border-color:#fde8e6">
+      <h3 style="margin-bottom:6px;font-size:15px;color:#c0392b">危険ゾーン</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">以下の操作は元に戻せません。</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-gray" id="btn-logout">ログアウト</button>
+        <button class="btn btn-gray" id="btn-reset" style="background:#c0392b">設定を初期化 (全データ削除)</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="partials.js"></script>
+  <script src="js/settings.js"></script>
+  <script>
+    SkyRentSettings.init('profile');
+
+    document.querySelector('#btn-pw').addEventListener('click', () => {
+      const cur = document.querySelector('#cur-pw').value;
+      const n1 = document.querySelector('#new-pw').value;
+      const n2 = document.querySelector('#new-pw2').value;
+      if (!cur || !n1) return alert('現在のパスワードと新パスワードを入力してください');
+      if (n1.length < 8) return alert('パスワードは 8 文字以上にしてください');
+      if (n1 !== n2) return alert('新パスワードと確認が一致しません');
+      SkyRentSettings.showToast('✓ パスワードを変更しました');
+      document.querySelector('#cur-pw').value = '';
+      document.querySelector('#new-pw').value = '';
+      document.querySelector('#new-pw2').value = '';
+    });
+
+    document.querySelector('#btn-logout').addEventListener('click', () => {
+      if (!confirm('ログアウトしますか?')) return;
+      sessionStorage.removeItem('sky-rent.session');
+      window.location.href = 'login.html';
+    });
+
+    document.querySelector('#btn-reset').addEventListener('click', () => {
+      if (!confirm('全ての設定・データを削除します。本当に続行しますか?')) return;
+      if (!confirm('元に戻せません。本当によろしいですか?')) return;
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith('sky-rent.')) localStorage.removeItem(k);
+      });
+      alert('全データを削除しました。ページを再読み込みします。');
+      window.location.href = 'dashboard.html';
+    });
+  </script>
+</body>
+</html>

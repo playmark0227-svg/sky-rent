@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>お問合せ | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">お問合せ</h1>
+    <p class="page-note">Sky Rent システムに関するご質問・不具合のご連絡はこちらから。</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <section class="card" style="padding:20px;text-align:center">
+        <div style="font-size:36px;margin-bottom:8px">📞</div>
+        <h3 style="font-size:15px;color:var(--primary);margin-bottom:6px">お電話でのお問合せ</h3>
+        <p style="font-size:18px;font-weight:700;margin-bottom:4px">0120-000-000</p>
+        <p style="font-size:12px;color:var(--muted)">平日 9:00〜18:00</p>
+      </section>
+      <section class="card" style="padding:20px;text-align:center">
+        <div style="font-size:36px;margin-bottom:8px">📧</div>
+        <h3 style="font-size:15px;color:var(--primary);margin-bottom:6px">メールでのお問合せ</h3>
+        <p style="font-size:14px;font-weight:700;margin-bottom:4px">support@sky-rent.example.com</p>
+        <p style="font-size:12px;color:var(--muted)">24時間受付・48時間以内に返信</p>
+      </section>
+    </div>
+
+    <section class="card" style="padding:24px">
+      <h3 style="font-size:15px;color:var(--primary);margin-bottom:14px">お問合せフォーム</h3>
+      <form id="contact-form">
+        <div class="form-row">
+          <label>お問合せ種別 <span style="color:#c0392b">*</span></label>
+          <select class="form-input" name="category" required>
+            <option value="">選択してください</option>
+            <option>機能のご質問</option>
+            <option>不具合のご報告</option>
+            <option>機能追加のご要望</option>
+            <option>料金プラン・契約について</option>
+            <option>解約のご連絡</option>
+            <option>その他</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>件名 <span style="color:#c0392b">*</span></label>
+          <input type="text" class="form-input" name="subject" required maxlength="100">
+        </div>
+        <div class="form-row">
+          <label>お問合せ内容 <span style="color:#c0392b">*</span></label>
+          <textarea class="form-input" name="body" rows="6" required maxlength="2000"></textarea>
+        </div>
+        <div class="form-row">
+          <label>返信先メール</label>
+          <input type="email" class="form-input" name="email" placeholder="自動入力されます">
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" style="padding:12px 50px;font-size:15px">送信する</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="partials.js"></script>
+  <script>
+    // ログインユーザー情報からメールを自動入力
+    const saved = JSON.parse(localStorage.getItem('sky-rent.settings.site') || '{}');
+    document.querySelector('input[name="email"]').value = saved['notify.storeEmail'] || '';
+
+    document.querySelector('#contact-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      // 送信履歴を保存
+      const log = JSON.parse(localStorage.getItem('sky-rent.contact-log') || '[]');
+      log.unshift({
+        date: new Date().toISOString(),
+        category: fd.get('category'),
+        subject: fd.get('subject'),
+        body: fd.get('body'),
+        email: fd.get('email')
+      });
+      localStorage.setItem('sky-rent.contact-log', JSON.stringify(log));
+      alert('✓ お問合せを受け付けました\n通常 48 時間以内にご返信いたします。');
+      e.target.reset();
+    });
+  </script>
+</body>
+</html>

@@ -77,9 +77,10 @@
     return escapeHtml(val);
   }
 
-  function generateId(prefix, list) {
+  function generateId(prefix, list, idField) {
+    idField = idField || 'id';
     let n = 1;
-    while (list.some(x => x.id === prefix + String(n).padStart(3, '0'))) n++;
+    while (list.some(x => x[idField] === prefix + String(n).padStart(3, '0'))) n++;
     return prefix + String(n).padStart(3, '0');
   }
 
@@ -169,6 +170,10 @@
       sortBy = null
     } = config;
 
+    // 主キーは columns の先頭で readonly のもの (デフォルト: 'id')
+    const idCol = columns.find(c => c.readonly && c.code) || columns[0];
+    const idField = (idCol && idCol.key) || 'id';
+
     let data = load(storageKey, defaults);
 
     function render() {
@@ -200,7 +205,7 @@
 
     function openEditModal(idx) {
       const item = idx == null
-        ? Object.assign({ _isNew: true, id: generateId(idPrefix, data) }, ...columns.map(c => c.default !== undefined ? { [c.key]: c.default } : {}))
+        ? Object.assign({ _isNew: true, [idField]: generateId(idPrefix, data, idField) }, ...columns.map(c => c.default !== undefined ? { [c.key]: c.default } : {}))
         : Object.assign({}, data[idx]);
 
       showModal(buildEditForm(item, columns));
@@ -261,31 +266,5 @@
   };
 
   window.SkyRentCRUD = { init, load, save, helpers };
-
-  // モーダル CSS を一度だけ注入
-  if (!document.getElementById('crud-style')) {
-    const s = document.createElement('style');
-    s.id = 'crud-style';
-    s.textContent = `
-      .crud-modal { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; }
-      .crud-modal-bg { position: absolute; inset: 0; background: rgba(0,0,0,0.45); cursor: pointer; }
-      .crud-modal-card { position: relative; background: #fff; border-radius: 6px; min-width: 480px; max-width: 90vw; max-height: 90vh; overflow: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
-      .crud-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #eee; background: #1c4a7a; color: #fff; border-radius: 6px 6px 0 0; }
-      .crud-modal-head h3 { margin: 0; font-size: 16px; font-weight: 700; }
-      .crud-close { background: none; border: none; color: #fff; font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px; }
-      .crud-close:hover { opacity: 0.7; }
-      .crud-modal .crud-field { padding: 12px 20px; border-bottom: 1px solid #f0f0f0; display: flex; gap: 14px; align-items: center; }
-      .crud-modal .crud-field label { width: 130px; font-weight: 600; font-size: 13px; color: #555; }
-      .crud-modal .crud-field label.inline { width: auto; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
-      .crud-modal .crud-field input, .crud-modal .crud-field select, .crud-modal .crud-field textarea {
-        flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 14px; font-family: inherit;
-      }
-      .crud-modal .crud-field input:focus, .crud-modal .crud-field select:focus, .crud-modal .crud-field textarea:focus {
-        outline: none; border-color: #1976c5;
-      }
-      .crud-modal-foot { display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid #eee; align-items: center; }
-      .crud-modal-foot .btn { padding: 8px 18px; }
-    `;
-    document.head.appendChild(s);
-  }
+  // モーダルCSSは manage/css/manage.css に統合済み
 })();

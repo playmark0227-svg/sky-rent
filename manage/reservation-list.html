@@ -117,9 +117,88 @@
           <td>${escapeHtml(r.vehicleId)}</td>
           <td>${escapeHtml(r.customerName)}</td>
           <td><small>${escapeHtml(r.customerEmail || '')}<br>${escapeHtml(r.customerPhone || '')}</small></td>
-          <td><a href="#" class="detail-link">詳細</a></td>
+          <td><a href="#" class="detail-link" data-id="${escapeHtml(r.reservationId)}">詳細</a></td>
         </tr>
       `).join('');
+      tbl.querySelectorAll('.detail-link').forEach(a => {
+        a.addEventListener('click', e => {
+          e.preventDefault();
+          openDetail(a.dataset.id);
+        });
+      });
+    }
+
+    function openDetail(id) {
+      const r = allRows.find(x => x.reservationId === id);
+      if (!r) return;
+      const cancelable = r.status !== 'cancelled';
+      const start = new Date(r.start);
+      const end = new Date(r.end);
+      const days = Math.max(1, Math.ceil((end - start) / 86400000));
+
+      const modalHtml = `
+        <div class="crud-modal-bg"></div>
+        <div class="crud-modal-card" style="min-width:520px">
+          <div class="crud-modal-head">
+            <h3>予約詳細 <code style="background:rgba(255,255,255,0.2);color:#fff;font-size:12px;margin-left:8px;padding:2px 8px;border-radius:2px">${escapeHtml(r.reservationId)}</code></h3>
+            <button class="crud-close" type="button">×</button>
+          </div>
+          <div style="padding:18px 22px">
+            <div style="display:grid;grid-template-columns:120px 1fr;gap:10px;font-size:13px">
+              <div style="color:#777;font-weight:600">状態</div>
+              <div><span class="status status-${r.status}">${statusLabel(r.status)}</span></div>
+              <div style="color:#777;font-weight:600">車種</div>
+              <div><strong>${escapeHtml(r.vehicleName)}</strong> (${escapeHtml(r.vehicleId)})</div>
+              <div style="color:#777;font-weight:600">貸出</div>
+              <div>${formatDateTime(r.start)}</div>
+              <div style="color:#777;font-weight:600">返却</div>
+              <div>${formatDateTime(r.end)} <small style="color:#888">(${days}日間)</small></div>
+              <div style="color:#777;font-weight:600">借受人</div>
+              <div><strong>${escapeHtml(r.customerName)}</strong> 様</div>
+              <div style="color:#777;font-weight:600">メール</div>
+              <div>${escapeHtml(r.customerEmail || '-')}</div>
+              <div style="color:#777;font-weight:600">電話</div>
+              <div>${escapeHtml(r.customerPhone || '-')}</div>
+              <div style="color:#777;font-weight:600">備考</div>
+              <div>${escapeHtml(r.note || '-')}</div>
+              <div style="color:#777;font-weight:600">登録日時</div>
+              <div>${formatDateTime(r.createdAt)}</div>
+            </div>
+          </div>
+          <div class="crud-modal-foot">
+            ${cancelable ? '<button type="button" class="btn btn-gray" id="btn-cancel-res" style="background:#c0392b">予約をキャンセル</button>' : ''}
+            <span style="flex:1"></span>
+            <button type="button" class="btn btn-gray crud-cancel">閉じる</button>
+            <button type="button" class="btn btn-primary" onclick="window.print()">印刷</button>
+          </div>
+        </div>
+      `;
+      let modal = document.getElementById('crud-modal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'crud-modal';
+        modal.className = 'crud-modal';
+        document.body.appendChild(modal);
+      }
+      modal.innerHTML = modalHtml;
+      const close = () => modal.remove();
+      modal.querySelector('.crud-modal-bg').addEventListener('click', close);
+      modal.querySelector('.crud-close').addEventListener('click', close);
+      modal.querySelector('.crud-cancel').addEventListener('click', close);
+      const cancelBtn = modal.querySelector('#btn-cancel-res');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          if (!confirm(`予約 ${r.reservationId} をキャンセルしますか?\n借受人: ${r.customerName} 様`)) return;
+          if (window.SkyRentAPI.updateReservation && !window.SkyRentAPI.isConfigured) {
+            window.SkyRentAPI.updateReservation(id, { status: 'cancelled' });
+            alert('✓ 予約をキャンセルしました');
+            close();
+            load();
+          } else {
+            alert('GAS本番環境では Google スプレッドシートで status を cancelled に変更してください');
+          }
+        });
+      }
     }
 
     function formatDateTime(s) {

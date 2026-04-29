@@ -159,17 +159,29 @@ html, body {
 .topbar-user {
   text-align: right;
   line-height: 1.3;
-  padding-left: 12px;
+  padding: 0 12px;
   border-left: 1px solid rgba(255,255,255,0.2);
   font-weight: 600;
+  background: transparent;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  height: 100%;
+  transition: background 0.15s;
 }
+.topbar-user:hover { background: var(--topbar-dark); }
 .topbar-user small {
   display: block;
   font-size: 11px;
   font-weight: 400;
   opacity: 0.9;
-  cursor: pointer;
 }
+.user-menu .topnav-menu { right: 0 !important; left: auto !important; }
+.user-menu .topnav-menu a { font-size: 13px; }
 
 /* ===== メイン ===== */
 .main {
@@ -266,6 +278,13 @@ html, body {
   text-align: center;
   padding: 18px 12px 22px;
   border-radius: 0;
+  text-decoration: none;
+  display: block;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+a.kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
 }
 .kpi-1 { background: var(--kpi-1); }
 .kpi-2 { background: var(--kpi-2); }
@@ -373,6 +392,26 @@ html, body {
   margin-right: 6px;
   font-size: 12px;
 }
+
+/* ===== モーダル (CRUD/予約詳細共通) ===== */
+.crud-modal { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; }
+.crud-modal-bg { position: absolute; inset: 0; background: rgba(0,0,0,0.45); cursor: pointer; }
+.crud-modal-card { position: relative; background: #fff; border-radius: 6px; min-width: 480px; max-width: 90vw; max-height: 90vh; overflow: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
+.crud-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #eee; background: #1c4a7a; color: #fff; border-radius: 6px 6px 0 0; }
+.crud-modal-head h3 { margin: 0; font-size: 16px; font-weight: 700; }
+.crud-close { background: none; border: none; color: #fff; font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.crud-close:hover { opacity: 0.7; }
+.crud-modal .crud-field { padding: 12px 20px; border-bottom: 1px solid #f0f0f0; display: flex; gap: 14px; align-items: center; }
+.crud-modal .crud-field label { width: 130px; font-weight: 600; font-size: 13px; color: #555; }
+.crud-modal .crud-field label.inline { width: auto; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.crud-modal .crud-field input, .crud-modal .crud-field select, .crud-modal .crud-field textarea {
+  flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 14px; font-family: inherit;
+}
+.crud-modal .crud-field input:focus, .crud-modal .crud-field select:focus, .crud-modal .crud-field textarea:focus {
+  outline: none; border-color: #1976c5;
+}
+.crud-modal-foot { display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid #eee; align-items: center; }
+.crud-modal-foot .btn { padding: 8px 18px; }
 
 /* ローディング */
 .loading {
