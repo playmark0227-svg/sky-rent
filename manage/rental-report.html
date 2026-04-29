@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>貸渡実績報告書 自動生成 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main no-print">
+    <h1 class="page-title">貸渡実績報告書 自動生成</h1>
+    <p class="page-note">
+      陸運局へ毎年4月30日までに提出する <strong>自家用自動車有償貸渡実績報告書</strong> を、
+      予約台帳・車輌マスタから自動集計して生成します。
+    </p>
+
+    <section class="card filter-bar">
+      <div class="filter-group">
+        <label>報告対象年度</label>
+        <select id="fy">
+          <!-- 動的生成 -->
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>運輸支局</label>
+        <input type="text" id="bureau" placeholder="例: 東京" value="東京">
+      </div>
+      <button class="btn btn-primary" id="btn-generate">集計して生成</button>
+      <button class="btn btn-gray" id="btn-print">🖨️ 印刷</button>
+      <button class="btn btn-gray" id="btn-csv">CSV ダウンロード</button>
+    </section>
+
+    <p style="font-size:12px;color:var(--muted);margin:6px 4px 12px">
+      ※ 自動集計値は <strong>編集可能</strong> です。実数と異なる場合は表内のセルをクリックして修正してください。修正後に印刷/CSV出力されます。
+    </p>
+  </main>
+
+  <!-- ===== 印刷対象: A4ページ ===== -->
+  <div class="print-area">
+    <article class="report-page">
+      <header class="rep-header">
+        <div class="rep-doc-no">様式第3号</div>
+        <h1 class="rep-title">自家用自動車有償貸渡実績報告書</h1>
+      </header>
+
+      <div class="rep-meta">
+        <table class="rep-meta-tbl">
+          <tr>
+            <th>提 出 先</th>
+            <td><span contenteditable="true" id="m-bureau">東京</span> 運輸支局長 殿</td>
+            <th>提 出 日</th>
+            <td><span contenteditable="true" id="m-submit-date">2026年 4月 30日</span></td>
+          </tr>
+          <tr>
+            <th>報告対象期間</th>
+            <td colspan="3"><span contenteditable="true" id="m-from">2025年4月1日</span> 〜 <span contenteditable="true" id="m-to">2026年3月31日</span></td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="rep-section">
+        <h2 class="rep-h2">1. 事業者の概要</h2>
+        <table class="rep-tbl">
+          <tr><th>事業者名 (商号)</th><td contenteditable="true" id="b-name">株式会社 Sky Rent</td></tr>
+          <tr><th>代表者氏名</th><td contenteditable="true" id="b-rep">山田 太郎</td></tr>
+          <tr><th>主たる事務所所在地</th><td contenteditable="true" id="b-addr">東京都〇〇区〇〇 1-2-3</td></tr>
+          <tr><th>電話番号</th><td contenteditable="true" id="b-tel">03-0000-0000</td></tr>
+          <tr><th>許可番号</th><td contenteditable="true" id="b-permit">関自旅2第〇〇〇〇号</td></tr>
+          <tr><th>許可年月日</th><td contenteditable="true" id="b-permit-date">2024年4月1日</td></tr>
+        </table>
+      </div>
+
+      <div class="rep-section">
+        <h2 class="rep-h2">2. 貸渡業務実績 <small>(自動集計)</small></h2>
+        <table class="rep-tbl matrix">
+          <thead>
+            <tr>
+              <th>項目</th>
+              <th>普通乗用</th>
+              <th>小型乗用</th>
+              <th>軽乗用</th>
+              <th>バン・トラック</th>
+              <th>マイクロ・バス</th>
+              <th>二輪自動車</th>
+              <th class="total">合 計</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>① 年度末保有車両数</th>
+              <td contenteditable="true" id="v-1-large">0</td>
+              <td contenteditable="true" id="v-1-small">0</td>
+              <td contenteditable="true" id="v-1-kei">0</td>
+              <td contenteditable="true" id="v-1-truck">0</td>
+              <td contenteditable="true" id="v-1-bus">0</td>
+              <td contenteditable="true" id="v-1-bike">0</td>
+              <td class="total" id="v-1-total">0</td>
+            </tr>
+            <tr>
+              <th>② 年度内貸渡件数</th>
+              <td contenteditable="true" id="v-2-large">0</td>
+              <td contenteditable="true" id="v-2-small">0</td>
+              <td contenteditable="true" id="v-2-kei">0</td>
+              <td contenteditable="true" id="v-2-truck">0</td>
+              <td contenteditable="true" id="v-2-bus">0</td>
+              <td contenteditable="true" id="v-2-bike">0</td>
+              <td class="total" id="v-2-total">0</td>
+            </tr>
+            <tr>
+              <th>③ 年度内延べ貸渡日数</th>
+              <td contenteditable="true" id="v-3-large">0</td>
+              <td contenteditable="true" id="v-3-small">0</td>
+              <td contenteditable="true" id="v-3-kei">0</td>
+              <td contenteditable="true" id="v-3-truck">0</td>
+              <td contenteditable="true" id="v-3-bus">0</td>
+              <td contenteditable="true" id="v-3-bike">0</td>
+              <td class="total" id="v-3-total">0</td>
+            </tr>
+            <tr>
+              <th>④ 平均稼働率 (③÷①÷365)</th>
+              <td id="v-4-large">-</td>
+              <td id="v-4-small">-</td>
+              <td id="v-4-kei">-</td>
+              <td id="v-4-truck">-</td>
+              <td id="v-4-bus">-</td>
+              <td id="v-4-bike">-</td>
+              <td class="total" id="v-4-total">-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="rep-section">
+        <h2 class="rep-h2">3. 事故及び法令違反</h2>
+        <table class="rep-tbl">
+          <tr>
+            <th style="width:36%">人身事故件数</th>
+            <td contenteditable="true" id="acc-injury">0</td>
+            <th style="width:36%">うち死亡者数</th>
+            <td contenteditable="true" id="acc-death">0</td>
+          </tr>
+          <tr>
+            <th>物損事故件数</th>
+            <td contenteditable="true" id="acc-property">0</td>
+            <th>その他事案件数</th>
+            <td contenteditable="true" id="acc-other">0</td>
+          </tr>
+          <tr>
+            <th>道路交通法違反 (借受人)</th>
+            <td contenteditable="true" id="vio-customer">0</td>
+            <th>同 (事業者責任分)</th>
+            <td contenteditable="true" id="vio-business">0</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="rep-section">
+        <h2 class="rep-h2">4. 整備関係</h2>
+        <table class="rep-tbl">
+          <tr>
+            <th style="width:36%">継続検査 (車検) 実施台数</th>
+            <td contenteditable="true" id="m-shaken">0</td>
+            <th style="width:36%">定期点検整備実施台数</th>
+            <td contenteditable="true" id="m-inspect">0</td>
+          </tr>
+          <tr>
+            <th>整備管理者氏名</th>
+            <td contenteditable="true" id="m-manager">鈴木 一郎</td>
+            <th>整備管理者選任年月日</th>
+            <td contenteditable="true" id="m-manager-date">2024年4月1日</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="rep-section">
+        <h2 class="rep-h2">5. 営業所情報</h2>
+        <table class="rep-tbl">
+          <thead>
+            <tr><th>営業所名</th><th>所在地</th><th>保有台数</th><th>電話番号</th></tr>
+          </thead>
+          <tbody id="store-tbody">
+            <tr>
+              <td contenteditable="true">Sky Rent 本店</td>
+              <td contenteditable="true">東京都〇〇区〇〇 1-2-3</td>
+              <td contenteditable="true" id="store-vehicles">0</td>
+              <td contenteditable="true">03-0000-0000</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="rep-footer">
+        <p>上記のとおり、自家用自動車有償貸渡業の実績を報告します。</p>
+        <div class="sign-area">
+          <span>事業者名: <span contenteditable="true">株式会社 Sky Rent</span></span>
+          <span>代表者: <span contenteditable="true">山田 太郎</span> <span class="seal">印</span></span>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div id="loading" class="loading no-print" hidden><div class="spinner"></div></div>
+
+  <style>
+    /* ===== 報告書スタイル ===== */
+    .print-area {
+      max-width: 210mm;
+      margin: 16px auto 60px;
+      padding: 0 18px;
+    }
+    .report-page {
+      background: #fff;
+      padding: 18mm 16mm;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", "MS Mincho", serif;
+      color: #000;
+      line-height: 1.6;
+    }
+    .rep-header { text-align: center; position: relative; margin-bottom: 18px; }
+    .rep-doc-no {
+      position: absolute; top: 0; right: 0;
+      font-size: 11px; padding: 2px 6px;
+      border: 1px solid #555;
+    }
+    .rep-title {
+      font-size: 22px;
+      letter-spacing: 0.15em;
+      font-weight: 700;
+      margin-bottom: 6px;
+      padding-bottom: 6px;
+    }
+    .rep-meta { margin-bottom: 14px; }
+    .rep-meta-tbl, .rep-tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .rep-meta-tbl th, .rep-meta-tbl td,
+    .rep-tbl th, .rep-tbl td {
+      border: 1px solid #555;
+      padding: 6px 8px;
+      vertical-align: middle;
+    }
+    .rep-meta-tbl th, .rep-tbl th {
+      background: #eef2f7;
+      font-weight: 600;
+      text-align: left;
+      width: auto;
+    }
+    .rep-tbl.matrix th { text-align: center; }
+    .rep-tbl.matrix td { text-align: center; font-feature-settings: 'tnum' 1; }
+    .rep-tbl.matrix td.total, .rep-tbl.matrix th.total {
+      background: #fff7e6;
+      font-weight: 700;
+    }
+    [contenteditable="true"]:hover {
+      background: #fff8d6;
+      outline: 1px dashed #c8a32d;
+      cursor: text;
+    }
+    [contenteditable="true"]:focus {
+      background: #fffabe;
+      outline: 2px solid #d18514;
+    }
+    .rep-section { margin-bottom: 16px; }
+    .rep-h2 {
+      font-size: 14px;
+      font-weight: 700;
+      background: #1c4a7a;
+      color: #fff;
+      padding: 4px 10px;
+      margin-bottom: 6px;
+    }
+    .rep-h2 small { font-size: 10px; opacity: 0.85; font-weight: normal; margin-left: 8px; }
+    .rep-footer {
+      margin-top: 24px;
+      padding-top: 12px;
+      border-top: 1px solid #555;
+      font-size: 12px;
+    }
+    .sign-area {
+      display: flex;
+      justify-content: flex-end;
+      gap: 28px;
+      margin-top: 12px;
+    }
+    .seal {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px; height: 22px;
+      border: 2px solid #c0392b;
+      border-radius: 50%;
+      color: #c0392b;
+      font-size: 11px;
+      margin-left: 4px;
+    }
+
+    /* ===== 印刷用 ===== */
+    @media print {
+      body { background: #fff; }
+      .no-print, .topbar, header.topbar { display: none !important; }
+      .print-area { margin: 0; padding: 0; max-width: none; }
+      .report-page { box-shadow: none; padding: 12mm 14mm; }
+      [contenteditable="true"]:hover, [contenteditable="true"]:focus {
+        background: transparent !important;
+        outline: none !important;
+      }
+      @page { size: A4; margin: 0; }
+    }
+  </style>
+
+  <script src="partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+  (function () {
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => document.querySelectorAll(s);
+
+    /**
+     * 車両を 6 区分に分類:
+     *   large  = 普通乗用 (SUV / ミニバン / セダン上級)
+     *   small  = 小型乗用 (5ナンバー / コンパクト / ミドル)
+     *   kei    = 軽乗用
+     *   truck  = バン・トラック (カーゴバン / 商用)
+     *   bus    = マイクロバス・バス
+     *   bike   = 二輪
+     *
+     * ミニバン は道路運送車両法上「普通乗用」扱いなので large に入れる。
+     * 「バン・トラック」は商用カーゴバン (ハイエースバン等) のみ。
+     */
+    function categorize(v) {
+      const text = String(v.class||'') + ' ' + String(v.name||'');
+      const lower = text.toLowerCase();
+
+      // 1) 二輪
+      if (/二輪|バイク|スクーター|モーター/.test(text)) return 'bike';
+      // 2) バス
+      if (/マイクロバス|^バス|ハイエース.*コミューター|大型バス/.test(text)) return 'bus';
+      // 3) 軽
+      if (/^軽|軽自動車|軽乗用|ケイ|kei/i.test(text)) return 'kei';
+      // 4) 商用バン・トラック (ミニバンは除く)
+      if (/トラック|カーゴ|^バン|商用バン|ハイエース.*バン/.test(text)) return 'truck';
+      // 5) 普通乗用 (SUV/ミニバン/大型)
+      if (/SUV|ミニバン|普通|大型|ハイエース|アルファード|エルグランド/.test(text)) return 'large';
+      // 6) デフォルト: 小型乗用
+      return 'small';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // 年度セレクタ初期化
+      const now = new Date();
+      const currentFY = now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
+      const sel = $('#fy');
+      for (let y = currentFY; y >= currentFY - 5; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = `${y}年度 (${y}/4/1〜${y+1}/3/31)`;
+        if (y === currentFY) opt.selected = true;
+        sel.appendChild(opt);
+      }
+
+      $('#btn-generate').addEventListener('click', generate);
+      $('#btn-print').addEventListener('click', () => window.print());
+      $('#btn-csv').addEventListener('click', exportCSV);
+
+      // 編集時に合計を再計算
+      $$('[contenteditable="true"]').forEach(el => {
+        el.addEventListener('input', () => {
+          if (el.id && el.id.startsWith('v-')) recalculate();
+        });
+      });
+
+      generate();
+    });
+
+    async function generate() {
+      $('#loading').hidden = false;
+      try {
+        const fy = +$('#fy').value;
+        const from = new Date(fy, 3, 1);            // 4/1
+        const to = new Date(fy + 1, 3, 0, 23, 59);   // 翌3/31
+
+        // 表示更新
+        $('#m-from').textContent = `${fy}年4月1日`;
+        $('#m-to').textContent = `${fy+1}年3月31日`;
+        $('#m-bureau').textContent = $('#bureau').value || '東京';
+
+        const [vehicles, reservations] = await Promise.all([
+          window.SkyRentAPI.listVehicles(),
+          window.SkyRentAPI.listReservations(from.toISOString(), to.toISOString())
+        ]);
+
+        // 区分別保有台数
+        const buckets = { large: [], small: [], kei: [], truck: [], bus: [], bike: [] };
+        vehicles.forEach(v => buckets[categorize(v)].push(v));
+
+        Object.entries(buckets).forEach(([key, vs]) => {
+          $('#v-1-' + key).textContent = vs.length;
+        });
+
+        // 区分別 貸渡件数 + 延べ日数
+        const counts = { large: 0, small: 0, kei: 0, truck: 0, bus: 0, bike: 0 };
+        const days = { large: 0, small: 0, kei: 0, truck: 0, bus: 0, bike: 0 };
+        const vMap = {};
+        vehicles.forEach(v => { vMap[v.vehicleId] = v; });
+
+        reservations.filter(r => r.status !== 'cancelled').forEach(r => {
+          const v = vMap[r.vehicleId];
+          if (!v) return;
+          const cat = categorize(v);
+          const s = new Date(r.start);
+          const e = new Date(r.end);
+          const d = Math.max(1, Math.ceil((e - s) / 86400000));
+          counts[cat]++;
+          days[cat] += d;
+        });
+
+        Object.keys(counts).forEach(key => {
+          $('#v-2-' + key).textContent = counts[key];
+          $('#v-3-' + key).textContent = days[key];
+        });
+
+        // 営業所
+        $('#store-vehicles').textContent = vehicles.length + '台';
+
+        recalculate();
+      } catch (err) {
+        alert('読み込み失敗: ' + err.message);
+      } finally {
+        $('#loading').hidden = true;
+      }
+    }
+
+    function recalculate() {
+      // 行合計と稼働率を再計算
+      const cats = ['large','small','kei','truck','bus','bike'];
+      [1, 2, 3].forEach(row => {
+        let total = 0;
+        cats.forEach(c => {
+          const v = parseInt(($('#v-' + row + '-' + c).textContent || '0').replace(/[^\d]/g,''), 10) || 0;
+          total += v;
+        });
+        $('#v-' + row + '-total').textContent = total;
+      });
+      // 稼働率
+      cats.forEach(c => {
+        const own = parseInt($('#v-1-' + c).textContent || '0', 10);
+        const days = parseInt($('#v-3-' + c).textContent || '0', 10);
+        const rate = own > 0 ? Math.round(days / own / 365 * 100 * 10) / 10 : 0;
+        $('#v-4-' + c).textContent = own > 0 ? rate + '%' : '-';
+      });
+      const totalOwn = parseInt($('#v-1-total').textContent || '0', 10);
+      const totalDays = parseInt($('#v-3-total').textContent || '0', 10);
+      const totalRate = totalOwn > 0 ? Math.round(totalDays / totalOwn / 365 * 100 * 10) / 10 : 0;
+      $('#v-4-total').textContent = totalOwn > 0 ? totalRate + '%' : '-';
+    }
+
+    function exportCSV() {
+      const rows = [];
+      rows.push(['自家用自動車有償貸渡実績報告書']);
+      rows.push(['対象期間', $('#m-from').textContent + ' 〜 ' + $('#m-to').textContent]);
+      rows.push(['提出先', $('#m-bureau').textContent + '運輸支局長']);
+      rows.push([]);
+      rows.push(['事業者名', $('#b-name').textContent]);
+      rows.push(['代表者', $('#b-rep').textContent]);
+      rows.push(['所在地', $('#b-addr').textContent]);
+      rows.push(['電話', $('#b-tel').textContent]);
+      rows.push(['許可番号', $('#b-permit').textContent]);
+      rows.push([]);
+      rows.push(['','普通乗用','小型乗用','軽乗用','バン・トラック','マイクロ・バス','二輪','合計']);
+      const labels = [
+        ['年度末保有車両数', 1],
+        ['年度内貸渡件数', 2],
+        ['年度内延べ貸渡日数', 3],
+        ['平均稼働率', 4]
+      ];
+      const cats = ['large','small','kei','truck','bus','bike','total'];
+      labels.forEach(([label, row]) => {
+        rows.push([label, ...cats.map(c => $('#v-' + row + '-' + c).textContent)]);
+      });
+      rows.push([]);
+      rows.push(['人身事故件数', $('#acc-injury').textContent]);
+      rows.push(['うち死亡者数', $('#acc-death').textContent]);
+      rows.push(['物損事故件数', $('#acc-property').textContent]);
+      rows.push(['車検実施台数', $('#m-shaken').textContent]);
+      rows.push(['定期点検実施台数', $('#m-inspect').textContent]);
+
+      const csv = '﻿' + rows.map(r => r.map(cell =>
+        '"' + String(cell).replace(/"/g,'""') + '"').join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '貸渡実績報告書_' + $('#fy').value + '年度.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+  })();
+  </script>
+</body>
+</html>

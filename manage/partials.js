@@ -51,6 +51,7 @@
           <div class="topnav-menu">
             <a href="stores.html">店舗管理</a>
             <a href="employees.html">従業員管理</a>
+            <a href="rental-report.html">貸渡実績報告書 (陸運局)</a>
             <a href="reports-print.html">定期報告書類の印刷</a>
           </div>
         </div>
