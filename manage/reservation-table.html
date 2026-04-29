@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>貸渡予約表 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">貸渡予約表 (ガントチャート)</h1>
+
+    <section class="card filter-bar">
+      <div class="filter-group">
+        <label>表示開始日</label>
+        <input type="date" id="from-date">
+      </div>
+      <div class="filter-group">
+        <label>表示日数</label>
+        <select id="days">
+          <option value="7">7日間</option>
+          <option value="14" selected>14日間</option>
+          <option value="30">30日間</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="btn-load">表 示</button>
+    </section>
+
+    <section class="card gantt-wrap">
+      <div class="gantt" id="gantt">読み込み中...</div>
+    </section>
+  </main>
+
+  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
+
+  <script src="_partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+  (function () {
+    const $ = (s) => document.querySelector(s);
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const today = new Date();
+      $('#from-date').value = today.toISOString().slice(0,10);
+      $('#btn-load').addEventListener('click', load);
+      load();
+    });
+
+    async function load() {
+      $('#loading').hidden = false;
+      try {
+        const start = new Date($('#from-date').value);
+        const days = parseInt($('#days').value, 10);
+        const end = new Date(start); end.setDate(end.getDate() + days);
+
+        const [vehicles, reservations] = await Promise.all([
+          window.SkyRentAPI.listVehicles(),
+          window.SkyRentAPI.listReservations(start.toISOString(), end.toISOString())
+        ]);
+        render(vehicles, reservations, start, days);
+      } catch (err) {
+        $('#gantt').textContent = '読み込み失敗: ' + err.message;
+      } finally {
+        $('#loading').hidden = true;
+      }
+    }
+
+    function render(vehicles, reservations, start, days) {
+      const cellW = 36;
+      const headerCells = [];
+      for (let i = 0; i < days; i++) {
+        const d = new Date(start); d.setDate(start.getDate() + i);
+        const dow = '日月火水木金土'[d.getDay()];
+        const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+        headerCells.push(`<div class="gantt-cell ${isWeekend ? 'weekend' : ''}" style="width:${cellW}px">
+          <div class="gantt-date">${d.getMonth()+1}/${d.getDate()}</div>
+          <div class="gantt-dow">(${dow})</div>
+        </div>`);
+      }
+
+      const rows = vehicles.map(v => {
+        const cells = [];
+        for (let i = 0; i < days; i++) {
+          const d = new Date(start); d.setDate(start.getDate() + i);
+          const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+          cells.push(`<div class="gantt-cell ${isWeekend ? 'weekend' : ''}" style="width:${cellW}px"></div>`);
+        }
+        // バー描画
+        const bars = reservations.filter(r => String(r.vehicleId) === String(v.vehicleId)).map(r => {
+          const rs = new Date(r.start);
+          const re = new Date(r.end);
+          const offsetDays = (rs - start) / 86400000;
+          const lengthDays = Math.max(0.25, (re - rs) / 86400000);
+          const left = Math.max(0, offsetDays * cellW);
+          const width = Math.min(days * cellW - left, lengthDays * cellW);
+          if (width <= 0) return '';
+          return `<div class="gantt-bar status-${r.status}" style="left:${left}px;width:${width}px" title="${escapeHtml(r.customerName)} (${r.reservationId})">
+            ${escapeHtml(r.customerName || '')}
+          </div>`;
+        }).join('');
+
+        return `<div class="gantt-row">
+          <div class="gantt-label">
+            <strong>${escapeHtml(v.name)}</strong>
+            <small>${escapeHtml(v.vehicleId)} / ${escapeHtml(v.class || '')}</small>
+          </div>
+          <div class="gantt-track">${cells.join('')}<div class="gantt-bars">${bars}</div></div>
+        </div>`;
+      });
+
+      $('#gantt').innerHTML = `
+        <div class="gantt-row gantt-header">
+          <div class="gantt-label">車輌</div>
+          <div class="gantt-track">${headerCells.join('')}</div>
+        </div>
+        ${rows.join('')}
+      `;
+    }
+
+    function escapeHtml(str) {
+      return String(str==null?'':str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+  })();
+  </script>
+</body>
+</html>

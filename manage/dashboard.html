@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ダッシュボード | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- ===== トップナビ (動的差し込み) ===== -->
+  <div data-include="topbar"></div>
+
+  <!-- ===== メイン ===== -->
+  <main class="main">
+    <!-- 日付選択バー -->
+    <section class="date-bar card">
+      <div class="date-bar-left">
+        <div class="date-input">
+          <input type="number" id="date-y" min="2020" max="2099"> 年
+          <input type="number" id="date-m" min="1" max="12"> 月
+          <input type="number" id="date-d" min="1" max="31"> 日
+        </div>
+        <div class="date-nav">
+          <a href="#" id="date-prev">◀前の日</a>
+          <a href="#" id="date-today">本日を表示</a>
+          <a href="#" id="date-next">次の日▶</a>
+        </div>
+      </div>
+      <div class="date-bar-right">
+        <button id="btn-search" class="btn btn-primary">検 索</button>
+      </div>
+    </section>
+
+    <!-- 印刷ボタン -->
+    <div class="print-bar">
+      <span class="badge-new">new</span>
+      <button class="btn btn-gray" id="btn-print">貸渡・返却リスト印刷</button>
+    </div>
+
+    <!-- 3カードKPI -->
+    <section class="kpi-row">
+      <div class="kpi kpi-1">
+        <div class="kpi-label">予約された件数</div>
+        <div class="kpi-value"><span id="kpi-bookings">0</span><span class="kpi-unit">件</span></div>
+      </div>
+      <div class="kpi kpi-2">
+        <div class="kpi-label">出発の予約</div>
+        <div class="kpi-value"><span id="kpi-depart">0</span><span class="kpi-unit">件</span></div>
+      </div>
+      <div class="kpi kpi-3">
+        <div class="kpi-label">帰着の予約</div>
+        <div class="kpi-value"><span id="kpi-return">0</span><span class="kpi-unit">件</span></div>
+      </div>
+    </section>
+
+    <!-- 中段3カラム -->
+    <section class="mid-row">
+      <!-- 左:グラフ + 予約された件数テーブル -->
+      <div class="mid-card">
+        <div class="chart-wrap">
+          <canvas id="chart-week"></canvas>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr><th>出発日</th><th>車種</th><th>車輌</th><th>借受人名 / 種別</th></tr>
+          </thead>
+          <tbody id="tbl-bookings">
+            <tr class="empty"><td colspan="4">該当する予約はありません</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 中:出発予約 -->
+      <div class="mid-card">
+        <table class="data-table">
+          <thead>
+            <tr><th>出発時間</th><th>車種</th><th>車輌</th><th>借受人名 / 種別</th><th></th></tr>
+          </thead>
+          <tbody id="tbl-departures">
+            <tr class="empty"><td colspan="5">該当する予約はありません</td></tr>
+          </tbody>
+        </table>
+        <div class="card-footer-link"><a href="reservation-list.html">予約一覧へ</a></div>
+      </div>
+
+      <!-- 右:帰着予約 -->
+      <div class="mid-card">
+        <table class="data-table">
+          <thead>
+            <tr><th>返却時間</th><th>車種</th><th>車輌</th><th>借受人名 / 種別</th><th></th></tr>
+          </thead>
+          <tbody id="tbl-returns">
+            <tr class="empty"><td colspan="5">該当する予約はありません</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 下段3カラム:お知らせ -->
+    <section class="bottom-row">
+      <div class="bottom-card">
+        <h3 class="bottom-title">Sky Rentからのお知らせ</h3>
+        <a href="#" class="bottom-sub">▶メンテナンス・障害情報</a>
+        <ul class="news-list">
+          <li><span class="news-date">2026/04/29</span> <span class="badge-new sm">NEW</span> 管理画面をリニューアルしました</li>
+          <li><span class="news-date">2026/04/15</span> 春のキャンペーン開始のお知らせ</li>
+        </ul>
+      </div>
+
+      <div class="bottom-card">
+        <h3 class="bottom-title">社内お知らせ</h3>
+        <ul class="news-list">
+          <li>貸渡や返却の処理の漏れがないようにして下さい。</li>
+          <li>合計金額の再確認をして下さい。</li>
+        </ul>
+      </div>
+
+      <div class="bottom-card">
+        <h3 class="bottom-title">車検の未予約</h3>
+        <table class="data-table compact">
+          <thead>
+            <tr><th>車検満了日</th><th>車種</th><th>車輌</th></tr>
+          </thead>
+          <tbody id="tbl-shaken">
+            <tr class="empty"><td colspan="3">該当する車輌はありません</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- ローディング -->
+  <div id="loading" class="loading" hidden>
+    <div class="spinner"></div>
+  </div>
+
+  <script src="_partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="js/manage.js"></script>
+</body>
+</html>

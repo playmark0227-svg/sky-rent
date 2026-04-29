@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>顧客管理 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">顧客管理</h1>
+
+    <section class="card filter-bar">
+      <div class="filter-group">
+        <label>キーワード</label>
+        <input type="text" id="kw" placeholder="名前・メール・電話">
+      </div>
+      <button class="btn btn-primary" id="btn-filter">検 索</button>
+    </section>
+
+    <section class="card">
+      <table class="data-table list">
+        <thead>
+          <tr>
+            <th>名前</th>
+            <th>メールアドレス</th>
+            <th>電話番号</th>
+            <th>予約回数</th>
+            <th>最終予約日</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbl"><tr class="empty"><td colspan="6">読み込み中...</td></tr></tbody>
+      </table>
+    </section>
+  </main>
+
+  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
+
+  <script src="_partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+  (function () {
+    const $ = (s) => document.querySelector(s);
+    let all = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      $('#btn-filter').addEventListener('click', filter);
+      $('#kw').addEventListener('keypress', e => { if (e.key === 'Enter') filter(); });
+      $('#loading').hidden = false;
+      try {
+        all = await window.SkyRentAPI.listCustomers();
+        filter();
+      } catch (err) {
+        $('#tbl').innerHTML = `<tr class="empty"><td colspan="6">読み込み失敗: ${err.message}</td></tr>`;
+      } finally {
+        $('#loading').hidden = true;
+      }
+    });
+
+    function filter() {
+      const kw = $('#kw').value.trim().toLowerCase();
+      const rows = !kw ? all : all.filter(c =>
+        (c.name||'').toLowerCase().includes(kw) ||
+        (c.email||'').toLowerCase().includes(kw) ||
+        (c.phone||'').toLowerCase().includes(kw)
+      );
+      if (!rows.length) {
+        $('#tbl').innerHTML = '<tr class="empty"><td colspan="6">該当する顧客はいません</td></tr>';
+        return;
+      }
+      $('#tbl').innerHTML = rows.map(c => `
+        <tr>
+          <td><strong>${esc(c.name)}</strong></td>
+          <td>${esc(c.email)}</td>
+          <td>${esc(c.phone)}</td>
+          <td style="text-align:center">${c.reservationCount}回</td>
+          <td>${formatDate(c.latestReservation)}</td>
+          <td><a href="reservation-list.html" class="detail-link">予約履歴</a></td>
+        </tr>
+      `).join('');
+    }
+    function formatDate(s) {
+      if (!s) return '';
+      const d = new Date(s);
+      return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function esc(str) {
+      return String(str==null?'':str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+  })();
+  </script>
+</body>
+</html>

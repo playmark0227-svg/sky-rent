@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>車種管理 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">車種管理</h1>
+    <p class="page-note">車種マスタの一覧。詳細編集はスプレッドシートで行います。</p>
+
+    <section class="card">
+      <table class="data-table list">
+        <thead><tr><th>車種ID</th><th>車種名</th><th>クラス</th><th>定員</th><th>登録台数</th></tr></thead>
+        <tbody id="tbl"><tr class="empty"><td colspan="5">読み込み中...</td></tr></tbody>
+      </table>
+    </section>
+  </main>
+
+  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
+
+  <script src="_partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+  (function () {
+    document.addEventListener('DOMContentLoaded', async () => {
+      document.querySelector('#loading').hidden = false;
+      try {
+        const vehicles = await window.SkyRentAPI.listVehicles();
+        // 車種ごとにグルーピング
+        const types = {};
+        vehicles.forEach(v => {
+          const key = v.name;
+          if (!types[key]) types[key] = { name: v.name, class: v.class, capacity: v.capacity, count: 0 };
+          types[key].count++;
+        });
+        const rows = Object.values(types);
+        const tbl = document.querySelector('#tbl');
+        if (!rows.length) {
+          tbl.innerHTML = '<tr class="empty"><td colspan="5">車種が登録されていません</td></tr>';
+        } else {
+          tbl.innerHTML = rows.map((t, i) => `
+            <tr>
+              <td><code>T${String(i+1).padStart(3,'0')}</code></td>
+              <td><strong>${esc(t.name)}</strong></td>
+              <td>${esc(t.class||'')}</td>
+              <td style="text-align:center">${t.capacity || '-'}名</td>
+              <td style="text-align:center">${t.count}台</td>
+            </tr>
+          `).join('');
+        }
+      } catch (err) {
+        document.querySelector('#tbl').innerHTML = `<tr class="empty"><td colspan="5">読み込み失敗: ${err.message}</td></tr>`;
+      } finally {
+        document.querySelector('#loading').hidden = true;
+      }
+    });
+    function esc(str) { return String(str==null?'':str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  })();
+  </script>
+</body>
+</html>

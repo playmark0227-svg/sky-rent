@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>コンテンツ管理 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">コンテンツ管理</h1>
+    <p class="page-note">予約サイトのトップページに表示する各種テキスト。</p>
+
+    <section class="card" style="padding: 20px">
+      <div class="form-row">
+        <label>キャッチコピー</label>
+        <input type="text" value="空(そら)へ、自由を。Sky Rent." class="form-input">
+      </div>
+      <div class="form-row">
+        <label>サブコピー</label>
+        <input type="text" value="Googleカレンダーと連動した、新しいレンタカー予約。" class="form-input">
+      </div>
+      <div class="form-row">
+        <label>店舗紹介文</label>
+        <textarea rows="5" class="form-input">Sky Rent 本店です。空港まで徒歩5分、年中無休で営業しております。</textarea>
+      </div>
+      <div class="form-row">
+        <label>営業時間</label>
+        <input type="text" value="9:00 - 19:00 (年中無休)" class="form-input">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="alert('（デモ） 保存されました')">保存する</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="_partials.js"></script>
+</body>
+</html>

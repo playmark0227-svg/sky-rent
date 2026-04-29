@@ -50,6 +50,18 @@ function doGet(e) {
           data: getAvailability(e.parameter.start, e.parameter.end)
         };
         break;
+      case 'reservations':
+        result = { ok: true, data: listReservations(e.parameter.from, e.parameter.to) };
+        break;
+      case 'dashboard':
+        result = { ok: true, data: getDashboard(e.parameter.date) };
+        break;
+      case 'customers':
+        result = { ok: true, data: listCustomers() };
+        break;
+      case 'revenue':
+        result = { ok: true, data: getRevenue(e.parameter.year, e.parameter.month) };
+        break;
       default:
         result = { ok: false, error: 'Unknown action: ' + action };
     }
@@ -219,6 +231,185 @@ function createReservation(body) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// ===== 管理画面用エンドポイント =====
+/**
+ * ダッシュボード集計
+ * @param dateStr YYYY-MM-DD (省略時 = 当日)
+ * @return {
+ *   date,
+ *   bookings: 過去1週間に登録された予約数,
+ *   departures: 当日出発予定の予約[],
+ *   returns: 当日返却予定の予約[],
+ *   weekly: [{date, count}] 過去7日の登録数,
+ *   shaken: 車検期限切れの車輌[]
+ * }
+ */
+function getDashboard(dateStr) {
+  const target = dateStr ? new Date(dateStr + 'T00:00:00+09:00') : new Date();
+  target.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(target); dayEnd.setHours(23, 59, 59, 999);
+
+  const allReservations = listReservations() || [];
+
+  // 過去7日 (target含む) の登録数
+  const weekly = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(target); d.setDate(target.getDate() - i);
+    const dEnd = new Date(d); dEnd.setHours(23, 59, 59, 999);
+    const count = allReservations.filter(r => {
+      const c = new Date(r.createdAt);
+      return c >= d && c <= dEnd;
+    }).length;
+    weekly.push({
+      date: Utilities.formatDate(d, 'JST', 'M/d'),
+      count
+    });
+  }
+
+  // 当日登録の予約数 (KPI 1: 予約された件数)
+  const bookings = allReservations.filter(r => {
+    const c = new Date(r.createdAt);
+    return c >= target && c <= dayEnd;
+  });
+
+  // 当日出発の予約
+  const departures = allReservations.filter(r => {
+    const s = new Date(r.start);
+    return s >= target && s <= dayEnd;
+  }).sort((a, b) => new Date(a.start) - new Date(b.start));
+
+  // 当日返却の予約
+  const returns = allReservations.filter(r => {
+    const e = new Date(r.end);
+    return e >= target && e <= dayEnd;
+  }).sort((a, b) => new Date(a.end) - new Date(b.end));
+
+  return {
+    date: Utilities.formatDate(target, 'JST', 'yyyy-MM-dd'),
+    bookings: bookings.map(simplifyForList_),
+    departures: departures.map(simplifyForList_),
+    returns: returns.map(simplifyForList_),
+    weekly,
+    shaken: [] // TODO: 車検期限管理は v2 で対応
+  };
+}
+
+function simplifyForList_(r) {
+  return {
+    reservationId: r.reservationId,
+    vehicleId: r.vehicleId,
+    vehicleName: r.vehicleName,
+    customerName: r.customerName,
+    start: r.start,
+    end: r.end,
+    status: r.status
+  };
+}
+
+/**
+ * 予約一覧 (期間指定可)
+ */
+function listReservations(fromStr, toStr) {
+  const sheet = getOrCreateSheet_(CONFIG.SHEET_RESERVATIONS, [
+    'reservationId', 'vehicleId', 'vehicleName',
+    'customerName', 'customerEmail', 'customerPhone',
+    'start', 'end', 'status', 'note',
+    'calendarEventId', 'createdAt'
+  ]);
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const header = values[0];
+  let list = values.slice(1)
+    .map(row => Object.fromEntries(header.map((h, i) => [h, row[i]])))
+    .filter(r => r.reservationId);
+
+  if (fromStr) {
+    const from = new Date(fromStr);
+    list = list.filter(r => new Date(r.start) >= from);
+  }
+  if (toStr) {
+    const to = new Date(toStr);
+    list = list.filter(r => new Date(r.end) <= to);
+  }
+  // 開始日降順
+  list.sort((a, b) => new Date(b.start) - new Date(a.start));
+  // 日付を ISO 文字列に
+  list.forEach(r => {
+    if (r.start instanceof Date) r.start = r.start.toISOString();
+    if (r.end instanceof Date) r.end = r.end.toISOString();
+    if (r.createdAt instanceof Date) r.createdAt = r.createdAt.toISOString();
+  });
+  return list;
+}
+
+/**
+ * 顧客一覧 (予約台帳から重複排除して抽出)
+ */
+function listCustomers() {
+  const reservations = listReservations() || [];
+  const map = new Map();
+  reservations.forEach(r => {
+    const key = (r.customerEmail || r.customerName || '').toLowerCase();
+    if (!key) return;
+    if (!map.has(key)) {
+      map.set(key, {
+        name: r.customerName,
+        email: r.customerEmail,
+        phone: r.customerPhone,
+        reservationCount: 0,
+        latestReservation: r.start
+      });
+    }
+    const c = map.get(key);
+    c.reservationCount++;
+    if (new Date(r.start) > new Date(c.latestReservation)) {
+      c.latestReservation = r.start;
+    }
+  });
+  return Array.from(map.values()).sort((a, b) =>
+    new Date(b.latestReservation) - new Date(a.latestReservation));
+}
+
+/**
+ * 月別売上集計
+ */
+function getRevenue(year, month) {
+  const reservations = listReservations() || [];
+  const vehicles = listVehicles() || [];
+  const priceMap = {};
+  vehicles.forEach(v => { priceMap[v.vehicleId] = Number(v.pricePerDay) || 0; });
+
+  // 期間: 引数の年月、未指定なら過去12ヶ月
+  if (year && month) {
+    return revenueForMonth_(reservations, priceMap, Number(year), Number(month));
+  }
+  const now = new Date();
+  const months = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(revenueForMonth_(reservations, priceMap, d.getFullYear(), d.getMonth() + 1));
+  }
+  return months;
+}
+
+function revenueForMonth_(reservations, priceMap, year, month) {
+  const start = new Date(year, month - 1, 1);
+  const end = new Date(year, month, 1);
+  let total = 0;
+  let count = 0;
+  reservations.forEach(r => {
+    if (r.status === 'cancelled') return;
+    const s = new Date(r.start);
+    if (s < start || s >= end) return;
+    const e = new Date(r.end);
+    const days = Math.max(1, Math.ceil((e - s) / (24 * 60 * 60 * 1000)));
+    total += (priceMap[r.vehicleId] || 0) * days;
+    count++;
+  });
+  return { year, month, label: `${year}/${String(month).padStart(2, '0')}`, count, total };
 }
 
 // ===== ヘルパー =====

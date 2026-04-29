@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>売上集計 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">売上集計</h1>
+
+    <section class="kpi-row" style="margin-bottom: 16px">
+      <div class="kpi kpi-1">
+        <div class="kpi-label">直近12ヶ月の売上</div>
+        <div class="kpi-value"><span id="total-sum">0</span><span class="kpi-unit">円</span></div>
+      </div>
+      <div class="kpi kpi-2">
+        <div class="kpi-label">直近12ヶ月の予約数</div>
+        <div class="kpi-value"><span id="total-count">0</span><span class="kpi-unit">件</span></div>
+      </div>
+      <div class="kpi kpi-3">
+        <div class="kpi-label">月平均売上</div>
+        <div class="kpi-value"><span id="avg-sum">0</span><span class="kpi-unit">円</span></div>
+      </div>
+    </section>
+
+    <section class="card" style="padding: 18px">
+      <h3 style="margin-bottom:12px;font-size:15px;color:var(--primary)">月別売上 (棒グラフ)</h3>
+      <div style="height: 320px"><canvas id="chart"></canvas></div>
+    </section>
+
+    <section class="card" style="margin-top:12px">
+      <table class="data-table list">
+        <thead><tr><th>年月</th><th>予約数</th><th style="text-align:right">売上</th></tr></thead>
+        <tbody id="tbl"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
+
+  <script src="_partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+  (function () {
+    document.addEventListener('DOMContentLoaded', async () => {
+      document.querySelector('#loading').hidden = false;
+      try {
+        const data = await window.SkyRentAPI.getRevenue();
+        render(data);
+      } catch (err) {
+        alert('読み込み失敗: ' + err.message);
+      } finally {
+        document.querySelector('#loading').hidden = true;
+      }
+    });
+
+    function render(data) {
+      const totalSum = data.reduce((a,b) => a + b.total, 0);
+      const totalCnt = data.reduce((a,b) => a + b.count, 0);
+      document.querySelector('#total-sum').textContent = totalSum.toLocaleString();
+      document.querySelector('#total-count').textContent = totalCnt;
+      document.querySelector('#avg-sum').textContent = Math.round(totalSum/data.length).toLocaleString();
+
+      // チャート
+      new Chart(document.getElementById('chart'), {
+        type: 'bar',
+        data: {
+          labels: data.map(d => d.label),
+          datasets: [{
+            label: '売上',
+            data: data.map(d => d.total),
+            backgroundColor: '#4ec5b6'
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: v => '¥' + v.toLocaleString() } }
+          }
+        }
+      });
+
+      // テーブル
+      document.querySelector('#tbl').innerHTML = data.map(d => `
+        <tr>
+          <td>${d.label}</td>
+          <td style="text-align:center">${d.count}件</td>
+          <td style="text-align:right;font-weight:600">¥${d.total.toLocaleString()}</td>
+        </tr>
+      `).join('');
+    }
+  })();
+  </script>
+</body>
+</html>

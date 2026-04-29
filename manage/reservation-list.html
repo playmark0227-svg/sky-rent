@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>予約一覧 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">予約一覧</h1>
+
+    <section class="card filter-bar">
+      <div class="filter-group">
+        <label>期間</label>
+        <input type="date" id="from"> 〜 <input type="date" id="to">
+      </div>
+      <div class="filter-group">
+        <label>状態</label>
+        <select id="status-filter">
+          <option value="">すべて</option>
+          <option value="confirmed">確定</option>
+          <option value="cancelled">キャンセル</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>キーワード</label>
+        <input type="text" id="keyword" placeholder="顧客名・車輌・予約ID">
+      </div>
+      <button class="btn btn-primary" id="btn-filter">検 索</button>
+    </section>
+
+    <section class="card">
+      <table class="data-table list">
+        <thead>
+          <tr>
+            <th>予約ID</th>
+            <th>状態</th>
+            <th>貸出</th>
+            <th>返却</th>
+            <th>車種</th>
+            <th>車輌</th>
+            <th>借受人</th>
+            <th>連絡先</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbl">
+          <tr class="empty"><td colspan="9">読み込み中...</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
+
+  <script src="_partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+  (function () {
+    const $ = (s) => document.querySelector(s);
+    let allRows = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      $('#btn-filter').addEventListener('click', applyFilter);
+      $('#keyword').addEventListener('keypress', e => { if (e.key === 'Enter') applyFilter(); });
+      await load();
+    });
+
+    async function load() {
+      $('#loading').hidden = false;
+      try {
+        allRows = await window.SkyRentAPI.listReservations();
+        applyFilter();
+      } catch (err) {
+        $('#tbl').innerHTML = `<tr class="empty"><td colspan="9">読み込み失敗: ${err.message}</td></tr>`;
+      } finally {
+        $('#loading').hidden = true;
+      }
+    }
+
+    function applyFilter() {
+      const from = $('#from').value;
+      const to = $('#to').value;
+      const status = $('#status-filter').value;
+      const kw = $('#keyword').value.trim().toLowerCase();
+      let rows = allRows.slice();
+      if (from) rows = rows.filter(r => new Date(r.start) >= new Date(from));
+      if (to) rows = rows.filter(r => new Date(r.end) <= new Date(to + 'T23:59:59'));
+      if (status) rows = rows.filter(r => r.status === status);
+      if (kw) {
+        rows = rows.filter(r =>
+          (r.customerName || '').toLowerCase().includes(kw) ||
+          (r.vehicleName || '').toLowerCase().includes(kw) ||
+          (r.reservationId || '').toLowerCase().includes(kw)
+        );
+      }
+      render(rows);
+    }
+
+    function render(rows) {
+      const tbl = $('#tbl');
+      if (!rows.length) {
+        tbl.innerHTML = '<tr class="empty"><td colspan="9">該当する予約はありません</td></tr>';
+        return;
+      }
+      tbl.innerHTML = rows.map(r => `
+        <tr>
+          <td><code>${escapeHtml(r.reservationId)}</code></td>
+          <td><span class="status status-${r.status}">${statusLabel(r.status)}</span></td>
+          <td>${formatDateTime(r.start)}</td>
+          <td>${formatDateTime(r.end)}</td>
+          <td>${escapeHtml(r.vehicleName)}</td>
+          <td>${escapeHtml(r.vehicleId)}</td>
+          <td>${escapeHtml(r.customerName)}</td>
+          <td><small>${escapeHtml(r.customerEmail || '')}<br>${escapeHtml(r.customerPhone || '')}</small></td>
+          <td><a href="#" class="detail-link">詳細</a></td>
+        </tr>
+      `).join('');
+    }
+
+    function formatDateTime(s) {
+      if (!s) return '';
+      const d = new Date(s);
+      return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+    function statusLabel(s) {
+      return s === 'confirmed' ? '確定' : s === 'cancelled' ? 'キャンセル' : (s || '-');
+    }
+    function escapeHtml(str) {
+      return String(str==null?'':str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+  })();
+  </script>
+</body>
+</html>

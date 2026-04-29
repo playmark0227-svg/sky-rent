@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>店舗管理 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">店舗管理</h1>
+
+    <section class="card store-card">
+      <h3>Sky Rent 本店</h3>
+      <table class="info-table">
+        <tr><th>店舗ID</th><td>S001</td></tr>
+        <tr><th>住所</th><td>東京都〇〇区〇〇 1-2-3</td></tr>
+        <tr><th>電話番号</th><td>03-0000-0000</td></tr>
+        <tr><th>営業時間</th><td>9:00 - 19:00 (年中無休)</td></tr>
+        <tr><th>登録車輌数</th><td id="vehicle-count">-</td></tr>
+        <tr><th>担当者</th><td>山田太郎</td></tr>
+      </table>
+    </section>
+  </main>
+
+  <script src="_partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const v = await window.SkyRentAPI.listVehicles();
+        document.querySelector('#vehicle-count').textContent = v.length + '台';
+      } catch (e) {}
+    });
+  </script>
+</body>
+</html>
