@@ -13,32 +13,39 @@
     <h1 class="page-title">お知らせ管理</h1>
     <p class="page-note">予約サイトのトップに表示するお知らせ・ニュース。</p>
 
-    <section class="card filter-bar">
-      <div class="filter-group">
-        <label>状態</label>
-        <select><option>すべて</option><option>公開中</option><option>下書き</option><option>期限切れ</option></select>
-      </div>
-      <div class="filter-group">
-        <label>キーワード</label>
-        <input type="text" placeholder="タイトルで検索">
-      </div>
-      <button class="btn btn-primary">検 索</button>
-    </section>
+    <div style="text-align:right;margin-bottom:10px">
+      <button id="btn-add" class="btn btn-primary">+ お知らせを追加</button>
+    </div>
 
     <section class="card">
       <table class="data-table list">
-        <thead><tr><th>掲載日</th><th>NEW</th><th>タイトル</th><th>カテゴリ</th><th>公開期限</th><th>状態</th><th></th></tr></thead>
-        <tbody>
-          <tr><td>2026/04/29</td><td><span class="badge-new sm">NEW</span></td><td><strong>管理画面をリニューアルしました</strong></td><td>システム</td><td>2026/05/29</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>2026/04/15</td><td>-</td><td><strong>春のキャンペーン開始のお知らせ</strong></td><td>キャンペーン</td><td>2026/06/30</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>2026/04/10</td><td>-</td><td><strong>GW期間の営業時間変更</strong></td><td>お知らせ</td><td>2026/05/06</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>2026/03/20</td><td>-</td><td><strong>新車種追加のお知らせ</strong></td><td>お知らせ</td><td>無期限</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>2026/05/15</td><td>-</td><td><strong>夏休みキャンペーン (準備中)</strong></td><td>キャンペーン</td><td>-</td><td><span class="status status-cancelled">下書き</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-        </tbody>
+        <thead><tr><th>掲載日</th><th>タイトル</th><th>カテゴリ</th><th>公開期限</th><th>状態</th><th></th></tr></thead>
+        <tbody id="tbl"></tbody>
       </table>
     </section>
-    <div style="text-align:right;margin-top:12px"><button class="btn btn-primary">+ お知らせを追加</button></div>
   </main>
+
   <script src="partials.js"></script>
+  <script src="js/crud.js"></script>
+  <script>
+  SkyRentCRUD.init({
+    storageKey: 'notices',
+    idPrefix: 'N',
+    columns: [
+      { key: 'date',     label: '掲載日',  type: 'date', required: true },
+      { key: 'title',    label: 'タイトル', bold: true, required: true },
+      { key: 'category', label: 'カテゴリ', type: 'select', options: ['お知らせ','キャンペーン','システム','メンテナンス'] },
+      { key: 'expiry',   label: '公開期限' },
+      { key: 'active',   label: '状態', type: 'status' }
+    ],
+    defaults: [
+      { date: '2026-04-29', title: '管理画面をリニューアルしました', category: 'システム',   expiry: '2026/05/29', active: true },
+      { date: '2026-04-15', title: '春のキャンペーン開始のお知らせ', category: 'キャンペーン', expiry: '2026/06/30', active: true },
+      { date: '2026-04-10', title: 'GW期間の営業時間変更',           category: 'お知らせ',     expiry: '2026/05/06', active: true },
+      { date: '2026-03-20', title: '新車種追加のお知らせ',           category: 'お知らせ',     expiry: '無期限',     active: true },
+      { date: '2026-05-15', title: '夏休みキャンペーン (準備中)',    category: 'キャンペーン', expiry: '-',          active: false }
+    ]
+  });
+  </script>
 </body>
 </html>

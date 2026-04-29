@@ -11,13 +11,16 @@
 
   <main class="main">
     <h1 class="page-title">入力項目管理</h1>
-    <p class="page-note">予約フォームに表示する項目をカスタマイズします。並び順・必須/任意・表示有無を変更できます。</p>
+    <p class="page-note">予約フォームに表示する項目をカスタマイズします。「必須」「表示」を編集してください。</p>
+
+    <div style="text-align:right;margin-bottom:10px">
+      <button id="btn-add" class="btn btn-primary">+ 項目を追加</button>
+    </div>
 
     <section class="card">
       <table class="data-table list">
         <thead>
           <tr>
-            <th style="width:40px"></th>
             <th>項目ID</th>
             <th>項目名</th>
             <th>入力タイプ</th>
@@ -26,28 +29,9 @@
             <th></th>
           </tr>
         </thead>
-        <tbody id="tbl">
-          <tr><td>⋮⋮</td><td><code>F001</code></td><td><strong>お名前</strong></td><td>テキスト</td><td><label class="chk"><input type="checkbox" checked></label></td><td><label class="chk"><input type="checkbox" checked></label></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>⋮⋮</td><td><code>F002</code></td><td><strong>お名前 (フリガナ)</strong></td><td>テキスト</td><td><label class="chk"><input type="checkbox"></label></td><td><label class="chk"><input type="checkbox" checked></label></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>⋮⋮</td><td><code>F003</code></td><td><strong>メールアドレス</strong></td><td>メール</td><td><label class="chk"><input type="checkbox" checked></label></td><td><label class="chk"><input type="checkbox" checked></label></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>⋮⋮</td><td><code>F004</code></td><td><strong>電話番号</strong></td><td>電話</td><td><label class="chk"><input type="checkbox" checked></label></td><td><label class="chk"><input type="checkbox" checked></label></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>⋮⋮</td><td><code>F005</code></td><td><strong>住所</strong></td><td>テキスト</td><td><label class="chk"><input type="checkbox"></label></td><td><label class="chk"><input type="checkbox"></label></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>⋮⋮</td><td><code>F006</code></td><td><strong>運転免許証番号</strong></td><td>テキスト</td><td><label class="chk"><input type="checkbox"></label></td><td><label class="chk"><input type="checkbox"></label></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>⋮⋮</td><td><code>F007</code></td><td><strong>生年月日</strong></td><td>日付</td><td><label class="chk"><input type="checkbox"></label></td><td><label class="chk"><input type="checkbox"></label></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>⋮⋮</td><td><code>F008</code></td><td><strong>到着便 (空港送迎用)</strong></td><td>テキスト</td><td><label class="chk"><input type="checkbox"></label></td><td><label class="chk"><input type="checkbox"></label></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>⋮⋮</td><td><code>F009</code></td><td><strong>備考</strong></td><td>テキストエリア</td><td><label class="chk"><input type="checkbox"></label></td><td><label class="chk"><input type="checkbox" checked></label></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td>⋮⋮</td><td><code>F010</code></td><td><strong>利用規約への同意</strong></td><td>チェックボックス</td><td><label class="chk"><input type="checkbox" checked></label></td><td><label class="chk"><input type="checkbox" checked></label></td><td><a href="#" class="detail-link">編集</a></td></tr>
-        </tbody>
+        <tbody id="tbl"></tbody>
       </table>
     </section>
-
-    <div style="display:flex;justify-content:space-between;margin-top:14px">
-      <p style="color:var(--muted);font-size:12px">⋮⋮ 行の左端をドラッグして並び替え (ベータ機能)</p>
-      <div>
-        <button class="btn btn-primary">+ 項目を追加</button>
-        <button class="btn btn-primary" onclick="alert('（デモ） 並び順を保存しました')" style="margin-left:8px">並び順を保存</button>
-      </div>
-    </div>
 
     <section class="card" style="margin-top:18px;padding:20px">
       <h3 style="margin-bottom:10px;color:var(--primary);font-size:15px">使えるフィールドタイプ</h3>
@@ -58,13 +42,37 @@
         <tr><th>電話</th><td>数字とハイフンのみ</td></tr>
         <tr><th>日付</th><td>カレンダーピッカー</td></tr>
         <tr><th>セレクト</th><td>選択肢から1つ</td></tr>
-        <tr><th>ラジオ</th><td>単一選択</td></tr>
-        <tr><th>チェックボックス</th><td>複数選択 / 同意確認</td></tr>
-        <tr><th>ファイル</th><td>免許証コピー等のアップロード</td></tr>
+        <tr><th>チェックボックス</th><td>同意確認</td></tr>
       </table>
     </section>
   </main>
-  <style>.chk{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}</style>
+
   <script src="partials.js"></script>
+  <script src="js/crud.js"></script>
+  <script>
+  SkyRentCRUD.init({
+    storageKey: 'input-fields',
+    idPrefix: 'F',
+    columns: [
+      { key: 'id', label: '項目ID', code: true, readonly: true },
+      { key: 'name', label: '項目名', bold: true, required: true },
+      { key: 'fieldType', label: '入力タイプ', type: 'select', options: ['テキスト','テキストエリア','メール','電話','日付','セレクト','チェックボックス'] },
+      { key: 'required', label: '必須', type: 'checkbox', center: true },
+      { key: 'visible', label: '表示', type: 'checkbox', center: true }
+    ],
+    defaults: [
+      { id: 'F001', name: 'お名前',             fieldType: 'テキスト',       required: true,  visible: true },
+      { id: 'F002', name: 'お名前 (フリガナ)',  fieldType: 'テキスト',       required: false, visible: true },
+      { id: 'F003', name: 'メールアドレス',     fieldType: 'メール',         required: true,  visible: true },
+      { id: 'F004', name: '電話番号',           fieldType: '電話',           required: true,  visible: true },
+      { id: 'F005', name: '住所',               fieldType: 'テキスト',       required: false, visible: false },
+      { id: 'F006', name: '運転免許証番号',     fieldType: 'テキスト',       required: false, visible: false },
+      { id: 'F007', name: '生年月日',           fieldType: '日付',           required: false, visible: false },
+      { id: 'F008', name: '到着便 (空港送迎用)',fieldType: 'テキスト',       required: false, visible: false },
+      { id: 'F009', name: '備考',               fieldType: 'テキストエリア', required: false, visible: true },
+      { id: 'F010', name: '利用規約への同意',   fieldType: 'チェックボックス', required: true,  visible: true }
+    ]
+  });
+  </script>
 </body>
 </html>

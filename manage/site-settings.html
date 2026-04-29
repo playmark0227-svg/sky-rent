@@ -11,32 +11,25 @@
 
   <main class="main">
     <h1 class="page-title">予約サイト設定</h1>
-    <p class="page-note">予約サイト全体に関わる基本設定。</p>
+    <p class="page-note">予約サイト全体に関わる基本設定。「設定を保存」で localStorage に保存されます。</p>
 
     <section class="card" style="padding:24px">
       <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">基本情報</h3>
       <div class="form-row">
         <label>サイト名</label>
-        <input type="text" class="form-input" value="Sky Rent">
+        <input type="text" class="form-input" data-setting="siteName" value="Sky Rent">
       </div>
       <div class="form-row">
         <label>サイトURL</label>
-        <input type="text" class="form-input" value="https://playmark0227-svg.github.io/sky-rent/">
+        <input type="text" class="form-input" data-setting="siteUrl" value="https://playmark0227-svg.github.io/sky-rent/">
       </div>
       <div class="form-row">
         <label>事業者コード</label>
-        <input type="text" class="form-input" value="c00000-000001" readonly style="background:#f5f5f5">
+        <input type="text" class="form-input" data-setting="bizCode" value="c00000-000001" readonly style="background:#f5f5f5">
       </div>
       <div class="form-row">
         <label>テーマカラー</label>
-        <input type="color" value="#1c4a7a" style="width:60px;height:36px;border:1px solid var(--border);cursor:pointer">
-      </div>
-      <div class="form-row">
-        <label>ロゴ画像</label>
-        <div style="flex:1">
-          <input type="file" accept="image/*">
-          <small style="color:var(--muted);display:block;margin-top:4px">推奨: 200×60px / PNG透過</small>
-        </div>
+        <input type="color" data-setting="themeColor" value="#1c4a7a" style="width:60px;height:36px;border:1px solid var(--border);cursor:pointer">
       </div>
     </section>
 
@@ -44,28 +37,32 @@
       <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">予約設定</h3>
       <div class="form-row">
         <label>最短予約時間</label>
-        <select class="form-input"><option>1時間前</option><option>3時間前</option><option selected>6時間前</option><option>1日前</option></select>
+        <select class="form-input" data-setting="minLeadTime">
+          <option>1時間前</option><option>3時間前</option><option>6時間前</option><option>1日前</option>
+        </select>
       </div>
       <div class="form-row">
         <label>最長予約期間</label>
-        <select class="form-input"><option>30日先</option><option>60日先</option><option selected>180日先</option><option>365日先</option></select>
+        <select class="form-input" data-setting="maxLeadTime">
+          <option>30日先</option><option>60日先</option><option>180日先</option><option>365日先</option>
+        </select>
       </div>
       <div class="form-row">
         <label>キャンセル料</label>
         <div style="flex:1;display:flex;flex-direction:column;gap:6px;font-size:13px">
-          <label class="chk"><input type="checkbox" checked> 7日前まで: 無料</label>
-          <label class="chk"><input type="checkbox" checked> 3日前まで: 30%</label>
-          <label class="chk"><input type="checkbox" checked> 前日: 50%</label>
-          <label class="chk"><input type="checkbox" checked> 当日・無連絡: 100%</label>
+          <label class="chk"><input type="checkbox" data-setting="cancel.7days"> 7日前まで: 無料</label>
+          <label class="chk"><input type="checkbox" data-setting="cancel.3days"> 3日前まで: 30%</label>
+          <label class="chk"><input type="checkbox" data-setting="cancel.1day"> 前日: 50%</label>
+          <label class="chk"><input type="checkbox" data-setting="cancel.same"> 当日・無連絡: 100%</label>
         </div>
       </div>
       <div class="form-row">
         <label>支払方法</label>
         <div style="flex:1;display:flex;gap:14px;font-size:13px">
-          <label class="chk"><input type="checkbox" checked> 店頭現金</label>
-          <label class="chk"><input type="checkbox" checked> クレジットカード</label>
-          <label class="chk"><input type="checkbox"> QRコード決済</label>
-          <label class="chk"><input type="checkbox"> 銀行振込</label>
+          <label class="chk"><input type="checkbox" data-setting="pay.cash"> 店頭現金</label>
+          <label class="chk"><input type="checkbox" data-setting="pay.credit"> クレジットカード</label>
+          <label class="chk"><input type="checkbox" data-setting="pay.qr"> QRコード決済</label>
+          <label class="chk"><input type="checkbox" data-setting="pay.bank"> 銀行振込</label>
         </div>
       </div>
     </section>
@@ -74,23 +71,43 @@
       <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">通知設定</h3>
       <div class="form-row">
         <label>予約確認メール</label>
-        <label class="chk"><input type="checkbox" checked> 顧客に自動送信</label>
+        <label class="chk"><input type="checkbox" data-setting="notify.customer"> 顧客に自動送信</label>
       </div>
       <div class="form-row">
         <label>店舗への通知</label>
-        <input type="email" class="form-input" placeholder="info@sky-rent.example.com">
+        <input type="email" class="form-input" data-setting="notify.storeEmail" placeholder="info@sky-rent.example.com">
       </div>
       <div class="form-row">
         <label>送信元アドレス</label>
-        <input type="email" class="form-input" value="noreply@sky-rent.example.com">
+        <input type="email" class="form-input" data-setting="notify.fromEmail" value="noreply@sky-rent.example.com">
       </div>
     </section>
 
     <div style="text-align:center;margin-top:18px">
-      <button class="btn btn-primary" onclick="alert('（デモ） 保存しました')" style="padding:12px 50px;font-size:15px">設定を保存</button>
+      <button class="btn btn-primary" data-save style="padding:12px 50px;font-size:15px">設定を保存</button>
     </div>
   </main>
+
   <style>.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer}</style>
   <script src="partials.js"></script>
+  <script src="js/settings.js"></script>
+  <script>
+    SkyRentSettings.init('site');
+    // デフォルト値 (初回のみ)
+    const defaults = {
+      'cancel.7days': true, 'cancel.3days': true, 'cancel.1day': true, 'cancel.same': true,
+      'pay.cash': true, 'pay.credit': true, 'notify.customer': true,
+      'minLeadTime': '6時間前', 'maxLeadTime': '180日先'
+    };
+    if (!localStorage.getItem('sky-rent.settings.site')) {
+      Object.entries(defaults).forEach(([k, v]) => {
+        const el = document.querySelector(`[data-setting="${k}"]`);
+        if (el) {
+          if (el.type === 'checkbox') el.checked = !!v;
+          else el.value = v;
+        }
+      });
+    }
+  </script>
 </body>
 </html>

@@ -13,25 +13,45 @@
     <h1 class="page-title">ハイシーズン管理</h1>
     <p class="page-note">繁忙期の料金加算設定。GW・夏休み・年末年始など期間と倍率を指定します。</p>
 
+    <div style="text-align:right;margin-bottom:10px">
+      <button id="btn-add" class="btn btn-primary">+ シーズン追加</button>
+    </div>
+
     <section class="card">
       <table class="data-table list">
         <thead><tr><th>シーズンID</th><th>名称</th><th>期間</th><th>料金倍率</th><th>適用クラス</th><th>状態</th><th></th></tr></thead>
-        <tbody>
-          <tr><td><code>HS001</code></td><td><strong>ゴールデンウィーク</strong></td><td>2026/04/29 〜 2026/05/06</td><td>×1.30</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>HS002</code></td><td><strong>夏休み</strong></td><td>2026/07/20 〜 2026/08/31</td><td>×1.20</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>HS003</code></td><td><strong>シルバーウィーク</strong></td><td>2026/09/19 〜 2026/09/23</td><td>×1.15</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>HS004</code></td><td><strong>年末年始</strong></td><td>2026/12/26 〜 2027/01/05</td><td>×1.40</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>HS005</code></td><td><strong>春休み</strong></td><td>2027/03/20 〜 2027/04/05</td><td>×1.10</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-        </tbody>
+        <tbody id="tbl"></tbody>
       </table>
     </section>
-    <div style="text-align:right;margin-top:12px"><button class="btn btn-primary">+ シーズン追加</button></div>
 
     <section class="card" style="margin-top:18px;padding:20px">
       <h3 style="margin-bottom:10px;color:var(--primary);font-size:15px">優先順位について</h3>
       <p style="font-size:13px;color:var(--muted)">期間が重複する場合は、上にあるものが優先適用されます。料金プランとの併用も可能です。</p>
     </section>
   </main>
+
   <script src="partials.js"></script>
+  <script src="js/crud.js"></script>
+  <script>
+  SkyRentCRUD.init({
+    storageKey: 'high-season',
+    idPrefix: 'HS',
+    columns: [
+      { key: 'id', label: 'シーズンID', code: true, readonly: true },
+      { key: 'name', label: '名称', bold: true, required: true },
+      { key: 'period', label: '期間' },
+      { key: 'rate', label: '料金倍率' },
+      { key: 'targetClass', label: '適用クラス', type: 'select', options: ['全クラス','コンパクト','ミドル','ミニバン','SUV'] },
+      { key: 'active', label: '状態', type: 'status' }
+    ],
+    defaults: [
+      { id: 'HS001', name: 'ゴールデンウィーク', period: '2026/04/29 〜 2026/05/06', rate: '×1.30', targetClass: '全クラス', active: true },
+      { id: 'HS002', name: '夏休み',             period: '2026/07/20 〜 2026/08/31', rate: '×1.20', targetClass: '全クラス', active: true },
+      { id: 'HS003', name: 'シルバーウィーク',   period: '2026/09/19 〜 2026/09/23', rate: '×1.15', targetClass: '全クラス', active: true },
+      { id: 'HS004', name: '年末年始',           period: '2026/12/26 〜 2027/01/05', rate: '×1.40', targetClass: '全クラス', active: true },
+      { id: 'HS005', name: '春休み',             period: '2027/03/20 〜 2027/04/05', rate: '×1.10', targetClass: '全クラス', active: true }
+    ]
+  });
+  </script>
 </body>
 </html>

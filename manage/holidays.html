@@ -13,47 +13,70 @@
     <h1 class="page-title">定休日管理</h1>
     <p class="page-note">店舗休業日。この日は予約サイトから受付不可になります。</p>
 
-    <section class="card" style="padding: 20px">
+    <section class="card" style="padding:20px;margin-bottom:14px">
       <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">定例休業日</h3>
       <div class="form-row">
         <label>毎週の定休曜日</label>
         <div style="display:flex;gap:14px">
-          <label class="chk"><input type="checkbox"> 月</label>
-          <label class="chk"><input type="checkbox"> 火</label>
-          <label class="chk"><input type="checkbox"> 水</label>
-          <label class="chk"><input type="checkbox"> 木</label>
-          <label class="chk"><input type="checkbox"> 金</label>
-          <label class="chk"><input type="checkbox"> 土</label>
-          <label class="chk"><input type="checkbox"> 日</label>
+          <label class="chk"><input type="checkbox" data-setting="weekly.mon"> 月</label>
+          <label class="chk"><input type="checkbox" data-setting="weekly.tue"> 火</label>
+          <label class="chk"><input type="checkbox" data-setting="weekly.wed"> 水</label>
+          <label class="chk"><input type="checkbox" data-setting="weekly.thu"> 木</label>
+          <label class="chk"><input type="checkbox" data-setting="weekly.fri"> 金</label>
+          <label class="chk"><input type="checkbox" data-setting="weekly.sat"> 土</label>
+          <label class="chk"><input type="checkbox" data-setting="weekly.sun"> 日</label>
         </div>
       </div>
       <div class="form-row">
         <label>祝日</label>
-        <label class="chk"><input type="checkbox" checked> 国民の祝日は営業</label>
+        <label class="chk"><input type="checkbox" data-setting="open.holidays"> 国民の祝日は営業</label>
+      </div>
+      <div style="text-align:right">
+        <button class="btn btn-primary" data-save>定例休業日を保存</button>
       </div>
     </section>
 
-    <section class="card" style="margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="font-size:15px;color:var(--primary)">臨時休業日</h3>
+      <button id="btn-add" class="btn btn-primary">+ 臨時休業日を追加</button>
+    </div>
+
+    <section class="card">
       <table class="data-table list">
         <thead><tr><th>日付</th><th>曜日</th><th>理由</th><th></th></tr></thead>
-        <tbody>
-          <tr><td>2026/05/03</td><td>日</td><td>GW振替休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
-          <tr><td>2026/08/13</td><td>木</td><td>夏季休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
-          <tr><td>2026/08/14</td><td>金</td><td>夏季休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
-          <tr><td>2026/08/15</td><td>土</td><td>夏季休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
-          <tr><td>2026/12/30</td><td>水</td><td>年末休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
-          <tr><td>2026/12/31</td><td>木</td><td>年末休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
-          <tr><td>2027/01/01</td><td>金</td><td>元旦</td><td><a href="#" class="detail-link">削除</a></td></tr>
-          <tr><td>2027/01/02</td><td>土</td><td>正月休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
-          <tr><td>2027/01/03</td><td>日</td><td>正月休業</td><td><a href="#" class="detail-link">削除</a></td></tr>
-        </tbody>
+        <tbody id="tbl"></tbody>
       </table>
     </section>
-    <div style="text-align:right;margin-top:12px"><button class="btn btn-primary">+ 臨時休業日を追加</button></div>
   </main>
-  <style>
-    .chk { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border: 1px solid var(--border); border-radius: 3px; }
-  </style>
+
+  <style>.chk { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border: 1px solid var(--border); border-radius: 3px; }</style>
   <script src="partials.js"></script>
+  <script src="js/crud.js"></script>
+  <script src="js/settings.js"></script>
+  <script>
+  SkyRentSettings.init('holidays');
+  SkyRentCRUD.init({
+    storageKey: 'holidays-list',
+    idPrefix: 'H',
+    columns: [
+      { key: 'date', label: '日付', type: 'date', required: true,
+        format: v => v ? `${v.slice(0,4)}/${v.slice(5,7)}/${v.slice(8,10)}` : '' },
+      { key: 'dow', label: '曜日', derived: true,
+        format: (_, row) => { try { const d = new Date(row.date); return '日月火水木金土'[d.getDay()] || '-'; } catch(e) { return '-'; } } },
+      { key: 'reason', label: '理由' }
+    ],
+    defaults: [
+      { id: 'H001', date: '2026-05-03', reason: 'GW振替休業' },
+      { id: 'H002', date: '2026-08-13', reason: '夏季休業' },
+      { id: 'H003', date: '2026-08-14', reason: '夏季休業' },
+      { id: 'H004', date: '2026-08-15', reason: '夏季休業' },
+      { id: 'H005', date: '2026-12-30', reason: '年末休業' },
+      { id: 'H006', date: '2026-12-31', reason: '年末休業' },
+      { id: 'H007', date: '2027-01-01', reason: '元旦' },
+      { id: 'H008', date: '2027-01-02', reason: '正月休業' },
+      { id: 'H009', date: '2027-01-03', reason: '正月休業' }
+    ]
+  });
+  </script>
 </body>
 </html>

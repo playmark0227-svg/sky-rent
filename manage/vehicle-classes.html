@@ -13,19 +13,37 @@
     <h1 class="page-title">クラス管理</h1>
     <p class="page-note">車両の料金クラスを管理します。</p>
 
+    <div style="text-align:right;margin-bottom:10px">
+      <button id="btn-add" class="btn btn-primary">+ クラス追加</button>
+    </div>
+
     <section class="card">
       <table class="data-table list">
-        <thead><tr><th>クラスID</th><th>クラス名</th><th>料金/日 (基準)</th><th>説明</th></tr></thead>
-        <tbody>
-          <tr><td><code>K1</code></td><td><strong>コンパクト</strong></td><td>¥5,500</td><td>ヴィッツ・フィット等</td></tr>
-          <tr><td><code>K2</code></td><td><strong>ミドル</strong></td><td>¥7,700</td><td>カローラ・プリウス等</td></tr>
-          <tr><td><code>K3</code></td><td><strong>ミニバン</strong></td><td>¥11,000</td><td>ノア・セレナ等</td></tr>
-          <tr><td><code>K4</code></td><td><strong>SUV</strong></td><td>¥13,200</td><td>ハリアー・CX-5等</td></tr>
-        </tbody>
+        <thead><tr><th>クラスID</th><th>クラス名</th><th>料金/日 (基準)</th><th>説明</th><th></th></tr></thead>
+        <tbody id="tbl"></tbody>
       </table>
     </section>
   </main>
 
   <script src="partials.js"></script>
+  <script src="js/crud.js"></script>
+  <script>
+  SkyRentCRUD.init({
+    storageKey: 'vehicle-classes',
+    idPrefix: 'K',
+    columns: [
+      { key: 'id', label: 'クラスID', code: true, readonly: true },
+      { key: 'name', label: 'クラス名', bold: true, required: true },
+      { key: 'pricePerDay', label: '料金/日 (基準)', type: 'number', format: SkyRentCRUD.helpers.yen },
+      { key: 'description', label: '説明' }
+    ],
+    defaults: [
+      { id: 'K001', name: 'コンパクト', pricePerDay: 5500,  description: 'ヴィッツ・フィット等' },
+      { id: 'K002', name: 'ミドル',     pricePerDay: 7700,  description: 'カローラ・プリウス等' },
+      { id: 'K003', name: 'ミニバン',   pricePerDay: 11000, description: 'ノア・セレナ等' },
+      { id: 'K004', name: 'SUV',        pricePerDay: 13200, description: 'ハリアー・CX-5等' }
+    ]
+  });
+  </script>
 </body>
 </html>

@@ -11,25 +11,43 @@
 
   <main class="main">
     <h1 class="page-title">料金プラン管理</h1>
-    <p class="page-note">時期や利用条件に応じた料金プラン。早割・連泊割・タイムセールなどを設定できます。</p>
+    <p class="page-note">時期や利用条件に応じた料金プラン。</p>
+
+    <div style="text-align:right;margin-bottom:10px">
+      <button id="btn-add" class="btn btn-primary">+ 新規プラン</button>
+    </div>
 
     <section class="card">
       <table class="data-table list">
-        <thead>
-          <tr><th>プランID</th><th>プラン名</th><th>適用期間</th><th>割引内容</th><th>対象クラス</th><th>状態</th><th></th></tr>
-        </thead>
-        <tbody>
-          <tr><td><code>P001</code></td><td><strong>早割30</strong></td><td>30日前〜</td><td>15%OFF</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>P002</code></td><td><strong>早割7</strong></td><td>7日前〜</td><td>5%OFF</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>P003</code></td><td><strong>3連泊割引</strong></td><td>3泊以上</td><td>10%OFF</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>P004</code></td><td><strong>平日割</strong></td><td>月〜木曜出発</td><td>8%OFF</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>P005</code></td><td><strong>GW特別料金</strong></td><td>2026/04/29〜05/06</td><td>+30%</td><td>全クラス</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>P006</code></td><td><strong>夏休みプラン</strong></td><td>2026/07/20〜08/31</td><td>+20%</td><td>全クラス</td><td><span class="status status-cancelled">準備中</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-        </tbody>
+        <thead><tr><th>プランID</th><th>プラン名</th><th>適用期間</th><th>割引内容</th><th>対象クラス</th><th>状態</th><th></th></tr></thead>
+        <tbody id="tbl"></tbody>
       </table>
     </section>
-    <div style="text-align:right;margin-top:12px"><button class="btn btn-primary">+ 新規プラン</button></div>
   </main>
+
   <script src="partials.js"></script>
+  <script src="js/crud.js"></script>
+  <script>
+  SkyRentCRUD.init({
+    storageKey: 'price-plans',
+    idPrefix: 'P',
+    columns: [
+      { key: 'id', label: 'プランID', code: true, readonly: true },
+      { key: 'name', label: 'プラン名', bold: true, required: true },
+      { key: 'period', label: '適用期間' },
+      { key: 'discount', label: '割引内容' },
+      { key: 'targetClass', label: '対象クラス', type: 'select', options: ['全クラス','コンパクト','ミドル','ミニバン','SUV'] },
+      { key: 'active', label: '状態', type: 'status' }
+    ],
+    defaults: [
+      { id: 'P001', name: '早割30',       period: '30日前〜',       discount: '15%OFF', targetClass: '全クラス', active: true },
+      { id: 'P002', name: '早割7',        period: '7日前〜',        discount: '5%OFF',  targetClass: '全クラス', active: true },
+      { id: 'P003', name: '3連泊割引',    period: '3泊以上',        discount: '10%OFF', targetClass: '全クラス', active: true },
+      { id: 'P004', name: '平日割',       period: '月〜木曜出発',   discount: '8%OFF',  targetClass: '全クラス', active: true },
+      { id: 'P005', name: 'GW特別料金',   period: '2026/04/29〜05/06', discount: '+30%', targetClass: '全クラス', active: true },
+      { id: 'P006', name: '夏休みプラン', period: '2026/07/20〜08/31', discount: '+20%', targetClass: '全クラス', active: false }
+    ]
+  });
+  </script>
 </body>
 </html>

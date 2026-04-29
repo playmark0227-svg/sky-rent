@@ -16,26 +16,26 @@
     <section class="card" style="padding:24px">
       <div class="form-row">
         <label>GA4 測定ID</label>
-        <input type="text" class="form-input" placeholder="G-XXXXXXXXXX" value="">
+        <input type="text" class="form-input" data-setting="ga4Id" placeholder="G-XXXXXXXXXX">
       </div>
       <div class="form-row">
         <label>Universal Analytics ID</label>
-        <input type="text" class="form-input" placeholder="UA-XXXXXXXXX-X (旧版・任意)" value="">
+        <input type="text" class="form-input" data-setting="uaId" placeholder="UA-XXXXXXXXX-X (旧版・任意)">
       </div>
       <div class="form-row">
         <label>イベント計測</label>
         <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-          <label class="chk"><input type="checkbox" checked> 予約完了 (purchase)</label>
-          <label class="chk"><input type="checkbox" checked> 車種ページ閲覧 (view_item)</label>
-          <label class="chk"><input type="checkbox"> 検索イベント (search)</label>
+          <label class="chk"><input type="checkbox" data-setting="event.purchase"> 予約完了 (purchase)</label>
+          <label class="chk"><input type="checkbox" data-setting="event.viewItem"> 車種ページ閲覧 (view_item)</label>
+          <label class="chk"><input type="checkbox" data-setting="event.search"> 検索イベント (search)</label>
         </div>
       </div>
       <div class="form-row">
         <label>クロスドメイン</label>
-        <input type="text" class="form-input" placeholder="example.com,example.jp">
+        <input type="text" class="form-input" data-setting="crossDomain" placeholder="example.com,example.jp">
       </div>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="alert('（デモ） 保存しました')">保存する</button>
+        <button class="btn btn-primary" data-save>保存する</button>
       </div>
     </section>
 
@@ -43,14 +43,25 @@
       <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">Google Search Console 連携</h3>
       <div class="form-row">
         <label>所有権確認用メタタグ</label>
-        <input type="text" class="form-input" placeholder='<meta name="google-site-verification" content="..." />'>
+        <input type="text" class="form-input" data-setting="gscMeta" placeholder='<meta name="google-site-verification" content="..." />'>
       </div>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="alert('（デモ） 保存しました')">保存する</button>
+        <button class="btn btn-primary" data-save>保存する</button>
       </div>
     </section>
   </main>
+
   <style>.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer}</style>
   <script src="partials.js"></script>
+  <script src="js/settings.js"></script>
+  <script>
+    SkyRentSettings.init('ga');
+    if (!localStorage.getItem('sky-rent.settings.ga')) {
+      ['event.purchase','event.viewItem'].forEach(k => {
+        const el = document.querySelector(`[data-setting="${k}"]`);
+        if (el) el.checked = true;
+      });
+    }
+  </script>
 </body>
 </html>

@@ -17,15 +17,15 @@
       <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">トップページ メタ情報</h3>
       <div class="form-row">
         <label>タイトル (title)</label>
-        <input type="text" class="form-input" value="Sky Rent | 空(そら)へ、自由を。レンタカー予約" maxlength="60">
+        <input type="text" class="form-input" data-setting="title" value="Sky Rent | 空(そら)へ、自由を。レンタカー予約" maxlength="60">
       </div>
       <div class="form-row">
         <label>説明 (description)</label>
-        <textarea class="form-input" rows="3" maxlength="160">Googleカレンダー連動の新しいレンタカー予約サイト。空車検索から予約までWeb完結。コンパクトカー〜SUVまで4車種を取り揃えています。</textarea>
+        <textarea class="form-input" data-setting="description" rows="3" maxlength="160">Googleカレンダー連動の新しいレンタカー予約サイト。空車検索から予約までWeb完結。コンパクトカー〜SUVまで4車種を取り揃えています。</textarea>
       </div>
       <div class="form-row">
         <label>キーワード (keywords)</label>
-        <input type="text" class="form-input" value="レンタカー,予約,Sky Rent,コンパクト,SUV,Googleカレンダー">
+        <input type="text" class="form-input" data-setting="keywords" value="レンタカー,予約,Sky Rent,コンパクト,SUV,Googleカレンダー">
       </div>
     </section>
 
@@ -33,19 +33,15 @@
       <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">OGP (SNS共有)</h3>
       <div class="form-row">
         <label>OGタイトル</label>
-        <input type="text" class="form-input" value="Sky Rent - 空へ、自由を。">
-      </div>
-      <div class="form-row">
-        <label>OG画像</label>
-        <input type="file" accept="image/*">
+        <input type="text" class="form-input" data-setting="og.title" value="Sky Rent - 空へ、自由を。">
       </div>
       <div class="form-row">
         <label>OG画像URL</label>
-        <input type="text" class="form-input" placeholder="https://...">
+        <input type="text" class="form-input" data-setting="og.imageUrl" placeholder="https://...">
       </div>
       <div class="form-row">
         <label>Twitterカード形式</label>
-        <select class="form-input">
+        <select class="form-input" data-setting="twitter.card">
           <option>summary_large_image (大きい画像)</option>
           <option>summary (小さい画像)</option>
         </select>
@@ -56,30 +52,26 @@
       <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">構造化データ</h3>
       <div class="form-row">
         <label>事業者タイプ</label>
-        <select class="form-input">
+        <select class="form-input" data-setting="schema.type">
           <option>LocalBusiness (一般事業者)</option>
           <option selected>AutoRental (レンタカー事業)</option>
         </select>
       </div>
       <div class="form-row">
         <label>営業時間 (JSON-LD)</label>
-        <textarea class="form-input" rows="3">"openingHours": "Mo-Su 09:00-19:00"</textarea>
+        <textarea class="form-input" data-setting="schema.openingHours" rows="3">"openingHours": "Mo-Su 09:00-19:00"</textarea>
       </div>
       <div class="form-row">
-        <label>位置情報</label>
-        <input type="text" class="form-input" placeholder="緯度,経度">
+        <label>位置情報 (緯度,経度)</label>
+        <input type="text" class="form-input" data-setting="schema.geo" placeholder="35.6812, 139.7671">
       </div>
     </section>
 
     <section class="card" style="margin-top:14px;padding:24px">
       <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">サイトマップ・robots.txt</h3>
       <div class="form-row">
-        <label>sitemap.xml</label>
-        <button class="btn btn-primary">再生成</button>
-      </div>
-      <div class="form-row">
         <label>robots.txt</label>
-        <textarea class="form-input" rows="4">User-agent: *
+        <textarea class="form-input" data-setting="robots" rows="4">User-agent: *
 Allow: /
 Disallow: /manage/
 
@@ -88,9 +80,11 @@ Sitemap: https://playmark0227-svg.github.io/sky-rent/sitemap.xml</textarea>
     </section>
 
     <div style="text-align:center;margin-top:18px">
-      <button class="btn btn-primary" onclick="alert('（デモ） 保存しました')" style="padding:12px 50px;font-size:15px">SEO設定を保存</button>
+      <button class="btn btn-primary" data-save style="padding:12px 50px;font-size:15px">SEO設定を保存</button>
     </div>
   </main>
   <script src="partials.js"></script>
+  <script src="js/settings.js"></script>
+  <script>SkyRentSettings.init('seo');</script>
 </body>
 </html>

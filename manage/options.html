@@ -11,24 +11,45 @@
 
   <main class="main">
     <h1 class="page-title">オプション管理</h1>
-    <p class="page-note">予約時に追加できるオプション品目。チャイルドシート・ETC・カーナビなど。</p>
+    <p class="page-note">予約時に追加できるオプション品目。</p>
+
+    <div style="text-align:right;margin-bottom:10px">
+      <button id="btn-add" class="btn btn-primary">+ オプション追加</button>
+    </div>
 
     <section class="card">
       <table class="data-table list">
         <thead><tr><th>ID</th><th>名称</th><th>料金</th><th>課金単位</th><th>在庫</th><th>必須</th><th>状態</th><th></th></tr></thead>
-        <tbody>
-          <tr><td><code>OP01</code></td><td><strong>チャイルドシート</strong></td><td>¥1,100</td><td>1回</td><td>10個</td><td>-</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>OP02</code></td><td><strong>ジュニアシート</strong></td><td>¥1,100</td><td>1回</td><td>5個</td><td>-</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>OP03</code></td><td><strong>ETCカード貸出</strong></td><td>¥330</td><td>1日</td><td>20枚</td><td>-</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>OP04</code></td><td><strong>スタッドレスタイヤ</strong></td><td>¥2,200</td><td>1日</td><td>4台分</td><td>-</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>OP05</code></td><td><strong>免責補償(CDW)</strong></td><td>¥1,650</td><td>1日</td><td>無制限</td><td>推奨</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>OP06</code></td><td><strong>NOC補償</strong></td><td>¥550</td><td>1日</td><td>無制限</td><td>-</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>OP07</code></td><td><strong>ペット同乗</strong></td><td>¥3,300</td><td>1回</td><td>-</td><td>-</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-        </tbody>
+        <tbody id="tbl"></tbody>
       </table>
     </section>
-    <div style="text-align:right;margin-top:12px"><button class="btn btn-primary">+ オプション追加</button></div>
   </main>
+
   <script src="partials.js"></script>
+  <script src="js/crud.js"></script>
+  <script>
+  SkyRentCRUD.init({
+    storageKey: 'options',
+    idPrefix: 'OP',
+    columns: [
+      { key: 'id', label: 'ID', code: true, readonly: true },
+      { key: 'name', label: '名称', bold: true, required: true },
+      { key: 'price', label: '料金', type: 'number', format: SkyRentCRUD.helpers.yen },
+      { key: 'unit', label: '課金単位', type: 'select', options: ['1日','1回','期間中','無制限'] },
+      { key: 'stock', label: '在庫' },
+      { key: 'recommend', label: '必須/推奨', type: 'select', options: ['-','推奨','必須'] },
+      { key: 'active', label: '状態', type: 'status' }
+    ],
+    defaults: [
+      { id: 'OP01', name: 'チャイルドシート',  price: 1100, unit: '1回', stock: '10個',    recommend: '-',   active: true },
+      { id: 'OP02', name: 'ジュニアシート',    price: 1100, unit: '1回', stock: '5個',     recommend: '-',   active: true },
+      { id: 'OP03', name: 'ETCカード貸出',     price: 330,  unit: '1日', stock: '20枚',    recommend: '-',   active: true },
+      { id: 'OP04', name: 'スタッドレスタイヤ',price: 2200, unit: '1日', stock: '4台分',   recommend: '-',   active: true },
+      { id: 'OP05', name: '免責補償(CDW)',     price: 1650, unit: '1日', stock: '無制限',  recommend: '推奨',active: true },
+      { id: 'OP06', name: 'NOC補償',           price: 550,  unit: '1日', stock: '無制限',  recommend: '-',   active: true },
+      { id: 'OP07', name: 'ペット同乗',        price: 3300, unit: '1回', stock: '-',       recommend: '-',   active: true }
+    ]
+  });
+  </script>
 </body>
 </html>

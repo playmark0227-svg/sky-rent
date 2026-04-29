@@ -13,22 +13,43 @@
     <h1 class="page-title">カスタムページ管理</h1>
     <p class="page-note">予約サイトに任意の固定ページを追加できます (利用規約、プライバシーポリシー、よくある質問など)。</p>
 
+    <div style="text-align:right;margin-bottom:10px">
+      <button id="btn-add" class="btn btn-primary">+ 新規ページ作成</button>
+    </div>
+
     <section class="card">
       <table class="data-table list">
         <thead><tr><th>ページID</th><th>タイトル</th><th>URL</th><th>更新日</th><th>状態</th><th></th></tr></thead>
-        <tbody>
-          <tr><td><code>P01</code></td><td><strong>利用規約</strong></td><td>/terms</td><td>2026/04/15</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>P02</code></td><td><strong>プライバシーポリシー</strong></td><td>/privacy</td><td>2026/04/15</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>P03</code></td><td><strong>よくあるご質問</strong></td><td>/faq</td><td>2026/04/20</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>P04</code></td><td><strong>会社概要</strong></td><td>/company</td><td>2026/04/01</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>P05</code></td><td><strong>キャンセル規定</strong></td><td>/cancel-policy</td><td>2026/04/10</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>P06</code></td><td><strong>特定商取引法に基づく表記</strong></td><td>/legal</td><td>2026/04/01</td><td><span class="status status-confirmed">公開</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>P07</code></td><td><strong>キャンペーン情報</strong></td><td>/campaign</td><td>2026/04/25</td><td><span class="status status-cancelled">下書き</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-        </tbody>
+        <tbody id="tbl"></tbody>
       </table>
     </section>
-    <div style="text-align:right;margin-top:12px"><button class="btn btn-primary">+ 新規ページ作成</button></div>
   </main>
+
   <script src="partials.js"></script>
+  <script src="js/crud.js"></script>
+  <script>
+  SkyRentCRUD.init({
+    storageKey: 'custom-pages',
+    idPrefix: 'P',
+    columns: [
+      { key: 'id', label: 'ページID', code: true, readonly: true },
+      { key: 'title', label: 'タイトル', bold: true, required: true },
+      { key: 'url', label: 'URL', required: true },
+      { key: 'body', label: '本文', type: 'textarea' },
+      { key: 'updatedAt', label: '更新日', type: 'date' },
+      { key: 'active', label: '状態', type: 'status',
+        statusLabel: v => v === true || v === 'true' ? '公開' : '下書き' }
+    ],
+    defaults: [
+      { id: 'P01', title: '利用規約',                     url: '/terms',         body: 'Sky Rent ご利用規約\n\n第1条 (目的)...', updatedAt: '2026-04-15', active: true },
+      { id: 'P02', title: 'プライバシーポリシー',         url: '/privacy',       body: '...',                                       updatedAt: '2026-04-15', active: true },
+      { id: 'P03', title: 'よくあるご質問',               url: '/faq',           body: 'Q. 予約はいつまでに?\nA. ...',              updatedAt: '2026-04-20', active: true },
+      { id: 'P04', title: '会社概要',                     url: '/company',       body: '株式会社Sky Rent...',                       updatedAt: '2026-04-01', active: true },
+      { id: 'P05', title: 'キャンセル規定',               url: '/cancel-policy', body: '7日前まで無料...',                          updatedAt: '2026-04-10', active: true },
+      { id: 'P06', title: '特定商取引法に基づく表記',     url: '/legal',         body: '販売事業者: ...',                           updatedAt: '2026-04-01', active: true },
+      { id: 'P07', title: 'キャンペーン情報',             url: '/campaign',      body: '夏のキャンペーン...',                       updatedAt: '2026-04-25', active: false }
+    ]
+  });
+  </script>
 </body>
 </html>

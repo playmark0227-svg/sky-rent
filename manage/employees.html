@@ -13,20 +13,18 @@
     <h1 class="page-title">従業員管理</h1>
     <p class="page-note">店舗スタッフのアカウント管理。権限ごとに操作範囲を制限できます。</p>
 
+    <div style="text-align:right;margin-bottom:10px">
+      <button id="btn-add" class="btn btn-primary">+ 従業員を追加</button>
+    </div>
+
     <section class="card">
       <table class="data-table list">
         <thead>
           <tr><th>従業員ID</th><th>氏名</th><th>メールアドレス</th><th>所属店舗</th><th>権限</th><th>最終ログイン</th><th>状態</th><th></th></tr>
         </thead>
-        <tbody>
-          <tr><td><code>E001</code></td><td><strong>山田 太郎</strong></td><td>yamada@sky-rent.example.com</td><td>本店</td><td>管理者</td><td>2026/04/29 09:12</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>E002</code></td><td><strong>佐藤 花子</strong></td><td>sato@sky-rent.example.com</td><td>本店</td><td>店舗スタッフ</td><td>2026/04/29 08:55</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>E003</code></td><td><strong>鈴木 一郎</strong></td><td>suzuki@sky-rent.example.com</td><td>本店</td><td>整備担当</td><td>2026/04/28 17:30</td><td><span class="status status-confirmed">有効</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-          <tr><td><code>E004</code></td><td><strong>田中 二郎</strong></td><td>tanaka@sky-rent.example.com</td><td>本店</td><td>閲覧のみ</td><td>2026/04/20 11:00</td><td><span class="status status-cancelled">休止中</span></td><td><a href="#" class="detail-link">編集</a></td></tr>
-        </tbody>
+        <tbody id="tbl"></tbody>
       </table>
     </section>
-    <div style="text-align:right;margin-top:12px"><button class="btn btn-primary">+ 従業員を追加</button></div>
 
     <section class="card" style="margin-top:18px;padding:20px">
       <h3 style="margin-bottom:12px;font-size:15px;color:var(--primary)">権限の説明</h3>
@@ -38,6 +36,29 @@
       </table>
     </section>
   </main>
+
   <script src="partials.js"></script>
+  <script src="js/crud.js"></script>
+  <script>
+  SkyRentCRUD.init({
+    storageKey: 'employees',
+    idPrefix: 'E',
+    columns: [
+      { key: 'id', label: '従業員ID', code: true, readonly: true },
+      { key: 'name', label: '氏名', bold: true, required: true },
+      { key: 'email', label: 'メールアドレス', type: 'email' },
+      { key: 'store', label: '所属店舗', type: 'select', options: ['本店'] },
+      { key: 'role', label: '権限', type: 'select', options: ['管理者','店舗スタッフ','整備担当','閲覧のみ'] },
+      { key: 'lastLogin', label: '最終ログイン' },
+      { key: 'active', label: '状態', type: 'status' }
+    ],
+    defaults: [
+      { id: 'E001', name: '山田 太郎', email: 'yamada@sky-rent.example.com',  store: '本店', role: '管理者',     lastLogin: '2026/04/29 09:12', active: true },
+      { id: 'E002', name: '佐藤 花子', email: 'sato@sky-rent.example.com',    store: '本店', role: '店舗スタッフ', lastLogin: '2026/04/29 08:55', active: true },
+      { id: 'E003', name: '鈴木 一郎', email: 'suzuki@sky-rent.example.com',  store: '本店', role: '整備担当',   lastLogin: '2026/04/28 17:30', active: true },
+      { id: 'E004', name: '田中 二郎', email: 'tanaka@sky-rent.example.com',  store: '本店', role: '閲覧のみ',   lastLogin: '2026/04/20 11:00', active: false }
+    ]
+  });
+  </script>
 </body>
 </html>

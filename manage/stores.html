@@ -11,30 +11,46 @@
 
   <main class="main">
     <h1 class="page-title">店舗管理</h1>
+    <p class="page-note">店舗情報を編集して保存できます。多店舗運営時は「+ 店舗追加」で増やせます。</p>
 
-    <section class="card store-card">
-      <h3>Sky Rent 本店</h3>
-      <table class="info-table">
-        <tr><th>店舗ID</th><td>S001</td></tr>
-        <tr><th>住所</th><td>東京都〇〇区〇〇 1-2-3</td></tr>
-        <tr><th>電話番号</th><td>03-0000-0000</td></tr>
-        <tr><th>営業時間</th><td>9:00 - 19:00 (年中無休)</td></tr>
-        <tr><th>登録車輌数</th><td id="vehicle-count">-</td></tr>
-        <tr><th>担当者</th><td>山田太郎</td></tr>
+    <div style="text-align:right;margin-bottom:10px">
+      <button id="btn-add" class="btn btn-primary">+ 店舗追加</button>
+    </div>
+
+    <section class="card">
+      <table class="data-table list">
+        <thead><tr><th>店舗ID</th><th>店舗名</th><th>住所</th><th>電話番号</th><th>営業時間</th><th>担当者</th><th>状態</th><th></th></tr></thead>
+        <tbody id="tbl"></tbody>
       </table>
     </section>
   </main>
 
   <script src="partials.js"></script>
-  <script src="../js/config.js"></script>
-  <script src="../js/api.js"></script>
+  <script src="js/crud.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      try {
-        const v = await window.SkyRentAPI.listVehicles();
-        document.querySelector('#vehicle-count').textContent = v.length + '台';
-      } catch (e) {}
-    });
+  SkyRentCRUD.init({
+    storageKey: 'stores',
+    idPrefix: 'S',
+    columns: [
+      { key: 'id', label: '店舗ID', code: true, readonly: true },
+      { key: 'name', label: '店舗名', bold: true, required: true },
+      { key: 'address', label: '住所' },
+      { key: 'phone', label: '電話番号', type: 'tel' },
+      { key: 'hours', label: '営業時間' },
+      { key: 'manager', label: '担当者' },
+      { key: 'active', label: '状態', type: 'status' }
+    ],
+    defaults: [
+      {
+        id: 'S001', name: 'Sky Rent 本店',
+        address: '東京都〇〇区〇〇 1-2-3',
+        phone: '03-0000-0000',
+        hours: '9:00-19:00 (年中無休)',
+        manager: '山田 太郎',
+        active: true
+      }
+    ]
+  });
   </script>
 </body>
 </html>

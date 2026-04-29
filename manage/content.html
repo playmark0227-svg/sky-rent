@@ -16,26 +16,36 @@
     <section class="card" style="padding: 20px">
       <div class="form-row">
         <label>キャッチコピー</label>
-        <input type="text" value="空(そら)へ、自由を。Sky Rent." class="form-input">
+        <input type="text" data-setting="catchCopy" value="空(そら)へ、自由を。Sky Rent." class="form-input">
       </div>
       <div class="form-row">
         <label>サブコピー</label>
-        <input type="text" value="Googleカレンダーと連動した、新しいレンタカー予約。" class="form-input">
+        <input type="text" data-setting="subCopy" value="Googleカレンダーと連動した、新しいレンタカー予約。" class="form-input">
       </div>
       <div class="form-row">
         <label>店舗紹介文</label>
-        <textarea rows="5" class="form-input">Sky Rent 本店です。空港まで徒歩5分、年中無休で営業しております。</textarea>
+        <textarea data-setting="storeIntro" rows="5" class="form-input">Sky Rent 本店です。空港まで徒歩5分、年中無休で営業しております。</textarea>
       </div>
       <div class="form-row">
         <label>営業時間</label>
-        <input type="text" value="9:00 - 19:00 (年中無休)" class="form-input">
+        <input type="text" data-setting="businessHours" value="9:00 - 19:00 (年中無休)" class="form-input">
+      </div>
+      <div class="form-row">
+        <label>店舗電話番号</label>
+        <input type="tel" data-setting="phone" value="0000-00-0000" class="form-input">
+      </div>
+      <div class="form-row">
+        <label>店舗住所</label>
+        <input type="text" data-setting="address" placeholder="東京都〇〇区〇〇 1-2-3" class="form-input">
       </div>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="alert('（デモ） 保存されました')">保存する</button>
+        <button class="btn btn-primary" data-save>保存する</button>
       </div>
     </section>
   </main>
 
   <script src="partials.js"></script>
+  <script src="js/settings.js"></script>
+  <script>SkyRentSettings.init('content');</script>
 </body>
 </html>
