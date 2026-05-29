@@ -55,10 +55,24 @@
       </div>
     </section>
 
+    <section class="card" style="margin-top:14px;padding:24px">
+      <h3 style="margin-bottom:6px;font-size:15px;color:var(--primary)">データのバックアップ / 復元</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">
+        車輌・予約・各種設定などすべてのデータを 1 つの JSON ファイルに書き出し / 読み込みできます。
+        定期的なバックアップや、別の端末への移行にご利用ください。
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary" id="btn-export">⬇ バックアップをダウンロード</button>
+        <button class="btn btn-gray" id="btn-import-trigger">⬆ バックアップから復元</button>
+        <input type="file" id="import-file" accept="application/json,.json" hidden>
+        <span id="data-stat" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    </section>
+
     <section class="card" style="margin-top:14px;padding:24px;border-color:#fde8e6">
       <h3 style="margin-bottom:6px;font-size:15px;color:#c0392b">危険ゾーン</h3>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">以下の操作は元に戻せません。</p>
-      <div style="display:flex;gap:10px">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">以下の操作は元に戻せません。実行前にバックアップをおすすめします。</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn btn-gray" id="btn-logout">ログアウト</button>
         <button class="btn btn-gray" id="btn-reset" style="background:#c0392b">設定を初期化 (全データ削除)</button>
       </div>
@@ -97,6 +111,77 @@
       });
       alert('全データを削除しました。ページを再読み込みします。');
       window.location.href = 'dashboard.html';
+    });
+
+    // ===== データのバックアップ / 復元 =====
+    function collectData() {
+      const out = {};
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith('sky-rent.')) out[k] = localStorage.getItem(k);
+      });
+      return out;
+    }
+
+    // 現在のデータ統計を表示
+    (function updateStat() {
+      const data = collectData();
+      let vehicles = 0, reservations = 0;
+      try { vehicles = (JSON.parse(data['sky-rent.vehicles'] || '[]')).length; } catch (e) {}
+      try { reservations = (JSON.parse(data['sky-rent.reservations'] || '[]')).length; } catch (e) {}
+      document.querySelector('#data-stat').textContent =
+        `保存済み: 車輌 ${vehicles} 台 / 予約 ${reservations} 件 / 設定キー ${Object.keys(data).length} 項目`;
+    })();
+
+    document.querySelector('#btn-export').addEventListener('click', () => {
+      const payload = {
+        _app: 'sky-rent',
+        _version: 1,
+        _exportedAt: new Date().toISOString(),
+        data: collectData()
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const d = new Date();
+      const stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+      a.href = url;
+      a.download = `sky-rent-backup-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      SkyRentSettings.showToast('✓ バックアップをダウンロードしました');
+    });
+
+    document.querySelector('#btn-import-trigger').addEventListener('click', () => {
+      document.querySelector('#import-file').click();
+    });
+
+    document.querySelector('#import-file').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          const data = parsed && parsed.data ? parsed.data : parsed;
+          if (!data || typeof data !== 'object') throw new Error('形式が正しくありません');
+          const keys = Object.keys(data).filter(k => k.startsWith('sky-rent.'));
+          if (!keys.length) throw new Error('Sky Rent のデータが見つかりません');
+          if (!confirm(`バックアップから ${keys.length} 項目を復元します。\n現在のデータは上書きされます。続行しますか?`)) {
+            e.target.value = '';
+            return;
+          }
+          keys.forEach(k => localStorage.setItem(k, data[k]));
+          alert('✓ 復元しました。ページを再読み込みします。');
+          window.location.reload();
+        } catch (err) {
+          alert('復元に失敗しました: ' + err.message);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsText(file);
     });
   </script>
 </body>

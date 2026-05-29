@@ -182,6 +182,30 @@ html, body {
 }
 .user-menu .topnav-menu { right: 0 !important; left: auto !important; }
 .user-menu .topnav-menu a { font-size: 13px; }
+.caret { font-size: 10px; opacity: 0.8; }
+
+/* ハンバーガー (モバイルのみ表示) */
+.nav-burger {
+  display: none;
+  margin-left: auto;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 10px 12px;
+  flex-direction: column;
+  gap: 5px;
+}
+.nav-burger-bar {
+  display: block;
+  width: 26px;
+  height: 3px;
+  background: #fff;
+  border-radius: 2px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.topbar.mobile-open .nav-burger-bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+.topbar.mobile-open .nav-burger-bar:nth-child(2) { opacity: 0; }
+.topbar.mobile-open .nav-burger-bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
 
 /* ===== メイン ===== */
 .main {
@@ -677,18 +701,110 @@ a.kpi:hover {
 .gantt-bar.status-cancelled { background: #c0392b; opacity: 0.6; text-decoration: line-through; }
 .gantt-bar:hover { filter: brightness(1.1); }
 
-/* レスポンシブ */
+/* ===== レスポンシブ ===== */
+/* タブレット幅: 多段グリッドを縦積みに */
 @media (max-width: 1100px) {
   .mid-row, .bottom-row { grid-template-columns: 1fr; }
   .kpi-row { grid-template-columns: 1fr; }
   .topbar-links { display: none; }
 }
+
+/* モバイル/小型タブレット: ナビをハンバーガードロワー化 */
+@media (max-width: 960px) {
+  .nav-burger { display: flex; }
+  .topbar-inner { flex-wrap: wrap; align-items: center; min-height: 56px; padding: 0 8px; }
+  .brand { border-right: 0; margin-right: 0; }
+
+  /* 既定では nav と right ブロックを隠し、開いたときだけ縦展開 */
+  /* flex:0 0 100% で必ず独立行に折り返す (ベースの flex:1 を打ち消す) */
+  .topnav, .topbar-right {
+    display: none;
+    flex: 0 0 100%;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    margin-left: 0;
+    gap: 0;
+    padding: 0;
+  }
+  .topbar.mobile-open .topnav,
+  .topbar.mobile-open .topbar-right { display: flex; }
+  .topbar.mobile-open .topbar-right {
+    border-top: 1px solid rgba(255,255,255,0.15);
+    padding: 6px 0 10px;
+  }
+
+  .topnav-item { display: block; position: static; }
+  .topnav-toggle, .topbar-user {
+    width: 100%;
+    text-align: left;
+    height: auto;
+    padding: 14px 18px;
+    border: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .topnav-item.open .topnav-toggle .caret { transform: rotate(180deg); }
+
+  /* サブメニューはアコーディオン (静的配置) */
+  .topnav-menu {
+    position: static;
+    display: none;
+    width: 100%;
+    min-width: 0;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+    background: rgba(0,0,0,0.18);
+  }
+  .topnav-item.open .topnav-menu { display: block; }
+  .topnav-menu a { color: #eaf1f8; padding: 13px 30px; justify-content: flex-start; }
+  .topnav-menu a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .topnav-menu a.active { background: rgba(255,255,255,0.16); color: #fff; }
+  .user-menu .topnav-menu { left: 0 !important; right: auto !important; }
+
+  /* ドロワー内ではリンク群を表示 (1100px の display:none を上書き) */
+  .topbar.mobile-open .topbar-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .topbar.mobile-open .topbar-links a {
+    color: #eaf1f8;
+    padding: 13px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+  }
+}
+
+/* スマホ幅: 余白・テーブル横スクロール・フォーム縦積み */
 @media (max-width: 760px) {
-  .topbar-inner { flex-wrap: wrap; padding: 8px; }
-  .brand { padding-right: 10px; margin-right: 4px; }
-  .topnav { width: 100%; overflow-x: auto; }
-  .topnav-toggle { padding: 12px 10px; font-size: 13px; }
-  .date-bar { flex-direction: column; gap: 12px; align-items: stretch; }
-  .date-bar-left { flex-direction: column; gap: 8px; align-items: stretch; }
+  .main { padding: 12px 10px 36px; }
+  .page-title { font-size: 18px; }
   .kpi-value { font-size: 40px; }
+
+  /* 広いテーブルはカード内で横スクロール (レイアウト崩れ防止) */
+  .card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .gantt-wrap, .card.kpi-row { overflow-x: auto; }
+  .data-table.list { min-width: 600px; }
+
+  /* 日付バー縦積み */
+  .date-bar { flex-direction: column; gap: 12px; align-items: stretch; }
+  .date-bar-left { flex-direction: column; gap: 10px; align-items: stretch; }
+  .date-bar-right .btn { width: 100%; }
+
+  /* フィルタバー縦積み */
+  .filter-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .filter-group { flex-wrap: wrap; }
+  .filter-group input[type="text"],
+  .filter-group input[type="date"],
+  .filter-group select { flex: 1; min-width: 0; }
+
+  /* モーダル/フォームを縦積みに */
+  .crud-modal-card { min-width: 0; width: 94vw; }
+  .crud-modal .crud-field { flex-direction: column; align-items: stretch; gap: 6px; }
+  .crud-modal .crud-field label { width: auto; }
+  .form-row { flex-direction: column; gap: 6px; }
+  .form-row label { width: auto; padding-top: 0; }
 }

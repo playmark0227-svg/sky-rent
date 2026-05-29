@@ -10,6 +10,13 @@
     // ===== 管理画面で設定したコンテンツ・テーマカラーを反映 =====
     (function() {
       try {
+        // favicon (ブランドアイコン)
+        (function() {
+          const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0a6ebd"/><text x="32" y="44" font-size="34" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="bold">✈</text></svg>';
+          const href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+          const icon = document.createElement('link'); icon.rel = 'icon'; icon.href = href; document.head.appendChild(icon);
+          const apple = document.createElement('link'); apple.rel = 'apple-touch-icon'; apple.href = href; document.head.appendChild(apple);
+        })();
         const content = JSON.parse(localStorage.getItem('sky-rent.settings.content') || '{}');
         const seo = JSON.parse(localStorage.getItem('sky-rent.settings.seo') || '{}');
         const site = JSON.parse(localStorage.getItem('sky-rent.settings.site') || '{}');

@@ -44,6 +44,12 @@
     .brand-mark { display: inline-flex !important; align-items: center; justify-content: center; background: var(--primary); color: #fff; border-radius: 50%; font-family: "Yu Mincho",serif; }
   </style>
   <script>
+    // favicon
+    (function() {
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#1c4a7a"/><text x="32" y="46" font-size="40" text-anchor="middle" fill="#ffffff" font-family="serif" font-weight="bold">空</text></svg>';
+      const href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+      const icon = document.createElement('link'); icon.rel = 'icon'; icon.href = href; document.head.appendChild(icon);
+    })();
     document.querySelector('#login-form').addEventListener('submit', e => {
       e.preventDefault();
       const fd = new FormData(e.target);

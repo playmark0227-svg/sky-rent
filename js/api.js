@@ -9,10 +9,14 @@
 
   // ===== モックデータ (GAS未設定時は localStorage を使用) =====
   const VEHICLE_DEFAULTS = [
-    { vehicleId: 'V001', name: 'コンパクト (ヴィッツ等)', class: 'コンパクト', plate: '札幌 500 あ 1234', capacity: 5, pricePerDay: 5500, active: true },
-    { vehicleId: 'V002', name: 'ミドル (カローラ等)',     class: 'ミドル',     plate: '札幌 500 あ 5678', capacity: 5, pricePerDay: 7700, active: true },
+    { vehicleId: 'V001', name: 'コンパクト (ヴィッツ等)', class: 'コンパクト', plate: '札幌 500 あ 1234', capacity: 5, pricePerDay: 5500,  active: true },
+    { vehicleId: 'V002', name: 'ミドル (カローラ等)',     class: 'ミドル',     plate: '札幌 500 あ 5678', capacity: 5, pricePerDay: 7700,  active: true },
     { vehicleId: 'V003', name: 'ミニバン (ノア等)',       class: 'ミニバン',   plate: '札幌 500 あ 9012', capacity: 7, pricePerDay: 11000, active: true },
-    { vehicleId: 'V004', name: 'SUV (ハリアー等)',        class: 'SUV',        plate: '札幌 500 あ 3456', capacity: 5, pricePerDay: 13200, active: true }
+    { vehicleId: 'V004', name: 'SUV (ハリアー等)',        class: 'SUV',        plate: '札幌 500 あ 3456', capacity: 5, pricePerDay: 13200, active: true },
+    { vehicleId: 'V005', name: '軽自動車 (N-BOX等)',      class: '軽自動車',   plate: '札幌 580 か 7788', capacity: 4, pricePerDay: 4400,  active: true },
+    { vehicleId: 'V006', name: 'ワゴン (セレナ等)',       class: 'ミニバン',   plate: '札幌 500 さ 2233', capacity: 8, pricePerDay: 12100, active: true },
+    { vehicleId: 'V007', name: 'バン (ハイエース等)',     class: 'バン',       plate: '札幌 400 す 4455', capacity: 6, pricePerDay: 14300, active: true },
+    { vehicleId: 'V008', name: '高級セダン (クラウン等)', class: 'ミドル',     plate: '札幌 300 た 6677', capacity: 5, pricePerDay: 16500, active: true }
   ];
 
   // localStorage の車両マスタを取得 (なければ既定値を投入)
@@ -28,27 +32,59 @@
   function localReservations() {
     const raw = localStorage.getItem('sky-rent.reservations');
     if (raw == null) {
-      // デモ予約 2 件を投入
-      const today = new Date().toISOString();
-      const tomorrow = new Date(Date.now()+86400000).toISOString();
-      const seed = [
-        {
-          reservationId: 'DEMO001', vehicleId: 'V003', vehicleName: 'ミニバン (ノア等)',
-          customerName: '伊藤', customerEmail: 'ito@example.com', customerPhone: '090-1111-2222',
-          start: today, end: tomorrow, status: 'confirmed', note: '', createdAt: today
-        },
-        {
-          reservationId: 'DEMO002', vehicleId: 'V001', vehicleName: 'コンパクト (ヴィッツ等)',
-          customerName: '佐藤', customerEmail: 'sato@example.com', customerPhone: '090-3333-4444',
-          start: new Date(Date.now()+3*86400000).toISOString(),
-          end: new Date(Date.now()+5*86400000).toISOString(),
-          status: 'confirmed', note: 'チャイルドシート希望', createdAt: today
-        }
-      ];
+      const seed = buildSeedReservations();
       localStorage.setItem('sky-rent.reservations', JSON.stringify(seed));
       return seed;
     }
     try { return JSON.parse(raw); } catch (e) { return []; }
+  }
+
+  // 「今日」を基準に時系列へ分散したデモ予約を生成
+  // (過去/本日/未来にまたがり、ダッシュボード・ガント・稼働率・売上が動いて見えるようにする)
+  function buildSeedReservations() {
+    const nameById = {};
+    VEHICLE_DEFAULTS.forEach(v => { nameById[v.vehicleId] = v.name; });
+    const DAY = 86400000;
+    // 指定オフセット日の 時:分 の ISO 文字列
+    const at = (offsetDays, hour) => {
+      const d = new Date();
+      d.setHours(hour, 0, 0, 0);
+      d.setDate(d.getDate() + offsetDays);
+      return d.toISOString();
+    };
+    // [開始オフセット, 日数, 車輌, 氏名, メール, 電話, 状態, 備考, 登録オフセット]
+    const rows = [
+      [-20, 3, 'V004', '田中 健一',   'tanaka@example.com',  '090-1010-2020', 'confirmed', '',                  -22],
+      [-15, 2, 'V001', '鈴木 美咲',   'suzuki@example.com',  '080-2233-4455', 'cancelled', 'お客様都合キャンセル', -17],
+      [ -9, 4, 'V003', '高橋 大輔',   'takahashi@example.com','090-3344-5566', 'confirmed', '禁煙車希望',         -10],
+      [ -6, 2, 'V007', '山本工務店',   'yamamoto-k@example.com','011-555-6677', 'confirmed', '社用・資材運搬',      -6],
+      [ -4, 2, 'V002', '伊藤 翔太',   'ito-s@example.com',   '070-6677-8899', 'confirmed', '',                   -5],
+      [ -2, 2, 'V008', '中村 由美',   'nakamura@example.com','090-7788-9900', 'confirmed', '空港送迎',            -3],
+      [ -1, 2, 'V006', '小林 様',     'kobayashi@example.com','080-8899-0011', 'confirmed', 'チャイルドシート×2',  -2],
+      [  0, 1, 'V003', '加藤 健',     'kato@example.com',    '090-1212-3434', 'confirmed', '',                   -1],
+      [  0, 3, 'V001', '吉田 直樹',   'yoshida@example.com', '070-2323-4545', 'confirmed', '',                    0],
+      [  1, 2, 'V004', '佐々木 玲奈', 'sasaki@example.com',  '080-3434-5656', 'confirmed', '',                   -1],
+      [  3, 4, 'V002', '松本 浩二',   'matsumoto@example.com','090-4545-6767', 'confirmed', '長期割引適用',         0],
+      [  5, 2, 'V006', '井上 美穂',   'inoue@example.com',   '070-5656-7878', 'confirmed', '',                   -2],
+      [  8, 3, 'V005', '木村 拓也',   'kimura@example.com',  '080-6767-8989', 'confirmed', '',                   -1],
+      [ 12, 2, 'V008', '渡辺 さやか', 'watanabe@example.com','090-7878-9090', 'confirmed', '記念日利用',           0]
+    ];
+    return rows.map((r, i) => {
+      const [off, dur, vid, name, email, phone, status, note, createdOff] = r;
+      return {
+        reservationId: 'R' + String(i + 1).padStart(4, '0'),
+        vehicleId: vid,
+        vehicleName: nameById[vid] || vid,
+        customerName: name,
+        customerEmail: email,
+        customerPhone: phone,
+        start: at(off, 10),
+        end: at(off + dur, 10),
+        status: status,
+        note: note,
+        createdAt: at(createdOff, 9)
+      };
+    });
   }
   function saveReservations(list) {
     localStorage.setItem('sky-rent.reservations', JSON.stringify(list));
@@ -135,7 +171,25 @@
           return e >= target && e <= dayEnd;
         });
 
-        resolve({ date: today, bookings, departures, returns, weekly, shaken: [] });
+        // 車検の未予約: 車輌マスタから車検満了日を擬似算出し、予約が未だ入っていないものを抽出
+        // (shaken-list.html と同じロジック。実運用では車輌台帳の車検満了日カラムを参照)
+        const nowReal = new Date();
+        const shaken = vehicles.map((v, i) => {
+          const expiry = new Date(nowReal);
+          expiry.setMonth(expiry.getMonth() + (i * 4 - 2));
+          const daysLeft = Math.ceil((expiry - nowReal) / 86400000);
+          const booked = i % 2 === 0 && daysLeft < 100;
+          return {
+            expireDate: expiry.getFullYear() + '/' + String(expiry.getMonth()+1).padStart(2,'0') + '/' + String(expiry.getDate()).padStart(2,'0'),
+            vehicleName: v.name,
+            plate: v.plate || '',
+            daysLeft, booked
+          };
+        }).filter(s => !s.booked && s.daysLeft > -60 && s.daysLeft <= 365)
+          .sort((a, b) => a.daysLeft - b.daysLeft)
+          .slice(0, 5);
+
+        resolve({ date: today, bookings, departures, returns, weekly, shaken });
       } else if (action === 'reservations') {
         let list = reservations.slice();
         if (params && params.from) list = list.filter(r => new Date(r.start) >= new Date(params.from));

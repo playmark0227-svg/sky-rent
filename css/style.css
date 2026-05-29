@@ -84,7 +84,9 @@ body {
 .site-nav a:hover { color: var(--color-primary); }
 
 @media (max-width: 600px) {
-  .site-nav { display: none; }
+  .header-inner { height: auto; padding: 8px 20px; flex-wrap: wrap; gap: 6px; }
+  .site-nav { gap: 12px; width: 100%; justify-content: space-between; }
+  .site-nav a { font-size: 12px; }
 }
 
 /* ===== Hero ===== */
