@@ -36,8 +36,9 @@
             <button class="topnav-toggle" aria-haspopup="true" aria-expanded="false">予約管理 <span class="caret">▼</span></button>
             <div class="topnav-menu">
               <a href="dashboard.html">ダッシュボード</a>
-              <a href="reservation-table.html">貸渡予約表</a>
+              <a href="reservation-table.html">貸渡予約表 (ガント)</a>
               <a href="reservation-list.html">予約一覧</a>
+              <a href="forms.html">帳票出力 (貸渡証・領収書等)</a>
               <a href="reservation-cancellations.html">予約キャンセル一覧</a>
               <a href="shaken-list.html">車検予約一覧</a>
               <a href="inspection-list.html">点検予約一覧</a>
@@ -46,13 +47,13 @@
           <div class="topnav-item">
             <button class="topnav-toggle" aria-haspopup="true" aria-expanded="false">各種管理 <span class="caret">▼</span></button>
             <div class="topnav-menu">
-              <a href="customers.html">顧客管理</a>
-              <a href="customer-rates.html">顧客料金種別管理</a>
-              <a href="vehicle-classes.html">クラス管理</a>
-              <a href="vehicle-types.html">車種管理</a>
-              <a href="vehicles.html">車輌管理</a>
-              <a href="price-plans.html">料金プラン管理</a>
+              <a href="categories.html">カテゴリ管理 (カスタム項目)</a>
+              <a href="vehicles.html">車両・物品管理</a>
               <a href="options.html">オプション管理</a>
+              <a href="members.html">顧客・会員管理</a>
+              <a href="invoices.html">請求書管理</a>
+              <a href="customer-rates.html">顧客料金種別管理</a>
+              <a href="price-plans.html">料金プラン管理</a>
               <a href="holidays.html">定休日管理</a>
               <a href="high-season.html">ハイシーズン管理</a>
             </div>
@@ -78,6 +79,7 @@
             <button class="topnav-toggle" aria-haspopup="true" aria-expanded="false">予約サイト設定 <span class="caret">▼</span></button>
             <div class="topnav-menu">
               <a href="site-settings.html">予約サイト設定</a>
+              <a href="points.html">ポイント・クーポン設定</a>
               <a href="content.html">コンテンツ管理</a>
               <a href="custom-pages.html">カスタムページ管理</a>
               <a href="notices.html">お知らせ管理</a>
@@ -98,9 +100,10 @@
               ${escapeHtml(profile.name)}
               <small>事業者コード: c00000-000001 ▼</small>
             </button>
-            <div class="topnav-menu" style="right:0;left:auto;min-width:200px">
+            <div class="topnav-menu" style="right:0;left:auto;min-width:220px">
               <a href="profile.html">プロフィール編集</a>
               <a href="../" target="_blank">予約サイトを表示 ↗</a>
+              <a href="../docs/index.html" target="_blank">システムドキュメント ↗</a>
               <a href="#" id="topbar-logout" style="color:#c0392b">ログアウト</a>
             </div>
           </div>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>詳細・ご予約 | Sky Rent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/public.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">✈</span><span class="logo-text">Sky Rent</span></a>
+      <nav class="site-nav">
+        <a href="index.html#categories" data-i18n="nav.categories">カテゴリ</a>
+        <a href="search.html" data-i18n="nav.search">予約する</a>
+        <a href="index.html#locations" data-i18n="nav.locations">店舗一覧</a>
+        <a href="mypage.html" data-i18n="nav.mypage">マイページ</a>
+        <button class="lang-btn" data-lang-toggle type="button">EN</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top:24px;padding-bottom:60px">
+    <div class="steps">
+      <span class="step done"><span class="n">1</span><span data-sk="s1">検索</span></span>
+      <span class="sep">›</span>
+      <span class="step active"><span class="n">2</span><span data-sk="s2">車両を選択</span></span>
+      <span class="sep">›</span>
+      <span class="step"><span class="n">3</span><span data-sk="s3">情報入力</span></span>
+      <span class="sep">›</span>
+      <span class="step"><span class="n">4</span><span data-sk="s4">完了</span></span>
+    </div>
+
+    <p class="muted mb16" id="crumb" style="font-size:12px"></p>
+    <div id="notfound" hidden class="p-card tc"><p class="muted">対象が見つかりませんでした。</p><a href="search.html" class="btn btn-primary mt16" data-i18n="detail.back">検索結果へ戻る</a></div>
+
+    <div class="detail-grid" id="detail-grid" hidden>
+      <!-- 左: 詳細 -->
+      <div>
+        <div class="p-card">
+          <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+            <div style="font-size:80px;line-height:1" id="d-image">📦</div>
+            <div>
+              <div class="muted" id="d-cat" style="font-size:12px;margin-bottom:4px"></div>
+              <h1 style="font-size:24px" id="d-name"></h1>
+              <div class="muted mt8" id="d-loc" style="font-size:13px"></div>
+            </div>
+          </div>
+          <div id="d-license"></div>
+          <h3 class="mt24 mb8" data-i18n="detail.specs" style="font-size:15px">スペック・装備</h3>
+          <table class="spec-table" id="d-specs"></table>
+        </div>
+
+        <div class="p-card mt16">
+          <h3 style="font-size:15px" id="price-title">料金プラン</h3>
+          <table class="spec-table mt8" id="d-plans"></table>
+        </div>
+
+        <a href="search.html" class="btn btn-secondary mt16" id="back-btn" data-i18n="detail.back">← 検索結果へ戻る</a>
+      </div>
+
+      <!-- 右: 予約パネル -->
+      <div class="detail-side">
+        <div class="p-card">
+          <h3 style="font-size:16px" data-i18n="detail.estimate">料金見積り</h3>
+          <div class="fg mt16" style="display:flex;flex-direction:column;gap:6px">
+            <label class="muted" style="font-size:12px;font-weight:700" data-i18n="search.start">出発日時 (受取)</label>
+            <input type="datetime-local" id="p-start" style="padding:9px 10px;border:1px solid var(--color-border);border-radius:6px;font-family:inherit">
+          </div>
+          <div class="fg mt8" style="display:flex;flex-direction:column;gap:6px">
+            <label class="muted" style="font-size:12px;font-weight:700" data-i18n="search.end">返却日時</label>
+            <input type="datetime-local" id="p-end" style="padding:9px 10px;border:1px solid var(--color-border);border-radius:6px;font-family:inherit">
+          </div>
+          <div class="fg mt8" id="qty-wrap" style="display:none;flex-direction:column;gap:6px">
+            <label class="muted" style="font-size:12px;font-weight:700" data-i18n="detail.quantity">数量</label>
+            <select id="p-qty" style="padding:9px 10px;border:1px solid var(--color-border);border-radius:6px;font-family:inherit"></select>
+          </div>
+
+          <div id="opt-area" class="mt8"></div>
+
+          <div class="price-box mt16">
+            <div class="price-lines" id="p-lines"></div>
+            <div class="price-total"><span data-i18n="detail.total">合計 (税込)</span><span class="amt" id="p-total">¥0</span></div>
+          </div>
+          <div class="mt8" id="p-avail"></div>
+          <button class="btn btn-primary btn-lg mt16" id="book-btn" style="width:100%" data-i18n="detail.book">この内容で予約に進む</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer"><div class="container"><p data-i18n="footer.copyright">© 2026 Sky Rent</p></div></footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/pricing.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+  (function () {
+    const S = window.SkyRentStore, I = window.SkyRentI18n, P = window.SkyRentPricing;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    const isEn = () => I.getLang() === 'en';
+    const catName = c => c && isEn() && c.nameEn ? c.nameEn : (c ? c.name : '');
+    const assetName = a => isEn() && a.nameEn ? a.nameEn : a.name;
+
+    const L = {
+      s1:{ja:'検索',en:'Search'}, s2:{ja:'車両を選択',en:'Select'}, s3:{ja:'情報入力',en:'Details'}, s4:{ja:'完了',en:'Done'},
+      plans:{ja:'料金プラン',en:'Pricing'},
+      ph:{ja:'時間貸し',en:'Hourly'}, pd:{ja:'日貸し',en:'Daily'}, pw:{ja:'週貸し (7日〜)',en:'Weekly (7d+)'}, pm:{ja:'月貸し (30日〜)',en:'Monthly (30d+)'},
+      cap:{ja:'定員',en:'Capacity'}, plate:{ja:'ナンバー',en:'Plate'}, stock:{ja:'在庫数',en:'Stock'}, loc:{ja:'取扱拠点',en:'Location'}, cat:{ja:'カテゴリ',en:'Category'},
+      avOk:{ja:'ご予約いただけます',en:'Available'}, avNg:{ja:'この期間は予約できません',en:'Not available for this period'},
+      stockLeft:{ja:n=>'残り '+n,en:n=>n+' left'},
+      guest:{ja:'名',en:''}, unit:{ja:'点',en:''}
+    };
+    const tt = k => L[k][isEn()?'en':'ja'];
+    function fmtLocal(iso){const d=iso?new Date(iso):null;if(!d)return '';const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());}
+
+    const params = new URLSearchParams(location.search);
+    const asset = S.getAsset(params.get('id'));
+    let cat, options = { common: [], specific: [] };
+    let selectedOptions = [];
+
+    if (!asset) { document.addEventListener('DOMContentLoaded', () => { $('#notfound').hidden = false; }); return; }
+    cat = S.getCategory(asset.categoryId);
+    const isItem = cat && cat.type === 'item';
+
+    function renderStatic() {
+      document.querySelectorAll('[data-sk]').forEach(el => { el.textContent = tt(el.dataset.sk); });
+      const loc = S.getLocation(asset.locationId);
+      $('#crumb').innerHTML = '<a href="index.html" style="color:var(--color-primary)">' + I.t('nav.categories') + '</a> › <a href="search.html?category=' + asset.categoryId + '" style="color:var(--color-primary)">' + esc(catName(cat)) + '</a> › ' + esc(assetName(asset));
+      $('#d-image').textContent = asset.image || '📦';
+      $('#d-cat').textContent = catName(cat) + ' ・ ' + (loc ? (isEn() && loc.nameEn ? loc.nameEn : loc.name) : '');
+      $('#d-name').textContent = assetName(asset);
+      $('#d-loc').textContent = loc ? (loc.address + ' / ' + loc.tel) : '';
+
+      // 免許警告
+      if (asset.requiredLicense) {
+        $('#d-license').innerHTML = '<div class="license-box"><strong>⚠ ' + I.t('detail.license') + '</strong>' + esc(asset.requiredLicense) + '</div>';
+      } else { $('#d-license').innerHTML = ''; }
+
+      // スペック表 (共通 + カスタム項目)
+      const rows = [];
+      rows.push([tt('cat'), catName(cat)]);
+      rows.push([tt('loc'), loc ? (isEn() && loc.nameEn ? loc.nameEn : loc.name) : '']);
+      if (asset.capacity) rows.push([tt('cap'), asset.capacity + (isEn() ? '' : '名')]);
+      if (asset.plate) rows.push([tt('plate'), asset.plate]);
+      if (isItem) rows.push([tt('stock'), asset.stock + (isEn() ? ' units' : '点')]);
+      (cat.customFieldDefs || []).forEach(def => {
+        const v = (asset.customFields || {})[def.key];
+        if (v == null || v === '') return;
+        rows.push([def.label, esc(v) + (def.unit ? ' ' + esc(def.unit) : '')]);
+      });
+      $('#d-specs').innerHTML = rows.map(r => '<tr><th>' + esc(r[0]) + '</th><td>' + r[1] + '</td></tr>').join('');
+
+      // 料金プラン
+      $('#price-title').textContent = tt('plans');
+      const plans = [];
+      if (asset.priceHour) plans.push([tt('ph'), '¥' + asset.priceHour.toLocaleString()]);
+      if (asset.priceDay) plans.push([tt('pd'), '¥' + asset.priceDay.toLocaleString()]);
+      if (asset.priceWeek) plans.push([tt('pw'), '¥' + asset.priceWeek.toLocaleString()]);
+      if (asset.priceMonth) plans.push([tt('pm'), '¥' + asset.priceMonth.toLocaleString()]);
+      $('#d-plans').innerHTML = plans.map(r => '<tr><th>' + esc(r[0]) + '</th><td>' + r[1] + '</td></tr>').join('');
+    }
+
+    function renderOptions() {
+      options = S.optionsForCategory(asset.categoryId);
+      const area = $('#opt-area');
+      let html = '';
+      function group(title, list) {
+        if (!list.length) return '';
+        return '<div class="opt-group-title">' + title + '</div>' + list.map(o => {
+          const unit = o.priceType === 'per_rental' ? (isEn() ? '/booking' : '/1回') : (isEn() ? '/day' : '/日');
+          return '<label class="opt-row"><input type="checkbox" data-opt="' + o.optionId + '"><span class="on">' + esc(o.name) + '</span>' +
+            '<span class="op">¥' + Number(o.price).toLocaleString() + ' <small>' + unit + '</small></span></label>';
+        }).join('');
+      }
+      html += group(I.t('detail.optCommon'), options.common);
+      html += group(I.t('detail.optSpecific'), options.specific);
+      area.innerHTML = html;
+      area.querySelectorAll('[data-opt]').forEach(cb => cb.addEventListener('change', () => { recalcOptions(); recalc(); }));
+    }
+    function recalcOptions() {
+      const ids = [...document.querySelectorAll('[data-opt]:checked')].map(c => c.dataset.opt);
+      const all = options.common.concat(options.specific);
+      selectedOptions = all.filter(o => ids.indexOf(o.optionId) >= 0);
+    }
+
+    function initInputs() {
+      let start = params.get('start') || '', end = params.get('end') || '';
+      if (!start) { const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(10, 0, 0, 0); start = t.toISOString(); }
+      if (!end) { const t = new Date(start); t.setDate(t.getDate() + 1); end = t.toISOString(); }
+      $('#p-start').value = fmtLocal(start);
+      $('#p-end').value = fmtLocal(end);
+      if (isItem && asset.stock > 1) {
+        $('#qty-wrap').style.display = 'flex';
+      }
+      $('#p-start').addEventListener('change', recalc);
+      $('#p-end').addEventListener('change', recalc);
+    }
+
+    function recalc() {
+      const start = $('#p-start').value ? new Date($('#p-start').value).toISOString() : '';
+      const end = $('#p-end').value ? new Date($('#p-end').value).toISOString() : '';
+      if (!start || !end || new Date(end) <= new Date(start)) {
+        $('#p-lines').innerHTML = '<div class="pl"><span class="muted">' + (isEn() ? 'Please set a valid period' : '有効な期間を入力してください') + '</span></div>';
+        $('#p-total').textContent = '¥0';
+        $('#p-avail').innerHTML = '';
+        $('#book-btn').disabled = true;
+        return;
+      }
+      // 空き & 在庫
+      const av = S.availability(asset.assetId, start, end, 1);
+      let maxQty = Math.max(1, av.remaining);
+      if (isItem && asset.stock > 1) {
+        const sel = $('#p-qty');
+        const cur = parseInt(sel.value || '1', 10);
+        sel.innerHTML = '';
+        for (let i = 1; i <= Math.max(1, maxQty); i++) sel.innerHTML += '<option value="' + i + '"' + (i === cur ? ' selected' : '') + '>' + i + '</option>';
+        if (!sel.onchange) sel.onchange = recalc;
+      }
+      const qty = isItem && asset.stock > 1 ? parseInt($('#p-qty').value || '1', 10) : 1;
+
+      const calc = P.calculate({ asset: asset, start: start, end: end, quantity: qty, options: selectedOptions });
+      $('#p-lines').innerHTML = calc.lines.map(l => '<div class="pl' + (l.amount < 0 ? ' minus' : '') + '"><span>' + esc(l.label) + '</span><span>' + (l.amount < 0 ? '-¥' + Math.abs(l.amount).toLocaleString() : '¥' + l.amount.toLocaleString()) + '</span></div>').join('');
+      $('#p-total').textContent = '¥' + calc.total.toLocaleString();
+
+      // 空き表示
+      let avHtml, ok = av.ok && av.remaining >= qty;
+      if (!ok) avHtml = '<span class="badge ng">' + tt('avNg') + '</span>';
+      else if (isItem && asset.stock > 1) avHtml = '<span class="badge stock">' + tt('avOk') + ' (' + tt('stockLeft')(av.remaining) + ')</span>';
+      else avHtml = '<span class="badge ok">' + tt('avOk') + '</span>';
+      $('#p-avail').innerHTML = avHtml;
+      $('#book-btn').disabled = !ok;
+    }
+
+    $('#book-btn').addEventListener('click', () => {
+      const start = new Date($('#p-start').value).toISOString();
+      const end = new Date($('#p-end').value).toISOString();
+      const qty = isItem && asset.stock > 1 ? parseInt($('#p-qty').value || '1', 10) : 1;
+      recalcOptions();
+      sessionStorage.setItem('sky-rent.pendingBooking', JSON.stringify({
+        assetId: asset.assetId, start: start, end: end, quantity: qty,
+        optionIds: selectedOptions.map(o => o.optionId)
+      }));
+      location.href = 'booking.html';
+    });
+
+    function boot() { $('#detail-grid').hidden = false; renderStatic(); renderOptions(); initInputs(); recalcOptions(); recalc(); }
+    document.addEventListener('DOMContentLoaded', boot);
+    document.addEventListener('sky-rent:langchange', () => { renderStatic(); renderOptions(); recalcOptions(); recalc(); });
+    if (document.readyState !== 'loading') boot();
+  })();
+  </script>
+</body>
+</html>

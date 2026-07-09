@@ -542,6 +542,45 @@ a.kpi:hover {
 .status-confirmed { background: #e3f5ec; color: #1e8a4a; }
 .status-cancelled { background: #fde8e6; color: #c0392b; }
 .status-soon { background: #fff4e0; color: #d18514; }
+.status-in_use { background: #e3edfb; color: #1d5cb8; }
+.status-returned { background: #ececec; color: #555; }
+.status-unpaid { background: #fff4e0; color: #d18514; }
+.status-paid { background: #e3f5ec; color: #1e8a4a; }
+
+/* チップ (カテゴリ紐付け・タグ表示) */
+.chip {
+  display: inline-block;
+  font-size: 11px;
+  background: #eef4fa;
+  color: #1c4a7a;
+  border: 1px solid #d4e2ef;
+  padding: 2px 9px;
+  border-radius: 99px;
+  margin: 1px 3px 1px 0;
+}
+.chip.chip-common { background: #f0eef9; color: #5b4a9e; border-color: #ddd6f0; }
+
+/* チェックボックス群 (オプションのカテゴリ紐付け等) */
+.chk-group { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.chk-group label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; font-weight: 400 !important; width: auto !important; padding-top: 0 !important; }
+
+/* カスタム項目エディタの行 */
+.field-def-row {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding: 8px 10px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 6px; background: #fafbfc;
+}
+.field-def-row input, .field-def-row select { padding: 6px 8px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; font-family: inherit; }
+
+/* セクション見出し (カード内) */
+.card-section-title { font-size: 15px; font-weight: 700; color: var(--primary); margin-bottom: 12px; }
+
+/* 印刷用 */
+@media print {
+  .topbar, .no-print, .filter-bar, .print-bar { display: none !important; }
+  body { background: #fff; }
+  .main { max-width: none; padding: 0; }
+  .card { border: none; }
+}
 
 /* 現在ページのトグルを白文字でアクティブ表示 */
 .topnav-item.current .topnav-toggle {

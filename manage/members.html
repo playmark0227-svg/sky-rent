@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>顧客・会員管理 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">顧客・会員管理</h1>
+    <p class="page-note">会員情報・利用履歴の確認、ポイントの手動付与・調整、法人・行政アカウントへの「請求書払い許可」付与を行います。</p>
+
+    <section class="kpi-row" style="margin-bottom:16px">
+      <div class="kpi kpi-1"><div class="kpi-label">会員数</div><div class="kpi-value"><span id="k-total">0</span><span class="kpi-unit">名</span></div></div>
+      <div class="kpi kpi-2"><div class="kpi-label">請求書払い許可</div><div class="kpi-value"><span id="k-invoice">0</span><span class="kpi-unit">社</span></div></div>
+      <div class="kpi kpi-3"><div class="kpi-label">未使用クーポン</div><div class="kpi-value">¥<span id="k-coupon">0</span></div></div>
+    </section>
+
+    <section class="card filter-bar">
+      <div class="filter-group"><label>キーワード</label><input type="text" id="f-kw" placeholder="氏名・メール・会社"></div>
+      <div class="filter-group"><label>種別</label><select id="f-type"><option value="">すべて</option><option value="ind">個人</option><option value="corp">法人</option></select></div>
+      <div class="filter-group"><label><input type="checkbox" id="f-inv"> 請求書払い許可のみ</label></div>
+      <span style="flex:1"></span>
+      <button id="btn-add" class="btn btn-primary">+ 会員追加</button>
+    </section>
+
+    <section class="card">
+      <table class="data-table list">
+        <thead>
+          <tr><th>会員ID</th><th>氏名 / 会社</th><th>メール</th><th>電話</th><th>ポイント</th><th>クーポン</th><th>請求書払い</th><th>最終利用</th><th></th></tr>
+        </thead>
+        <tbody id="tbl"><tr class="empty"><td colspan="9">読み込み中...</td></tr></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/pricing.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+  (function () {
+    const S = window.SkyRentStore;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    function fmtD(iso){if(!iso)return '-';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate());}
+    function fmtDT(iso){if(!iso)return '-';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
+
+    function renderKpi() {
+      const ms = S.members();
+      $('#k-total').textContent = ms.length;
+      $('#k-invoice').textContent = ms.filter(m => m.invoiceAllowed).length;
+      const sum = ms.reduce((s, m) => s + (m.coupons || []).filter(c => !c.usedAt).reduce((a, c) => a + c.amount, 0), 0);
+      $('#k-coupon').textContent = sum.toLocaleString();
+    }
+
+    function render() {
+      renderKpi();
+      const kw = $('#f-kw').value.trim().toLowerCase(), type = $('#f-type').value, invOnly = $('#f-inv').checked;
+      let ms = S.members();
+      if (kw) ms = ms.filter(m => [m.name, m.email, m.company].some(x => (x || '').toLowerCase().includes(kw)));
+      if (type === 'ind') ms = ms.filter(m => !m.isCorporate);
+      if (type === 'corp') ms = ms.filter(m => m.isCorporate);
+      if (invOnly) ms = ms.filter(m => m.invoiceAllowed);
+      if (!ms.length) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="9" style="text-align:center;padding:24px;color:#888">該当なし</td></tr>'; return; }
+      $('#tbl').innerHTML = ms.map(m => {
+        const unused = (m.coupons || []).filter(c => !c.usedAt).length;
+        return '<tr>' +
+          '<td><code>' + esc(m.memberId) + '</code></td>' +
+          '<td><strong>' + esc(m.name) + '</strong>' + (m.company ? '<br><small style="color:#999">' + esc(m.company) + '</small>' : '') + '</td>' +
+          '<td>' + esc(m.email) + '</td>' +
+          '<td>' + esc(m.phone || '-') + '</td>' +
+          '<td style="text-align:center">' + (m.points || 0) + 'pt</td>' +
+          '<td style="text-align:center">' + (unused ? unused + '枚' : '-') + '</td>' +
+          '<td>' + (m.invoiceAllowed ? '<span class="status status-paid">許可</span>' : '<span style="color:#bbb">-</span>') + '</td>' +
+          '<td>' + fmtD(m.lastUseAt) + '</td>' +
+          '<td style="text-align:center"><a href="#" class="detail-link" data-detail="' + esc(m.memberId) + '">詳細</a></td>' +
+          '</tr>';
+      }).join('');
+      $('#tbl').querySelectorAll('[data-detail]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); openDetail(a.dataset.detail); }));
+    }
+
+    function memberReservations(m) {
+      return S.list('reservations').filter(r => (r.memberId === m.memberId) || (r.customerEmail && m.email && r.customerEmail.toLowerCase() === m.email.toLowerCase()))
+        .sort((a, b) => new Date(b.start) - new Date(a.start));
+    }
+
+    function openDetail(memberId) {
+      const m = S.getMember(memberId);
+      if (!m) return;
+      const cfg = S.pointSettings();
+      const res = memberReservations(m);
+      const coupons = m.coupons || [];
+      const ph = (m.pointHistory || []).slice().reverse().slice(0, 10);
+
+      const html =
+        '<div class="crud-modal-bg"></div><div class="crud-modal-card" style="min-width:640px;max-width:720px">' +
+        '<div class="crud-modal-head"><h3>会員詳細 <code style="background:rgba(255,255,255,.2);color:#fff;font-size:12px;margin-left:8px;padding:2px 8px;border-radius:2px">' + esc(m.memberId) + '</code></h3><button class="crud-close" type="button">×</button></div>' +
+        '<div style="padding:18px 22px;max-height:70vh;overflow:auto">' +
+          // 基本
+          '<table class="data-table" style="margin-bottom:16px"><tbody>' +
+          '<tr><th style="width:120px;background:#f7f7f7">氏名</th><td><strong>' + esc(m.name) + '</strong> 様</td></tr>' +
+          '<tr><th style="background:#f7f7f7">会社名</th><td>' + esc(m.company || '-') + (m.isCorporate ? ' <span class="chip">法人</span>' : ' <span class="chip chip-common">個人</span>') + '</td></tr>' +
+          '<tr><th style="background:#f7f7f7">連絡先</th><td>' + esc(m.email) + ' / ' + esc(m.phone || '-') + '</td></tr>' +
+          '<tr><th style="background:#f7f7f7">登録日</th><td>' + fmtDT(m.createdAt) + '</td></tr>' +
+          '</tbody></table>' +
+
+          // 請求書払いトグル
+          '<div class="card" style="padding:12px 14px;margin-bottom:14px;background:#fafbfc">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">' +
+          '<div><strong>請求書払い許可</strong><div style="font-size:12px;color:#777">法人・行政アカウント向け。許可すると予約フローで請求書払いが選択可能に。</div></div>' +
+          '<div>' + (m.invoiceAllowed ? '<span class="status status-paid" style="margin-right:8px">許可中</span>' : '<span style="color:#bbb;margin-right:8px">未許可</span>') +
+          '<button class="btn ' + (m.invoiceAllowed ? 'btn-gray' : 'btn-primary') + '" id="inv-toggle">' + (m.invoiceAllowed ? '許可を解除' : '許可を付与') + '</button></div>' +
+          '</div></div>' +
+
+          // ポイント
+          '<div class="card" style="padding:12px 14px;margin-bottom:14px">' +
+          '<strong class="card-section-title">ポイント操作 (現在: ' + (m.points || 0) + 'pt)</strong>' +
+          '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">' +
+          '<input type="number" id="pt-delta" placeholder="増減 (例 +5 / -3)" style="width:130px;padding:7px 9px;border:1px solid #ddd;border-radius:4px">' +
+          '<input type="text" id="pt-reason" placeholder="事由" style="flex:1;min-width:150px;padding:7px 9px;border:1px solid #ddd;border-radius:4px">' +
+          '<button class="btn btn-primary" id="pt-apply">反映</button></div>' +
+          '<div style="font-size:11px;color:#999;margin-top:5px">累計' + (cfg.couponThreshold || 10) + 'pt到達で¥' + (cfg.couponAmount || 1000).toLocaleString() + 'クーポンを自動発行します。</div></div>' +
+
+          // クーポン手動発行
+          '<div class="card" style="padding:12px 14px;margin-bottom:14px">' +
+          '<strong class="card-section-title">クーポン手動発行</strong>' +
+          '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">' +
+          '<input type="number" id="cp-amount" value="1000" style="width:110px;padding:7px 9px;border:1px solid #ddd;border-radius:4px">円 ' +
+          '<input type="text" id="cp-reason" placeholder="事由 (例: お詫び)" style="flex:1;min-width:150px;padding:7px 9px;border:1px solid #ddd;border-radius:4px">' +
+          '<button class="btn btn-primary" id="cp-issue">発行</button></div></div>' +
+
+          // クーポン一覧
+          '<strong class="card-section-title">保有クーポン</strong>' +
+          (coupons.length ? '<table class="data-table" style="margin-bottom:14px"><thead><tr><th>額面</th><th>発行日</th><th>事由</th><th>状態</th></tr></thead><tbody>' +
+            coupons.slice().reverse().map(c => '<tr><td>¥' + c.amount.toLocaleString() + '</td><td>' + fmtD(c.issuedAt) + '</td><td>' + esc(c.reason || '') + '</td><td>' + (c.usedAt ? '<span class="status status-returned">使用済' + (c.usedFor ? ' (' + esc(c.usedFor) + ')' : '') + '</span>' : '<span class="status status-confirmed">未使用</span>') + '</td></tr>').join('') +
+            '</tbody></table>' : '<p style="color:#999;font-size:13px;margin-bottom:14px">なし</p>') +
+
+          // ポイント履歴
+          '<strong class="card-section-title">ポイント履歴</strong>' +
+          (ph.length ? '<table class="data-table" style="margin-bottom:14px"><thead><tr><th>日時</th><th>増減</th><th>事由</th></tr></thead><tbody>' +
+            ph.map(h => '<tr><td>' + fmtDT(h.at) + '</td><td style="font-weight:700;color:' + (h.delta >= 0 ? '#1e8a4a' : '#c0392b') + '">' + (h.delta >= 0 ? '+' : '') + h.delta + '</td><td>' + esc(h.reason) + '</td></tr>').join('') +
+            '</tbody></table>' : '<p style="color:#999;font-size:13px;margin-bottom:14px">-</p>') +
+
+          // 利用履歴
+          '<strong class="card-section-title">利用履歴</strong>' +
+          (res.length ? '<table class="data-table"><thead><tr><th>予約ID</th><th>対象</th><th>期間</th><th>金額</th><th>状態</th></tr></thead><tbody>' +
+            res.map(r => '<tr><td><code>' + esc(r.reservationId) + '</code></td><td>' + esc(r.assetName || r.vehicleName) + '</td><td>' + fmtD(r.start) + '〜' + fmtD(r.end) + '</td><td>¥' + ((r.price && r.price.total) || 0).toLocaleString() + '</td><td><span class="status status-' + r.status + '">' + (S.STATUS_LABELS[r.status] || r.status) + '</span></td></tr>').join('') +
+            '</tbody></table>' : '<p style="color:#999;font-size:13px">なし</p>') +
+        '</div>' +
+        '<div class="crud-modal-foot"><span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">閉じる</button></div></div>';
+
+      let modal = document.getElementById('crud-modal');
+      if (!modal) { modal = document.createElement('div'); modal.id = 'crud-modal'; modal.className = 'crud-modal'; document.body.appendChild(modal); }
+      modal.innerHTML = html;
+      const close = () => modal.remove();
+      modal.querySelector('.crud-modal-bg').addEventListener('click', close);
+      modal.querySelector('.crud-close').addEventListener('click', close);
+      modal.querySelector('.crud-cancel').addEventListener('click', close);
+
+      modal.querySelector('#inv-toggle').addEventListener('click', () => {
+        const to = !m.invoiceAllowed;
+        if (!confirm(to ? 'この会員に「請求書払い許可」を付与しますか?' : '「請求書払い許可」を解除しますか?')) return;
+        m.invoiceAllowed = to; m.isCorporate = to || m.isCorporate;
+        S.upsert('members', 'memberId', m);
+        S.notify('member', m.name + ' の請求書払い許可を' + (to ? '付与' : '解除') + 'しました', m.memberId);
+        openDetail(memberId); render();
+      });
+      modal.querySelector('#pt-apply').addEventListener('click', () => {
+        const delta = parseInt(modal.querySelector('#pt-delta').value, 10);
+        const reason = modal.querySelector('#pt-reason').value.trim();
+        if (!delta) { alert('増減ポイントを入力してください'); return; }
+        S.adjustPoints(memberId, delta, reason || '管理者による手動調整');
+        openDetail(memberId); render();
+      });
+      modal.querySelector('#cp-issue').addEventListener('click', () => {
+        const amt = parseInt(modal.querySelector('#cp-amount').value, 10);
+        if (!amt || amt <= 0) { alert('金額を入力してください'); return; }
+        S.issueCouponManually(memberId, amt, modal.querySelector('#cp-reason').value.trim() || '管理者発行');
+        openDetail(memberId); render();
+      });
+    }
+
+    function openAdd() {
+      const html =
+        '<div class="crud-modal-bg"></div><div class="crud-modal-card">' +
+        '<div class="crud-modal-head"><h3>会員追加</h3><button class="crud-close" type="button">×</button></div>' +
+        '<div style="padding:6px 0">' +
+          '<div class="crud-field"><label>氏名 <span style="color:#c0392b">*</span></label><input type="text" id="m-name"></div>' +
+          '<div class="crud-field"><label>フリガナ</label><input type="text" id="m-kana"></div>' +
+          '<div class="crud-field"><label>メール <span style="color:#c0392b">*</span></label><input type="email" id="m-email"></div>' +
+          '<div class="crud-field"><label>電話</label><input type="tel" id="m-phone"></div>' +
+          '<div class="crud-field"><label>会社名</label><input type="text" id="m-company" placeholder="法人の場合"></div>' +
+          '<div class="crud-field"><label>初期パスワード <span style="color:#c0392b">*</span></label><input type="text" id="m-pass" value="demo1234"></div>' +
+        '</div>' +
+        '<div class="crud-modal-foot"><span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">キャンセル</button><button type="button" class="btn btn-primary" id="m-save">登録</button></div></div>';
+      let modal = document.getElementById('crud-modal');
+      if (!modal) { modal = document.createElement('div'); modal.id = 'crud-modal'; modal.className = 'crud-modal'; document.body.appendChild(modal); }
+      modal.innerHTML = html;
+      const close = () => modal.remove();
+      modal.querySelector('.crud-modal-bg').addEventListener('click', close);
+      modal.querySelector('.crud-close').addEventListener('click', close);
+      modal.querySelector('.crud-cancel').addEventListener('click', close);
+      modal.querySelector('#m-save').addEventListener('click', () => {
+        try {
+          S.registerMember({
+            name: modal.querySelector('#m-name').value.trim(), nameKana: modal.querySelector('#m-kana').value.trim(),
+            email: modal.querySelector('#m-email').value.trim(), phone: modal.querySelector('#m-phone').value.trim(),
+            company: modal.querySelector('#m-company').value.trim(), password: modal.querySelector('#m-pass').value || 'demo1234'
+          });
+          close(); render();
+        } catch (ex) { alert(ex.message); }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      ['#f-kw', '#f-type', '#f-inv'].forEach(s => { const el = $(s); el.addEventListener(s === '#f-kw' ? 'input' : 'change', render); });
+      $('#btn-add').addEventListener('click', openAdd);
+      render();
+    });
+  })();
+  </script>
+</body>
+</html>

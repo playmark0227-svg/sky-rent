@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>マイページ | Sky Rent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/public.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">✈</span><span class="logo-text">Sky Rent</span></a>
+      <nav class="site-nav">
+        <a href="index.html#categories" data-i18n="nav.categories">カテゴリ</a>
+        <a href="search.html" data-i18n="nav.search">予約する</a>
+        <a href="index.html#locations" data-i18n="nav.locations">店舗一覧</a>
+        <a href="mypage.html" data-i18n="nav.mypage">マイページ</a>
+        <button class="lang-btn" data-lang-toggle type="button">EN</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top:30px;padding-bottom:60px;max-width:900px">
+    <h1 class="mb24" style="font-size:26px" data-i18n="mypage.title">マイページ</h1>
+
+    <!-- 未ログイン -->
+    <div id="auth-view" hidden>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="auth-grid">
+        <div class="p-card">
+          <h3 data-i18n="mypage.login">ログイン</h3>
+          <form id="login-form" style="margin-top:12px">
+            <div class="form-group mb16"><label data-i18n="mypage.email">メールアドレス</label><input type="email" id="l-email" required></div>
+            <div class="form-group mb16"><label data-i18n="mypage.password">パスワード</label><input type="password" id="l-pass" required></div>
+            <p id="login-error" class="error-text" hidden></p>
+            <button type="submit" class="btn btn-primary" style="width:100%" data-i18n="mypage.login">ログイン</button>
+          </form>
+          <div style="margin-top:14px;padding:10px;background:#fff8d6;border:1px solid #f0e0a0;border-radius:6px;font-size:12px;color:#6a5a1a">
+            💡 デモ会員: <br>demo@example.com / demo1234 (一般)<br>corp@example.com / demo1234 (法人・請求書払い可)
+          </div>
+        </div>
+        <div class="p-card">
+          <h3 data-i18n="mypage.register">新規会員登録</h3>
+          <form id="reg-form" style="margin-top:12px">
+            <div class="form-group mb16"><label data-i18n="booking.name">お名前 *</label><input type="text" id="r-name" required></div>
+            <div class="form-group mb16"><label data-i18n="booking.kana">フリガナ</label><input type="text" id="r-kana"></div>
+            <div class="form-group mb16"><label data-i18n="mypage.email">メールアドレス *</label><input type="email" id="r-email" required></div>
+            <div class="form-group mb16"><label data-i18n="booking.phone">電話番号</label><input type="tel" id="r-phone"></div>
+            <div class="form-group mb16"><label data-i18n="booking.company">会社名 (法人の場合)</label><input type="text" id="r-company"></div>
+            <div class="form-group mb16"><label data-i18n="mypage.password">パスワード * (8文字以上)</label><input type="password" id="r-pass" minlength="8" required></div>
+            <p id="reg-error" class="error-text" hidden></p>
+            <button type="submit" class="btn btn-primary" style="width:100%" data-i18n="mypage.register">登録する</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ログイン後 -->
+    <div id="member-view" hidden></div>
+  </main>
+
+  <footer class="site-footer"><div class="container"><p data-i18n="footer.copyright">© 2026 Sky Rent</p></div></footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/pricing.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+  (function () {
+    const S = window.SkyRentStore, I = window.SkyRentI18n;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    const isEn = () => I.getLang() === 'en';
+    function fmtDT(iso){if(!iso)return '-';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
+    function fmtD(iso){if(!iso)return '-';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate());}
+
+    const L = {
+      welcome:{ja:'さん、こんにちは',en:''}, memberId:{ja:'会員ID',en:'Member ID'},
+      toNext:{ja:(m,a)=>'あと '+m+'pt で ¥'+a.toLocaleString()+' クーポン',en:(m,a)=>m+'pt to a ¥'+a.toLocaleString()+' coupon'},
+      couponsCount:{ja:(n,a)=>n+'枚 (¥'+a.toLocaleString()+'相当)',en:(n,a)=>n+' ('+'¥'+a.toLocaleString()+')'},
+      noCoupon:{ja:'利用可能なクーポンはありません',en:'No available coupons'},
+      used:{ja:'使用済',en:'Used'}, unused:{ja:'未使用',en:'Available'},
+      noHistory:{ja:'ご利用履歴はまだありません。',en:'No booking history yet.'},
+      toSearch:{ja:'車両・物品を探す →',en:'Browse rentals →'},
+      hName:{ja:'対象',en:'Item'}, hPeriod:{ja:'期間',en:'Period'}, hQty:{ja:'数量',en:'Qty'}, hAmount:{ja:'金額',en:'Amount'}, hPay:{ja:'支払',en:'Pay'}, hStatus:{ja:'状態',en:'Status'}, hId:{ja:'予約ID',en:'ID'},
+      hDate:{ja:'日時',en:'Date'}, hDelta:{ja:'増減',en:'±'}, hReason:{ja:'事由',en:'Reason'},
+      issuedAt:{ja:'発行',en:'Issued'}
+    };
+    const tt = (k, ...a) => { const v = L[k][isEn()?'en':'ja']; return typeof v === 'function' ? v(...a) : v; };
+
+    // ===== 認証フォーム =====
+    $('#login-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const m = S.loginMember($('#l-email').value.trim(), $('#l-pass').value);
+      if (!m) { $('#login-error').hidden = false; $('#login-error').textContent = isEn() ? 'Email or password is incorrect.' : 'メールアドレスまたはパスワードが違います'; return; }
+      render();
+    });
+    $('#reg-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const err = $('#reg-error'); err.hidden = true;
+      try {
+        if ($('#r-pass').value.length < 8) throw new Error(isEn() ? 'Password must be at least 8 characters.' : 'パスワードは8文字以上にしてください');
+        const m = S.registerMember({
+          name: $('#r-name').value.trim(), nameKana: $('#r-kana').value.trim(),
+          email: $('#r-email').value.trim(), phone: $('#r-phone').value.trim(),
+          company: $('#r-company').value.trim(), password: $('#r-pass').value
+        });
+        S.loginMember(m.email, m.password);
+        render();
+      } catch (ex) { err.hidden = false; err.textContent = ex.message; }
+    });
+
+    function memberReservations(m) {
+      return S.list('reservations').filter(r =>
+        (r.memberId && r.memberId === m.memberId) ||
+        (r.customerEmail && m.email && r.customerEmail.toLowerCase() === m.email.toLowerCase())
+      ).sort((a, b) => new Date(b.start) - new Date(a.start));
+    }
+
+    function renderMember(m) {
+      const cfg = S.pointSettings();
+      const coupons = m.coupons || [];
+      const unused = coupons.filter(c => !c.usedAt);
+      const couponSum = unused.reduce((s, c) => s + (c.amount || 0), 0);
+      const toNext = Math.max(0, (cfg.couponThreshold || 10) - ((m.points || 0) % (cfg.couponThreshold || 10)));
+      const res = memberReservations(m);
+
+      let html = '';
+      // ヘッダ
+      html += '<div class="p-card mb16"><div class="flex-sb">' +
+        '<div><div style="font-size:20px;font-weight:700">' + esc(m.name) + (isEn() ? '' : ' 様') + (m.company ? ' <span class="muted" style="font-size:13px">(' + esc(m.company) + ')</span>' : '') + (m.invoiceAllowed ? ' <span class="badge stock">' + (isEn() ? 'Invoice OK' : '請求書払い可') + '</span>' : '') + '</div>' +
+        '<div class="muted" style="font-size:12px;margin-top:2px">' + tt('memberId') + ': ' + esc(m.memberId) + ' ・ ' + esc(m.email) + '</div></div>' +
+        '<button class="btn btn-secondary" id="logout-btn" data-i18n="mypage.logout">ログアウト</button></div></div>';
+
+      // スタッツ
+      html += '<div class="member-hero mb24">' +
+        '<div class="stat-tile"><div class="lbl">' + I.t('mypage.points') + '</div><div class="val">' + (m.points || 0) + ' <small>pt</small></div>' +
+        '<div style="font-size:11px;opacity:.85;margin-top:4px">' + tt('toNext', toNext, cfg.couponAmount || 1000) + '</div></div>' +
+        '<div class="stat-tile alt"><div class="lbl">' + I.t('mypage.coupons') + '</div><div class="val">' + unused.length + ' <small>' + (isEn() ? '' : '枚') + '</small></div>' +
+        '<div style="font-size:11px;opacity:.85;margin-top:4px">¥' + couponSum.toLocaleString() + (isEn() ? '' : '相当') + '</div></div></div>';
+
+      // クーポン
+      html += '<div class="p-card mb16"><h3 class="mb16">' + I.t('mypage.coupons') + '</h3>';
+      if (!coupons.length) html += '<p class="muted">' + tt('noCoupon') + '</p>';
+      else html += coupons.slice().reverse().map(c =>
+        '<div class="coupon-card' + (c.usedAt ? ' used' : '') + '"><div><div class="amt">¥' + c.amount.toLocaleString() + '</div><div class="muted" style="font-size:11px">' + esc(c.reason || '') + ' ・ ' + tt('issuedAt') + ' ' + fmtD(c.issuedAt) + '</div></div>' +
+        '<div>' + (c.usedAt ? '<span class="muted" style="font-size:12px">' + tt('used') + (c.usedFor ? ' (' + esc(c.usedFor) + ')' : '') + '</span>' : '<span class="badge ok">' + tt('unused') + '</span>') + '</div></div>'
+      ).join('');
+      html += '</div>';
+
+      // 予約履歴
+      html += '<div class="p-card mb16"><h3 class="mb16">' + I.t('mypage.history') + '</h3>';
+      if (!res.length) html += '<p class="muted">' + tt('noHistory') + ' <a href="search.html" style="color:var(--color-primary)">' + tt('toSearch') + '</a></p>';
+      else html += '<div class="p-table-wrap"><table class="p-table"><thead><tr><th>' + tt('hId') + '</th><th>' + tt('hName') + '</th><th>' + tt('hPeriod') + '</th><th>' + tt('hQty') + '</th><th>' + tt('hAmount') + '</th><th>' + tt('hPay') + '</th><th>' + tt('hStatus') + '</th></tr></thead><tbody>' +
+        res.map(r => '<tr><td><code>' + esc(r.reservationId) + '</code></td><td>' + esc(r.assetName || r.vehicleName) + '</td><td style="white-space:nowrap">' + fmtD(r.start) + '〜' + fmtD(r.end) + '</td><td style="text-align:center">' + (r.quantity || 1) + '</td><td>¥' + ((r.price && r.price.total) || 0).toLocaleString() + '</td><td>' + (S.PAYMENT_LABELS[r.payment ? r.payment.method : 'onsite'] || '-') + '</td><td><span class="badge ' + (r.status === 'cancelled' ? 'ng' : 'ok') + '">' + (S.STATUS_LABELS[r.status] || r.status) + '</span></td></tr>').join('') +
+        '</tbody></table></div>';
+      html += '</div>';
+
+      // ポイント履歴
+      const ph = (m.pointHistory || []).slice().reverse();
+      html += '<div class="p-card"><h3 class="mb16">' + I.t('mypage.pointHistory') + '</h3>';
+      if (!ph.length) html += '<p class="muted">-</p>';
+      else html += '<div class="p-table-wrap"><table class="p-table"><thead><tr><th>' + tt('hDate') + '</th><th>' + tt('hDelta') + '</th><th>' + tt('hReason') + '</th></tr></thead><tbody>' +
+        ph.map(h => '<tr><td>' + fmtDT(h.at) + '</td><td style="font-weight:700;color:' + (h.delta >= 0 ? 'var(--color-success)' : 'var(--color-error)') + '">' + (h.delta >= 0 ? '+' : '') + h.delta + 'pt</td><td>' + esc(h.reason) + '</td></tr>').join('') +
+        '</tbody></table></div>';
+      html += '</div>';
+
+      $('#member-view').innerHTML = html;
+      $('#logout-btn').addEventListener('click', () => { S.logoutMember(); render(); });
+    }
+
+    function render() {
+      const m = S.currentMember();
+      if (m) { $('#auth-view').hidden = true; $('#member-view').hidden = false; renderMember(m); }
+      else { $('#auth-view').hidden = false; $('#member-view').hidden = true; }
+      // レスポンシブ: 認証グリッドを狭幅で1カラムに
+      if (window.matchMedia('(max-width:640px)').matches) $('#auth-grid').style.gridTemplateColumns = '1fr';
+    }
+
+    document.addEventListener('DOMContentLoaded', render);
+    document.addEventListener('sky-rent:langchange', render);
+    if (document.readyState !== 'loading') render();
+  })();
+  </script>
+</body>
+</html>

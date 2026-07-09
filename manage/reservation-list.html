@@ -13,43 +13,24 @@
     <h1 class="page-title">予約一覧</h1>
 
     <section class="card filter-bar">
-      <div class="filter-group">
-        <label>期間</label>
-        <input type="date" id="from"> 〜 <input type="date" id="to">
-      </div>
-      <div class="filter-group">
-        <label>状態</label>
-        <select id="status-filter">
-          <option value="">すべて</option>
-          <option value="confirmed">確定</option>
-          <option value="cancelled">キャンセル</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>キーワード</label>
-        <input type="text" id="keyword" placeholder="顧客名・車輌・予約ID">
-      </div>
+      <div class="filter-group"><label>期間</label><input type="date" id="from"> 〜 <input type="date" id="to"></div>
+      <div class="filter-group"><label>状態</label><select id="status-filter"><option value="">すべて</option><option value="confirmed">確定</option><option value="in_use">貸出中</option><option value="returned">返却済</option><option value="cancelled">キャンセル</option></select></div>
+      <div class="filter-group"><label>拠点</label><select id="loc-filter"></select></div>
+      <div class="filter-group"><label>カテゴリ</label><select id="cat-filter"></select></div>
+      <div class="filter-group"><label>キーワード</label><input type="text" id="keyword" placeholder="顧客名・対象・予約ID"></div>
       <button class="btn btn-primary" id="btn-filter">検 索</button>
     </section>
+
+    <div class="flex-sb" style="margin-bottom:8px;padding:0 2px">
+      <span class="muted" id="count-info" style="font-size:13px;color:#777"></span>
+    </div>
 
     <section class="card">
       <table class="data-table list">
         <thead>
-          <tr>
-            <th>予約ID</th>
-            <th>状態</th>
-            <th>貸出</th>
-            <th>返却</th>
-            <th>車種</th>
-            <th>車輌</th>
-            <th>借受人</th>
-            <th>連絡先</th>
-            <th></th>
-          </tr>
+          <tr><th>予約ID</th><th>状態</th><th>貸出</th><th>返却</th><th>対象</th><th>カテゴリ</th><th>拠点</th><th>借受人</th><th>支払</th><th style="text-align:right">金額</th><th></th></tr>
         </thead>
-        <tbody id="tbl">
-          <tr class="empty"><td colspan="9">読み込み中...</td></tr>
-        </tbody>
+        <tbody id="tbl"><tr class="empty"><td colspan="11">読み込み中...</td></tr></tbody>
       </table>
     </section>
   </main>
@@ -58,160 +39,139 @@
 
   <script src="partials.js"></script>
   <script src="../js/config.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/pricing.js"></script>
   <script src="../js/api.js"></script>
   <script>
   (function () {
-    const $ = (s) => document.querySelector(s);
+    const S = window.SkyRentStore;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    function fmtDT(s){if(!s)return '';const d=new Date(s);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
     let allRows = [];
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      $('#btn-filter').addEventListener('click', applyFilter);
-      $('#keyword').addEventListener('keypress', e => { if (e.key === 'Enter') applyFilter(); });
-      await load();
-    });
+    function initFilters() {
+      $('#loc-filter').innerHTML = '<option value="">全拠点</option>' + S.locations().map(l => '<option value="' + l.locationId + '">' + esc(l.name) + '</option>').join('');
+      $('#cat-filter').innerHTML = '<option value="">全カテゴリ</option>' + S.categories(true).map(c => '<option value="' + c.categoryId + '">' + esc(c.name) + '</option>').join('');
+    }
 
     async function load() {
       $('#loading').hidden = false;
       try {
         allRows = await window.SkyRentAPI.listReservations();
         applyFilter();
-      } catch (err) {
-        $('#tbl').innerHTML = `<tr class="empty"><td colspan="9">読み込み失敗: ${err.message}</td></tr>`;
-      } finally {
-        $('#loading').hidden = true;
-      }
+        // ハッシュで詳細を開く
+        if (location.hash.length > 1) { const id = location.hash.slice(1); if (allRows.some(r => r.reservationId === id)) openDetail(id); }
+      } catch (e) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="11">読み込み失敗: ' + e.message + '</td></tr>'; }
+      finally { $('#loading').hidden = true; }
     }
 
     function applyFilter() {
-      const from = $('#from').value;
-      const to = $('#to').value;
-      const status = $('#status-filter').value;
-      const kw = $('#keyword').value.trim().toLowerCase();
+      const from = $('#from').value, to = $('#to').value, st = $('#status-filter').value;
+      const loc = $('#loc-filter').value, cat = $('#cat-filter').value, kw = $('#keyword').value.trim().toLowerCase();
       let rows = allRows.slice();
-      if (from) rows = rows.filter(r => new Date(r.start) >= new Date(from));
-      if (to) rows = rows.filter(r => new Date(r.end) <= new Date(to + 'T23:59:59'));
-      if (status) rows = rows.filter(r => r.status === status);
-      if (kw) {
-        rows = rows.filter(r =>
-          (r.customerName || '').toLowerCase().includes(kw) ||
-          (r.vehicleName || '').toLowerCase().includes(kw) ||
-          (r.reservationId || '').toLowerCase().includes(kw)
-        );
-      }
+      if (from) rows = rows.filter(r => new Date(r.end) >= new Date(from));
+      if (to) rows = rows.filter(r => new Date(r.start) <= new Date(to + 'T23:59:59'));
+      if (st) rows = rows.filter(r => r.status === st);
+      if (loc) rows = rows.filter(r => r.locationId === loc);
+      if (cat) rows = rows.filter(r => r.categoryId === cat);
+      if (kw) rows = rows.filter(r => [r.customerName, r.assetName, r.vehicleName, r.reservationId].some(x => (x || '').toLowerCase().includes(kw)));
       render(rows);
     }
 
     function render(rows) {
-      const tbl = $('#tbl');
-      if (!rows.length) {
-        tbl.innerHTML = '<tr class="empty"><td colspan="9">該当する予約はありません</td></tr>';
-        return;
-      }
-      tbl.innerHTML = rows.map(r => `
-        <tr>
-          <td><code>${escapeHtml(r.reservationId)}</code></td>
-          <td><span class="status status-${r.status}">${statusLabel(r.status)}</span></td>
-          <td>${formatDateTime(r.start)}</td>
-          <td>${formatDateTime(r.end)}</td>
-          <td>${escapeHtml(r.vehicleName)}</td>
-          <td>${escapeHtml(r.vehicleId)}</td>
-          <td>${escapeHtml(r.customerName)}</td>
-          <td><small>${escapeHtml(r.customerEmail || '')}<br>${escapeHtml(r.customerPhone || '')}</small></td>
-          <td><a href="#" class="detail-link" data-id="${escapeHtml(r.reservationId)}">詳細</a></td>
-        </tr>
-      `).join('');
-      tbl.querySelectorAll('.detail-link').forEach(a => {
-        a.addEventListener('click', e => {
-          e.preventDefault();
-          openDetail(a.dataset.id);
-        });
-      });
+      const total = rows.filter(r => r.status !== 'cancelled').reduce((s, r) => s + ((r.price && r.price.total) || 0), 0);
+      $('#count-info').textContent = rows.length + ' 件 ／ 合計金額 (キャンセル除く): ¥' + total.toLocaleString();
+      if (!rows.length) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="11">該当する予約はありません</td></tr>'; return; }
+      $('#tbl').innerHTML = rows.map(r => {
+        const l = S.getLocation(r.locationId), c = S.getCategory(r.categoryId);
+        const pay = (r.payment ? (S.PAYMENT_LABELS[r.payment.method] || '') : '') + (r.payment && r.payment.status === 'paid' ? ' <span class="status status-paid">済</span>' : (r.payment && r.status !== 'cancelled' ? ' <span class="status status-unpaid">未</span>' : ''));
+        return '<tr>' +
+          '<td><code>' + esc(r.reservationId) + '</code></td>' +
+          '<td><span class="status status-' + r.status + '">' + (S.STATUS_LABELS[r.status] || r.status) + '</span></td>' +
+          '<td>' + fmtDT(r.start) + '</td><td>' + fmtDT(r.end) + '</td>' +
+          '<td>' + esc(r.assetName || r.vehicleName) + (r.quantity > 1 ? ' ×' + r.quantity : '') + '</td>' +
+          '<td>' + esc(c ? c.name : '') + '</td>' +
+          '<td>' + esc(l ? l.name : '') + '</td>' +
+          '<td>' + (r.memberId ? '👤 ' : '') + esc(r.customerName) + '</td>' +
+          '<td style="font-size:12px">' + pay + '</td>' +
+          '<td style="text-align:right">¥' + ((r.price && r.price.total) || 0).toLocaleString() + '</td>' +
+          '<td style="text-align:center"><a href="#" class="detail-link" data-id="' + esc(r.reservationId) + '">詳細</a></td>' +
+          '</tr>';
+      }).join('');
+      $('#tbl').querySelectorAll('.detail-link').forEach(a => a.addEventListener('click', e => { e.preventDefault(); openDetail(a.dataset.id); }));
     }
 
     function openDetail(id) {
       const r = allRows.find(x => x.reservationId === id);
       if (!r) return;
-      const cancelable = r.status !== 'cancelled';
-      const start = new Date(r.start);
-      const end = new Date(r.end);
-      const days = Math.max(1, Math.ceil((end - start) / 86400000));
+      const a = S.getAsset(r.assetId), c = S.getCategory(r.categoryId), l = S.getLocation(r.locationId);
+      const days = Math.max(1, Math.ceil((new Date(r.end) - new Date(r.start)) / 86400000));
+      const lines = (r.price && (r.price.lines || r.price.breakdown)) || [];
 
-      const modalHtml = `
-        <div class="crud-modal-bg"></div>
-        <div class="crud-modal-card" style="min-width:520px">
-          <div class="crud-modal-head">
-            <h3>予約詳細 <code style="background:rgba(255,255,255,0.2);color:#fff;font-size:12px;margin-left:8px;padding:2px 8px;border-radius:2px">${escapeHtml(r.reservationId)}</code></h3>
-            <button class="crud-close" type="button">×</button>
-          </div>
-          <div style="padding:18px 22px">
-            <div style="display:grid;grid-template-columns:120px 1fr;gap:10px;font-size:13px">
-              <div style="color:#777;font-weight:600">状態</div>
-              <div><span class="status status-${r.status}">${statusLabel(r.status)}</span></div>
-              <div style="color:#777;font-weight:600">車種</div>
-              <div><strong>${escapeHtml(r.vehicleName)}</strong> (${escapeHtml(r.vehicleId)})</div>
-              <div style="color:#777;font-weight:600">貸出</div>
-              <div>${formatDateTime(r.start)}</div>
-              <div style="color:#777;font-weight:600">返却</div>
-              <div>${formatDateTime(r.end)} <small style="color:#888">(${days}日間)</small></div>
-              <div style="color:#777;font-weight:600">借受人</div>
-              <div><strong>${escapeHtml(r.customerName)}</strong> 様</div>
-              <div style="color:#777;font-weight:600">メール</div>
-              <div>${escapeHtml(r.customerEmail || '-')}</div>
-              <div style="color:#777;font-weight:600">電話</div>
-              <div>${escapeHtml(r.customerPhone || '-')}</div>
-              <div style="color:#777;font-weight:600">備考</div>
-              <div>${escapeHtml(r.note || '-')}</div>
-              <div style="color:#777;font-weight:600">登録日時</div>
-              <div>${formatDateTime(r.createdAt)}</div>
-            </div>
-          </div>
-          <div class="crud-modal-foot">
-            ${cancelable ? '<button type="button" class="btn btn-gray" id="btn-cancel-res" style="background:#c0392b">予約をキャンセル</button>' : ''}
-            <span style="flex:1"></span>
-            <button type="button" class="btn btn-gray crud-cancel">閉じる</button>
-            <button type="button" class="btn btn-primary" onclick="window.print()">印刷</button>
-          </div>
-        </div>
-      `;
+      // 状態遷移ボタン
+      let actions = '';
+      if (r.status === 'confirmed') actions += '<button type="button" class="btn btn-primary" id="act-inuse">🚗 貸出処理 (出発)</button>';
+      if (r.status === 'in_use') actions += '<button type="button" class="btn btn-primary" id="act-return" style="background:#1e8a4a">✅ 返却処理</button>';
+      if (r.status === 'confirmed' || r.status === 'in_use') actions += '<button type="button" class="btn btn-gray" id="act-cancel" style="background:#c0392b">予約をキャンセル</button>';
+      if (r.payment && r.payment.status === 'unpaid' && r.status !== 'cancelled' && r.payment.method === 'onsite') actions += '<button type="button" class="btn btn-gray" id="act-pay" style="background:#2e7d5b">入金を記録</button>';
+
+      const rows = [
+        ['状態', '<span class="status status-' + r.status + '">' + (S.STATUS_LABELS[r.status] || r.status) + '</span>'],
+        ['対象', '<strong>' + esc(r.assetName || r.vehicleName) + '</strong>' + (r.quantity > 1 ? ' × ' + r.quantity : '') + ' (' + esc(r.assetId) + ')'],
+        ['カテゴリ', esc(c ? c.name : '')],
+        ['拠点', esc(l ? l.name : '')],
+        ['期間', fmtDT(r.start) + ' 〜 ' + fmtDT(r.end) + ' <small style="color:#888">(' + days + '日間)</small>'],
+        ['借受人', '<strong>' + esc(r.customerName) + '</strong> 様' + (r.company ? ' / ' + esc(r.company) : '') + (r.memberId ? ' <span class="chip">会員 ' + esc(r.memberId) + '</span>' : '')],
+        ['連絡先', esc(r.customerEmail || '-') + ' / ' + esc(r.customerPhone || '-')]
+      ];
+      if (c && c.type === 'vehicle') rows.push(['免許証番号', esc(r.licenseNo || '-') + (r.licenseConfirmed ? ' <span class="chip">✓ 必要資格確認済</span>' : '')]);
+      rows.push(['支払方法', (r.payment ? (S.PAYMENT_LABELS[r.payment.method] || '') : '') + ' / ' + (r.payment && r.payment.status === 'paid' ? '<span class="status status-paid">入金済</span>' : '<span class="status status-unpaid">未入金</span>')]);
+      if (r.invoiceId) rows.push(['請求書', '<a href="invoices.html" class="detail-link">' + esc(r.invoiceId) + '</a>']);
+      if (r.couponId) rows.push(['クーポン', '利用あり']);
+      rows.push(['備考', esc(r.note || '-')]);
+      rows.push(['登録日時', fmtDT(r.createdAt)]);
+
+      const html =
+        '<div class="crud-modal-bg"></div><div class="crud-modal-card" style="min-width:560px;max-width:620px">' +
+        '<div class="crud-modal-head"><h3>予約詳細 <code style="background:rgba(255,255,255,.2);color:#fff;font-size:12px;margin-left:8px;padding:2px 8px;border-radius:2px">' + esc(r.reservationId) + '</code></h3><button class="crud-close" type="button">×</button></div>' +
+        '<div style="padding:18px 22px;max-height:66vh;overflow:auto">' +
+          '<div style="display:grid;grid-template-columns:110px 1fr;gap:9px;font-size:13px">' +
+          rows.map(row => '<div style="color:#777;font-weight:600">' + row[0] + '</div><div>' + row[1] + '</div>').join('') +
+          '</div>' +
+          (lines.length ? '<div style="margin-top:14px"><strong class="card-section-title">料金内訳</strong><table class="data-table" style="margin-top:4px">' +
+            lines.map(li => '<tr><td>' + esc(li.label) + '</td><td style="text-align:right">' + (li.amount < 0 ? '-¥' + Math.abs(li.amount).toLocaleString() : '¥' + li.amount.toLocaleString()) + '</td></tr>').join('') +
+            '<tr><td style="font-weight:700">合計</td><td style="text-align:right;font-weight:700">¥' + ((r.price && r.price.total) || 0).toLocaleString() + '</td></tr></table></div>' : '') +
+        '</div>' +
+        '<div class="crud-modal-foot" style="flex-wrap:wrap;gap:8px">' + actions +
+          '<span style="flex:1"></span><a href="forms.html" class="btn btn-gray">帳票出力</a><button type="button" class="btn btn-gray crud-cancel">閉じる</button></div></div>';
+
       let modal = document.getElementById('crud-modal');
-      if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'crud-modal';
-        modal.className = 'crud-modal';
-        document.body.appendChild(modal);
-      }
-      modal.innerHTML = modalHtml;
+      if (!modal) { modal = document.createElement('div'); modal.id = 'crud-modal'; modal.className = 'crud-modal'; document.body.appendChild(modal); }
+      modal.innerHTML = html;
       const close = () => modal.remove();
       modal.querySelector('.crud-modal-bg').addEventListener('click', close);
       modal.querySelector('.crud-close').addEventListener('click', close);
       modal.querySelector('.crud-cancel').addEventListener('click', close);
-      const cancelBtn = modal.querySelector('#btn-cancel-res');
-      if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => {
-          if (!confirm(`予約 ${r.reservationId} をキャンセルしますか?\n借受人: ${r.customerName} 様`)) return;
-          if (window.SkyRentAPI.updateReservation && !window.SkyRentAPI.isConfigured) {
-            window.SkyRentAPI.updateReservation(id, { status: 'cancelled' });
-            alert('✓ 予約をキャンセルしました');
-            close();
-            load();
-          } else {
-            alert('GAS本番環境では Google スプレッドシートで status を cancelled に変更してください');
-          }
-        });
-      }
+
+      function reloadAfter() { close(); load(); }
+      const inuse = modal.querySelector('#act-inuse');
+      if (inuse) inuse.addEventListener('click', () => { if (!confirm('貸出処理を行いますか? (状態を「貸出中」に変更します)')) return; S.updateReservation(id, { status: 'in_use' }); reloadAfter(); });
+      const ret = modal.querySelector('#act-return');
+      if (ret) ret.addEventListener('click', () => { if (!confirm('返却処理を行いますか?\n会員予約の場合はポイントが自動付与されます。')) return; S.updateReservation(id, { status: 'returned' }); reloadAfter(); });
+      const can = modal.querySelector('#act-cancel');
+      if (can) can.addEventListener('click', () => { if (!confirm('予約 ' + id + ' をキャンセルしますか?\n借受人: ' + r.customerName + ' 様')) return; S.updateReservation(id, { status: 'cancelled' }); reloadAfter(); });
+      const pay = modal.querySelector('#act-pay');
+      if (pay) pay.addEventListener('click', () => { S.updateReservation(id, { payment: Object.assign({}, r.payment, { status: 'paid' }) }); alert('✓ 入金を記録しました'); reloadAfter(); });
     }
 
-    function formatDateTime(s) {
-      if (!s) return '';
-      const d = new Date(s);
-      return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    }
-    function statusLabel(s) {
-      return s === 'confirmed' ? '確定' : s === 'cancelled' ? 'キャンセル' : (s || '-');
-    }
-    function escapeHtml(str) {
-      return String(str==null?'':str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+      initFilters();
+      $('#btn-filter').addEventListener('click', applyFilter);
+      $('#keyword').addEventListener('keypress', e => { if (e.key === 'Enter') applyFilter(); });
+      ['#status-filter', '#loc-filter', '#cat-filter'].forEach(s => $(s).addEventListener('change', applyFilter));
+      load();
+    });
   })();
   </script>
 </body>

@@ -3,8 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>貸渡予約表 | Sky Rent 管理画面</title>
+  <title>貸渡予約表 (ガント) | Sky Rent 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
+  <style>
+    .gantt-cell.today { background: #fffbe6; }
+    .gantt-row.gantt-header .gantt-cell.today { background: #b08a1e; }
+    .gantt-group { background: #eef4fa; font-weight: 700; color: var(--topbar); padding: 8px 14px; border-bottom: 1px solid #d4e2ef; position: sticky; left: 0; }
+    .gantt-bar.status-in_use { background: #1d5cb8; }
+    .gantt-bar.status-returned { background: #9aa7b2; }
+    .gantt-bar.status-confirmed { background: var(--chart-line); }
+    .legend { display: flex; gap: 16px; font-size: 12px; flex-wrap: wrap; align-items: center; }
+    .legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .legend i { width: 14px; height: 12px; border-radius: 2px; display: inline-block; }
+  </style>
 </head>
 <body>
   <div data-include="topbar"></div>
@@ -13,116 +24,162 @@
     <h1 class="page-title">貸渡予約表 (ガントチャート)</h1>
 
     <section class="card filter-bar">
-      <div class="filter-group">
-        <label>表示開始日</label>
-        <input type="date" id="from-date">
-      </div>
-      <div class="filter-group">
-        <label>表示日数</label>
-        <select id="days">
-          <option value="7">7日間</option>
-          <option value="14" selected>14日間</option>
-          <option value="30">30日間</option>
+      <div class="filter-group"><label>表示開始日</label><input type="date" id="from-date"></div>
+      <div class="filter-group"><label>表示単位</label>
+        <select id="unit">
+          <option value="d7">日単位 (7日間)</option>
+          <option value="d14" selected>日単位 (14日間)</option>
+          <option value="d30">日単位 (30日間)</option>
+          <option value="h24">時間単位 (1日 / 24時間)</option>
         </select>
       </div>
+      <div class="filter-group"><label>拠点</label><select id="loc-filter"></select></div>
+      <div class="filter-group"><label>カテゴリ</label><select id="cat-filter"></select></div>
       <button class="btn btn-primary" id="btn-load">表 示</button>
     </section>
 
-    <section class="card gantt-wrap">
-      <div class="gantt" id="gantt">読み込み中...</div>
-    </section>
+    <div class="legend card" style="padding:10px 16px;margin-bottom:12px">
+      <strong>凡例:</strong>
+      <span><i style="background:#4ec5b6"></i>確定</span>
+      <span><i style="background:#1d5cb8"></i>貸出中</span>
+      <span><i style="background:#9aa7b2"></i>返却済</span>
+      <span><i style="background:#c0392b"></i>キャンセル</span>
+    </div>
+
+    <section class="card gantt-wrap"><div class="gantt" id="gantt">読み込み中...</div></section>
   </main>
 
   <div id="loading" class="loading" hidden><div class="spinner"></div></div>
 
   <script src="partials.js"></script>
   <script src="../js/config.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/pricing.js"></script>
   <script src="../js/api.js"></script>
   <script>
   (function () {
-    const $ = (s) => document.querySelector(s);
+    const S = window.SkyRentStore;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    const DAY = 86400000, HOUR = 3600000;
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const today = new Date();
-      $('#from-date').value = today.toISOString().slice(0,10);
-      $('#btn-load').addEventListener('click', load);
-      load();
-    });
+    function initFilters() {
+      $('#loc-filter').innerHTML = '<option value="">全拠点</option>' + S.locations().map(l => '<option value="' + l.locationId + '">' + esc(l.name) + '</option>').join('');
+      $('#cat-filter').innerHTML = '<option value="">全カテゴリ</option>' + S.categories(true).map(c => '<option value="' + c.categoryId + '">' + esc(c.name) + '</option>').join('');
+    }
 
-    async function load() {
+    function load() {
       $('#loading').hidden = false;
       try {
-        const start = new Date($('#from-date').value);
-        const days = parseInt($('#days').value, 10);
-        const end = new Date(start); end.setDate(end.getDate() + days);
+        const unit = $('#unit').value;
+        const startBase = new Date($('#from-date').value || new Date().toISOString().slice(0, 10));
+        const isHour = unit.charAt(0) === 'h';
+        const cellCount = isHour ? 24 : parseInt(unit.slice(1), 10);
+        const cellMs = isHour ? HOUR : DAY;
+        if (!isHour) startBase.setHours(0, 0, 0, 0);
+        const start = new Date(startBase);
+        const end = new Date(start.getTime() + cellCount * cellMs);
 
-        const [vehicles, reservations] = await Promise.all([
-          window.SkyRentAPI.listVehicles(),
-          window.SkyRentAPI.listReservations(start.toISOString(), end.toISOString())
-        ]);
-        render(vehicles, reservations, start, days);
-      } catch (err) {
-        $('#gantt').textContent = '読み込み失敗: ' + err.message;
-      } finally {
-        $('#loading').hidden = true;
-      }
+        const locF = $('#loc-filter').value, catF = $('#cat-filter').value;
+        let assets = S.assets({ activeOnly: true });
+        if (locF) assets = assets.filter(a => a.locationId === locF);
+        if (catF) assets = assets.filter(a => a.categoryId === catF);
+        const reservations = S.list('reservations').filter(r => r.status !== 'cancelled' || true); // 表示は全件 (キャンセルは色で)
+
+        render(assets, reservations, start, cellCount, cellMs, isHour);
+      } catch (e) { $('#gantt').textContent = '表示失敗: ' + e.message; }
+      finally { $('#loading').hidden = true; }
     }
 
-    function render(vehicles, reservations, start, days) {
-      const cellW = 36;
+    function render(assets, reservations, start, cellCount, cellMs, isHour) {
+      const cellW = isHour ? 42 : 38;
+      const now = new Date();
+
+      // ヘッダ
       const headerCells = [];
-      for (let i = 0; i < days; i++) {
-        const d = new Date(start); d.setDate(start.getDate() + i);
-        const dow = '日月火水木金土'[d.getDay()];
-        const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-        headerCells.push(`<div class="gantt-cell ${isWeekend ? 'weekend' : ''}" style="width:${cellW}px">
-          <div class="gantt-date">${d.getMonth()+1}/${d.getDate()}</div>
-          <div class="gantt-dow">(${dow})</div>
-        </div>`);
+      for (let i = 0; i < cellCount; i++) {
+        const d = new Date(start.getTime() + i * cellMs);
+        const isToday = !isHour && d.toDateString() === now.toDateString();
+        const isWeekend = !isHour && (d.getDay() === 0 || d.getDay() === 6);
+        const label1 = isHour ? d.getHours() + '時' : (d.getMonth() + 1) + '/' + d.getDate();
+        const label2 = isHour ? '' : '(' + '日月火水木金土'[d.getDay()] + ')';
+        headerCells.push('<div class="gantt-cell ' + (isWeekend ? 'weekend ' : '') + (isToday ? 'today' : '') + '" style="width:' + cellW + 'px"><div class="gantt-date">' + label1 + '</div><div class="gantt-dow">' + label2 + '</div></div>');
       }
 
-      const rows = vehicles.map(v => {
+      // 拠点グループ化
+      const locs = S.locations();
+      const showGroup = !$('#loc-filter').value;
+      let bodyHtml = '';
+
+      function assetRow(a) {
+        const cat = S.getCategory(a.categoryId);
+        const isItem = cat && cat.type === 'item';
+        const stock = Number(a.stock) || 1;
+        // セル
         const cells = [];
-        for (let i = 0; i < days; i++) {
-          const d = new Date(start); d.setDate(start.getDate() + i);
-          const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-          cells.push(`<div class="gantt-cell ${isWeekend ? 'weekend' : ''}" style="width:${cellW}px"></div>`);
+        for (let i = 0; i < cellCount; i++) {
+          const d = new Date(start.getTime() + i * cellMs);
+          const isToday = !isHour && d.toDateString() === now.toDateString();
+          const isWeekend = !isHour && (d.getDay() === 0 || d.getDay() === 6);
+          cells.push('<div class="gantt-cell ' + (isWeekend ? 'weekend ' : '') + (isToday ? 'today' : '') + '" style="width:' + cellW + 'px"></div>');
         }
-        // バー描画
-        const bars = reservations.filter(r => String(r.vehicleId) === String(v.vehicleId)).map(r => {
-          const rs = new Date(r.start);
-          const re = new Date(r.end);
-          const offsetDays = (rs - start) / 86400000;
-          const lengthDays = Math.max(0.25, (re - rs) / 86400000);
-          const left = Math.max(0, offsetDays * cellW);
-          const width = Math.min(days * cellW - left, lengthDays * cellW);
-          if (width <= 0) return '';
-          return `<div class="gantt-bar status-${r.status}" style="left:${left}px;width:${width}px" title="${escapeHtml(r.customerName)} (${r.reservationId})">
-            ${escapeHtml(r.customerName || '')}
-          </div>`;
+        // バー (物品は段積み)
+        const rs = reservations.filter(r => String(r.assetId) === String(a.assetId));
+        // 段割り当て (単純: 開始順に空いている段へ)
+        const lanes = [];
+        const bars = rs.map(r => {
+          const rs0 = new Date(r.start).getTime(), re0 = new Date(r.end).getTime();
+          const offset = (rs0 - start.getTime()) / cellMs;
+          const length = Math.max(0.3, (re0 - rs0) / cellMs);
+          const left = Math.max(0, offset * cellW);
+          const width = Math.min(cellCount * cellW - left, length * cellW);
+          if (width <= 0 || offset > cellCount || (offset + length) < 0) return null;
+          // 段
+          let lane = 0;
+          while (lanes[lane] && lanes[lane] > rs0) lane++;
+          lanes[lane] = re0;
+          return { r, left, width, lane };
+        }).filter(Boolean);
+        const maxLane = bars.reduce((m, b) => Math.max(m, b.lane), 0);
+        const rowH = isItem && stock > 1 ? Math.max(48, (maxLane + 1) * 26 + 14) : 48;
+        const barHtml = bars.map(b => {
+          const r = b.r;
+          const top = isItem && stock > 1 ? (8 + b.lane * 26) : 8;
+          const barH = isItem && stock > 1 ? 20 : null;
+          const qtyTxt = (r.quantity > 1 ? ' ×' + r.quantity : '');
+          return '<div class="gantt-bar status-' + r.status + '" style="left:' + b.left + 'px;width:' + b.width + 'px;top:' + top + 'px' + (barH ? ';bottom:auto;height:' + barH + 'px' : '') + '" title="' + esc(r.reservationId + ' / ' + r.customerName + ' / ' + fmtDT(r.start) + '〜' + fmtDT(r.end) + ' / ' + (S.STATUS_LABELS[r.status] || r.status)) + '" onclick="location.href=\'reservation-list.html#' + r.reservationId + '\'">' + esc(r.customerName) + qtyTxt + '</div>';
         }).join('');
 
-        return `<div class="gantt-row">
-          <div class="gantt-label">
-            <strong>${escapeHtml(v.name)}</strong>
-            <small>${escapeHtml(v.vehicleId)} / ${escapeHtml(v.class || '')}</small>
-          </div>
-          <div class="gantt-track">${cells.join('')}<div class="gantt-bars">${bars}</div></div>
-        </div>`;
-      });
+        return '<div class="gantt-row" style="min-height:' + rowH + 'px">' +
+          '<div class="gantt-label"><strong>' + esc(a.name) + '</strong><small>' + esc(a.assetId) + ' / ' + esc(cat ? cat.name : '') + (isItem && stock > 1 ? ' ・在庫' + stock : '') + '</small></div>' +
+          '<div class="gantt-track">' + cells.join('') + '<div class="gantt-bars">' + barHtml + '</div></div></div>';
+      }
 
-      $('#gantt').innerHTML = `
-        <div class="gantt-row gantt-header">
-          <div class="gantt-label">車輌</div>
-          <div class="gantt-track">${headerCells.join('')}</div>
-        </div>
-        ${rows.join('')}
-      `;
+      if (showGroup) {
+        locs.forEach(loc => {
+          const la = assets.filter(a => a.locationId === loc.locationId);
+          if (!la.length) return;
+          bodyHtml += '<div class="gantt-row"><div class="gantt-group" style="width:100%">📍 ' + esc(loc.name) + '</div></div>';
+          bodyHtml += la.map(assetRow).join('');
+        });
+      } else {
+        bodyHtml += assets.map(assetRow).join('');
+      }
+
+      $('#gantt').innerHTML =
+        '<div class="gantt-row gantt-header"><div class="gantt-label">車両・物品</div><div class="gantt-track">' + headerCells.join('') + '</div></div>' +
+        (bodyHtml || '<div style="padding:30px;text-align:center;color:#888">該当する車両・物品がありません</div>');
     }
 
-    function escapeHtml(str) {
-      return String(str==null?'':str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    }
+    function fmtDT(s){const d=new Date(s);const p=n=>String(n).padStart(2,'0');return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes());}
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initFilters();
+      $('#from-date').value = new Date().toISOString().slice(0, 10);
+      $('#btn-load').addEventListener('click', load);
+      ['#unit', '#loc-filter', '#cat-filter'].forEach(s => $(s).addEventListener('change', load));
+      load();
+    });
   })();
   </script>
 </body>

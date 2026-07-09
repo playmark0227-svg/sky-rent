@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>空き状況を検索 | Sky Rent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/public.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">✈</span><span class="logo-text">Sky Rent</span></a>
+      <nav class="site-nav">
+        <a href="index.html#categories" data-i18n="nav.categories">カテゴリ</a>
+        <a href="search.html" data-i18n="nav.search">予約する</a>
+        <a href="index.html#locations" data-i18n="nav.locations">店舗一覧</a>
+        <a href="mypage.html" data-i18n="nav.mypage">マイページ</a>
+        <button class="lang-btn" data-lang-toggle type="button">EN</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top:24px;padding-bottom:60px">
+    <div class="steps">
+      <span class="step active"><span class="n">1</span><span data-sk="s1">検索</span></span>
+      <span class="sep">›</span>
+      <span class="step"><span class="n">2</span><span data-sk="s2">車両を選択</span></span>
+      <span class="sep">›</span>
+      <span class="step"><span class="n">3</span><span data-sk="s3">情報入力</span></span>
+      <span class="sep">›</span>
+      <span class="step"><span class="n">4</span><span data-sk="s4">完了</span></span>
+    </div>
+
+    <form class="p-searchbar mb16" id="searchbar">
+      <div class="fg"><label data-i18n="search.category">カテゴリ</label><select id="s-category"></select></div>
+      <div class="fg"><label data-i18n="search.location">利用拠点</label><select id="s-location"></select></div>
+      <div class="fg"><label data-i18n="search.start">出発日時 (受取)</label><input type="datetime-local" id="s-start"></div>
+      <div class="fg"><label data-i18n="search.end">返却日時</label><input type="datetime-local" id="s-end"></div>
+      <button type="submit" class="btn btn-primary" data-i18n="search.submit">検索する</button>
+    </form>
+
+    <div class="filter-panel" id="filter-panel" hidden></div>
+
+    <div class="flex-sb mb16">
+      <p class="muted" id="result-count" style="font-size:14px"></p>
+      <div class="fg" style="display:flex;align-items:center;gap:6px">
+        <label class="muted" style="font-size:12px;font-weight:600" id="sort-label">並び替え</label>
+        <select id="sort" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:5px;font-size:13px">
+          <option value="rec" data-sk="sort-rec">おすすめ順</option>
+          <option value="asc" data-sk="sort-asc">料金が安い順</option>
+          <option value="desc" data-sk="sort-desc">料金が高い順</option>
+        </select>
+      </div>
+    </div>
+
+    <p id="search-error" class="error-text" hidden></p>
+    <div class="asset-grid" id="results"></div>
+  </main>
+
+  <footer class="site-footer"><div class="container"><p data-i18n="footer.copyright">© 2026 Sky Rent</p></div></footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/pricing.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+  (function () {
+    const S = window.SkyRentStore, I = window.SkyRentI18n, P = window.SkyRentPricing;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    const isEn = () => I.getLang() === 'en';
+    const catName = c => c && isEn() && c.nameEn ? c.nameEn : (c ? c.name : '');
+    const assetName = a => isEn() && a.nameEn ? a.nameEn : a.name;
+
+    const L = {
+      s1: { ja: '検索', en: 'Search' }, s2: { ja: '車両を選択', en: 'Select' }, s3: { ja: '情報入力', en: 'Details' }, s4: { ja: '完了', en: 'Done' },
+      'sort-rec': { ja: 'おすすめ順', en: 'Recommended' }, 'sort-asc': { ja: '料金が安い順', en: 'Price ↑' }, 'sort-desc': { ja: '料金が高い順', en: 'Price ↓' },
+      results: { ja: n => n + ' 件の空きが見つかりました', en: n => n + ' result(s) available' },
+      perday: { ja: '/日', en: '/day' }, perhour: { ja: '〜/時', en: '〜/hr' },
+      lic: { ja: '要免許', en: 'License req.' }, filterLabel: { ja: '絞り込み', en: 'Filter' }, any: { ja: '指定なし', en: 'Any' },
+      over: { ja: '以上', en: '+' }
+    };
+    const tt = k => L[k][isEn() ? 'en' : 'ja'];
+
+    const params = new URLSearchParams(location.search);
+    let state = {
+      category: params.get('category') || '',
+      location: params.get('location') || '',
+      start: params.get('start') || '',
+      end: params.get('end') || '',
+      filters: {},
+      sort: 'rec'
+    };
+    // カスタムフィルタ (f_key)
+    params.forEach((v, k) => { if (k.indexOf('f_') === 0) state.filters[k.slice(2)] = v; });
+
+    function fmtLocal(iso) {
+      const d = iso ? new Date(iso) : null; if (!d) return '';
+      const p = n => String(n).padStart(2, '0');
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+    }
+
+    function initBar() {
+      const cats = S.categories(), locs = S.locations();
+      $('#s-category').innerHTML = '<option value="">' + I.t('search.all') + '</option>' + cats.map(c => '<option value="' + c.categoryId + '"' + (c.categoryId === state.category ? ' selected' : '') + '>' + esc(catName(c)) + '</option>').join('');
+      $('#s-location').innerHTML = '<option value="">' + I.t('search.all') + '</option>' + locs.map(l => '<option value="' + l.locationId + '"' + (l.locationId === state.location ? ' selected' : '') + '>' + esc(isEn() && l.nameEn ? l.nameEn : l.name) + '</option>').join('');
+      if (!state.start) { const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(10, 0, 0, 0); state.start = t.toISOString(); }
+      if (!state.end) { const t = new Date(state.start); t.setDate(t.getDate() + 1); state.end = t.toISOString(); }
+      $('#s-start').value = fmtLocal(state.start);
+      $('#s-end').value = fmtLocal(state.end);
+      // ステップ・並び替えラベル
+      document.querySelectorAll('[data-sk]').forEach(el => { el.textContent = tt(el.dataset.sk); });
+      $('#sort-label').textContent = tt('filterLabel') === 'Filter' ? 'Sort' : '並び替え';
+    }
+
+    function renderFilters() {
+      const panel = $('#filter-panel');
+      const cat = state.category ? S.getCategory(state.category) : null;
+      if (!cat || !cat.customFieldDefs) { panel.hidden = true; panel.innerHTML = ''; return; }
+      const defs = cat.customFieldDefs.filter(d => d.filterable);
+      if (!defs.length) { panel.hidden = true; panel.innerHTML = ''; return; }
+      panel.hidden = false;
+      panel.innerHTML = '<span class="muted" style="font-weight:700">' + (isEn() ? 'Filter' : 'こだわり条件') + ':</span>' + defs.map(d => {
+        const cur = state.filters[d.key] || '';
+        if (d.type === 'select') {
+          return '<div class="fg"><label>' + esc(d.label) + '</label><select data-fk="' + d.key + '"><option value="">' + tt('any') + '</option>' +
+            (d.options || []).map(o => '<option value="' + esc(o) + '"' + (cur === o ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select></div>';
+        }
+        return '<div class="fg"><label>' + esc(d.label) + (d.unit ? ' (' + esc(d.unit) + ')' : '') + tt('over') + '</label><input type="number" data-fk="' + d.key + '" value="' + esc(cur) + '" style="width:90px"></div>';
+      }).join('');
+      panel.querySelectorAll('[data-fk]').forEach(el => {
+        el.addEventListener('change', () => {
+          const k = el.dataset.fk;
+          if (el.value) state.filters[k] = el.value; else delete state.filters[k];
+          run();
+        });
+      });
+    }
+
+    function priceLabel(a) {
+      const day = a.priceDay ? '¥' + a.priceDay.toLocaleString() + tt('perday') : '';
+      if (a.priceHour) return '¥' + a.priceHour.toLocaleString() + tt('perhour') + ' / ' + day;
+      return day;
+    }
+
+    function run() {
+      // URL 同期
+      const p = new URLSearchParams();
+      if (state.category) p.set('category', state.category);
+      if (state.location) p.set('location', state.location);
+      if (state.start) p.set('start', state.start);
+      if (state.end) p.set('end', state.end);
+      Object.keys(state.filters).forEach(k => p.set('f_' + k, state.filters[k]));
+      history.replaceState(null, '', 'search.html?' + p.toString());
+
+      $('#search-error').hidden = true;
+      if (state.start && state.end && new Date(state.end) <= new Date(state.start)) {
+        $('#search-error').hidden = false;
+        $('#search-error').textContent = isEn() ? 'Return time must be after pick-up time.' : '返却日時は出発日時より後にしてください';
+      }
+
+      renderFilters();
+      let items = S.searchAvailable({ categoryId: state.category, locationId: state.location, start: state.start, end: state.end, quantity: 1, filters: state.filters });
+      if (state.sort === 'asc') items.sort((a, b) => (a.priceDay || 0) - (b.priceDay || 0));
+      else if (state.sort === 'desc') items.sort((a, b) => (b.priceDay || 0) - (a.priceDay || 0));
+
+      $('#result-count').textContent = tt('results')(items.length);
+      const grid = $('#results');
+      if (!items.length) { grid.innerHTML = '<p class="muted tc" style="grid-column:1/-1;padding:40px">' + I.t('search.noresults') + '</p>'; return; }
+
+      grid.innerHTML = items.map(a => {
+        const cat = S.getCategory(a.categoryId);
+        const loc = S.getLocation(a.locationId);
+        const av = a.availability;
+        const isItem = cat && cat.type === 'item';
+        let badge;
+        if (!av.ok) badge = '<span class="badge ng">' + I.t('search.unavailable') + '</span>';
+        else if (isItem && av.stock > 1) badge = '<span class="badge stock">' + I.t('search.stock') + ' ' + av.remaining + '</span>';
+        else badge = '<span class="badge ok">' + I.t('search.available') + '</span>';
+        const lic = a.requiredLicense ? ' <span class="badge lic">' + tt('lic') + '</span>' : '';
+        const q = 'id=' + a.assetId + (state.start ? '&start=' + encodeURIComponent(state.start) : '') + (state.end ? '&end=' + encodeURIComponent(state.end) : '');
+        const btn = av.ok
+          ? '<a class="btn btn-primary" href="detail.html?' + q + '">' + (isEn() ? 'Details & Book' : '詳細・予約') + '</a>'
+          : '<button class="btn btn-secondary" disabled>' + I.t('search.unavailable') + '</button>';
+        return '<div class="asset-card ' + (av.ok ? 'ok' : 'ng') + '">' +
+          '<div class="thumb">' + esc(a.image || '📦') + '</div>' +
+          '<div class="body">' +
+          '<div class="cat">' + esc(catName(cat)) + ' ・ ' + esc(loc ? (isEn() && loc.nameEn ? loc.nameEn : loc.name) : '') + '</div>' +
+          '<div class="name">' + esc(assetName(a)) + lic + '</div>' +
+          '<div style="margin:2px 0">' + badge + '</div>' +
+          '<div class="price">' + priceLabel(a) + '</div>' +
+          '</div>' + btn + '</div>';
+      }).join('');
+    }
+
+    $('#searchbar').addEventListener('submit', e => {
+      e.preventDefault();
+      state.category = $('#s-category').value;
+      state.location = $('#s-location').value;
+      state.start = $('#s-start').value ? new Date($('#s-start').value).toISOString() : '';
+      state.end = $('#s-end').value ? new Date($('#s-end').value).toISOString() : '';
+      state.filters = {}; // カテゴリ変更でフィルタリセット
+      run();
+    });
+    $('#sort').addEventListener('change', () => { state.sort = $('#sort').value; run(); });
+
+    function boot() { initBar(); run(); }
+    document.addEventListener('DOMContentLoaded', boot);
+    document.addEventListener('sky-rent:langchange', () => { initBar(); run(); });
+    if (document.readyState !== 'loading') boot();
+  })();
+  </script>
+</body>
+</html>

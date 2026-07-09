@@ -1,119 +1,79 @@
 # Sky Rent
 
-Googleカレンダー連携付きのレンタカー予約システム (MVP)。
-GitHub Pages (フロント) + Google Apps Script (バックエンド) + Google Sheets (DB) + Google Calendar (在庫照合) で動作する、**サーバーレス・無料運用**の構成です。
+レンタカー・キッチンカー・特殊車両・家電・工具を扱う **統合レンタル予約システム & 管理システム**。
+要件定義書 v3.0 (2026-06-26) に基づいて実装。素の HTML/CSS/JS + GitHub Pages で動作し、
+データ層は差替可能な抽象化 (`SkyRentStore`) により、デモはブラウザ内 localStorage、本番は GAS / AWS 等へ移行できます。
 
-公開URL: https://playmark0227-svg.github.io/sky-rent/
+- 予約サイト: https://playmark0227-svg.github.io/sky-rent/
+- 管理画面: https://playmark0227-svg.github.io/sky-rent/manage/dashboard.html
+- ドキュメント: https://playmark0227-svg.github.io/sky-rent/docs/
 
-## 特徴
+## 主な機能 (要件定義書 v3.0 準拠)
 
-- **Googleカレンダー自動照合**: 予約時に Google Sheets と Google Calendar の双方を見て、空き状況を判定
-- **二重予約防止**: ScriptLock + 予約確定時の再照合
-- **完了メール自動送信**: 顧客向けに予約確認メール送信
-- **無料**: Google アカウントだけで運用可能
+### 予約サイト (公開)
+- **カテゴリ横断検索**: 日時・拠点 (4拠点)・カテゴリで空きを検索。カテゴリ固有の絞り込み (家電=品目種別/対応電圧、工具=用途/サイズ 等) に対応
+- **車両・物品詳細**: カテゴリごとのカスタムスペック表示、料金プラン (時間/日/週/月)、オプション選択と料金リアルタイム見積り
+- **免許・資格の明示と確認**: 大型免許等が必要な車両は詳細ページに明示し、予約フローで保有確認
+- **動的な予約フロー**: 車両レンタルは免許証番号欄を表示、物品レンタルは非表示に自動切替
+- **会員機能**: 会員登録・ログイン・予約履歴・ポイント残高・クーポン確認 (マイページ)
+- **多言語**: 日本語 / 英語 (将来 中国語・韓国語へ拡張可能な i18n 構造)
+- **レスポンシブ**: スマートフォン最優先設計
+
+### 管理画面 (スタッフ)
+- **ダッシュボード**: 全4拠点の本日出発・返却、拠点別サマリー、未処理アラート、当月売上、自動通知ログ
+- **ガントチャート式予約表**: 日単位・時間単位、拠点グループ表示、物品は在庫数ぶん段積み
+- **予約管理**: 状態遷移 (確定→貸出中→返却済)、キャンセル、入金記録
+- **帳票出力**: 貸渡証・車輌チェックシート・領収書 (車両) / 物品貸出書・領収書 (物品) を A4 印刷
+- **カテゴリ管理 (EAV)**: エンジニア不要で新カテゴリと固有カスタム項目を追加。予約サイトに自動反映
+- **車両・物品マスタ**: カテゴリに応じた入力欄の自動切替、料金プラン、車検・点検期限 (車両)、在庫数 (物品)
+- **オプション管理**: 共通オプション / カテゴリ専用オプションの2階層
+- **顧客・会員管理**: 利用履歴、ポイント手動付与・調整、クーポン発行、請求書払い許可フラグ
+- **請求書管理**: 法人・行政向けの請求書発行 (月次一括対応)・入金管理・印刷
+- **ポイント/クーポン設定・拠点管理・各種設定**
+
+### 決済 (要件定義書 6章)
+- 現地決済 (基本)
+- 請求書払い (管理画面で「請求書払い許可」を付与した法人・行政アカウントのみ)
+- オンライン事前決済 (Stripe 等) は初期リリース対象外だが、`payment.method` の拡張で追加可能な設計
 
 ## ディレクトリ構成
 
 ```
 sky-rent/
-├── index.html              # トップページ (1ページ完結ステップ式)
-├── css/style.css
+├── index.html / search.html / detail.html / booking.html / mypage.html   # 公開サイト
+├── css/style.css, css/public.css
 ├── js/
-│   ├── config.js          # GAS の URL を設定 (要編集)
-│   ├── api.js             # API クライアント (モック切替対応)
-│   └── app.js             # メイン処理
-├── gas/
-│   ├── Code.gs            # バックエンド (これを GAS にコピペ)
-│   └── appsscript.json    # GAS マニフェスト
-└── README.md
+│   ├── config.js      # バックエンドURL設定 (未設定時は localStorage デモ)
+│   ├── store.js       # 統合データストア (カテゴリ/拠点/資産/会員/予約/請求書…)
+│   ├── pricing.js     # 料金計算エンジン (時間/日/週/月/ハイシーズン/クーポン)
+│   ├── i18n.js        # 多言語 (日英)
+│   └── api.js         # API 抽象化層 (旧画面互換のエイリアス込み)
+├── manage/            # 管理画面一式 (dashboard, categories, vehicles, options,
+│   │                  #   members, invoices, forms, reservation-list/table, stores, points, …)
+│   ├── partials.js    # 共通トップナビ (レスポンシブ・ハンバーガー)
+│   └── css/manage.css
+├── docs/              # 納品ドキュメント (要件定義書・基本設計書・管理者マニュアル・開発規約)
+└── gas/               # (旧) Google Apps Script バックエンド雛形
 ```
 
-## セットアップ手順
+## データ層とバックエンド
 
-### 1. Google Apps Script の準備
+デモ環境ではすべてのデータをブラウザの localStorage (`sky-rent.*` プレフィックス) に保存します。
+`SkyRentStore` / `SkyRentAPI` がデータアクセスの唯一の入口で、本番では `js/config.js` の `GAS_URL` を
+設定することで、同一インターフェースのまま Google Apps Script 等のサーバーサイドへ差し替えられます。
 
-1. https://script.google.com/ にアクセス → 「新しいプロジェクト」
-2. プロジェクト名を `Sky Rent Backend` などに変更
-3. 左サイドバーの ⚙(プロジェクトの設定) → 「`appsscript.json`マニフェストファイルをエディタに表示」にチェック
-4. `gas/Code.gs` の内容をエディタに貼り付け (`Code.gs`)
-5. `gas/appsscript.json` の内容をエディタの `appsscript.json` に貼り付け
-6. エディタ上部で関数 `setup` を選択 → 「実行」
-   - 初回は権限承認が必要 (Sheets / Calendar / Mail / Script へのアクセスを許可)
-   - 実行ログに Spreadsheet URL が表示されるので開いて確認 (サンプル車両4台が登録されています)
+- メール送信は `SkyRentStore.notify()` にログ化 (本番は実送信へ差替)
+- データのバックアップ/復元は管理画面「プロフィール」から JSON で書き出し・読み込み可能
+- デモデータの初期化も同画面から可能
 
-### 2. ウェブアプリとしてデプロイ
+## ドキュメント
 
-1. 右上「デプロイ」→「新しいデプロイ」
-2. 種類: **ウェブアプリ**
-3. 設定:
-   - 説明: `Sky Rent v1`
-   - 実行するユーザー: **自分**
-   - アクセスできるユーザー: **全員**
-4. 「デプロイ」を押すと URL が発行される (`https://script.google.com/macros/s/.../exec`)
-5. この URL をコピー
+`docs/index.html` から以下を参照できます。
 
-### 3. フロントエンドの設定
-
-`js/config.js` の `GAS_URL` を発行された URL に書き換える:
-
-```javascript
-window.SKY_RENT_CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbx.../exec',
-  USE_MOCK_WHEN_NO_URL: true
-};
-```
-
-### 4. GitHub Pages で公開
-
-リポジトリの Settings → Pages →
-- Source: `Deploy from a branch`
-- Branch: `main` / root
-
-数分で `https://<ユーザー名>.github.io/sky-rent/` で公開されます。
-
-### 5. (任意) 専用カレンダーを使う
-
-デフォルトではログインユーザーのメインカレンダー (primary) を使用しますが、
-レンタカー専用のカレンダーに分けたい場合:
-
-1. Google Calendar で新規カレンダーを作成 (例: `Sky Rent 予約`)
-2. カレンダー設定 → カレンダーの統合 → カレンダーIDをコピー
-3. GAS エディタで → プロジェクトの設定 → スクリプト プロパティ → 追加
-   - キー: `CALENDAR_ID`
-   - 値: コピーしたカレンダーID
-
-## 仕組み (照合ロジック)
-
-予約フォーム送信 → GAS が以下の順で照合:
-
-1. **Sheets 予約台帳** に同じ車両 × 期間重複の予約があるか
-2. **Google Calendar** に同じ期間でタイトルに車両ID/車両名を含むイベントがあるか
-3. どちらにも無ければ → Sheets追加 + Calendar イベント作成 + 確認メール送信
-
-```
-[ お客様 ] → [ index.html (GitHub Pages) ]
-                        |
-                        ▼ fetch
-              [ Google Apps Script ]
-                ├─ Google Sheets (車両/予約台帳)
-                ├─ Google Calendar (在庫照合)
-                └─ Mail (確認メール)
-```
-
-## カスタマイズ
-
-- **車両を増やす**: Spreadsheet `車両マスタ` シートに行を追加 (`active=TRUE` にすれば即反映)
-- **料金体系の変更**: `pricePerDay` を編集
-- **店舗名・ロゴ**: `index.html` の `Sky Rent` を変更
-
-## ロードマップ (v2 以降)
-
-- [ ] 管理者ダッシュボード (店舗側UI)
-- [ ] 予約キャンセル機能
-- [ ] クレジットカード決済 (Stripe 連携)
-- [ ] 貸渡証 / 領収書 PDF発行
-- [ ] OTAメールAI解析
-- [ ] 多店舗対応
+- **要件定義書** (`docs/requirements.html`) — 機能要件と実装状況
+- **基本設計書** (`docs/design.html`) — システム構成図・画面遷移図・DBスキーマ・API仕様
+- **管理者向けマニュアル** (`docs/manual.html`) — 管理画面の操作手順書
+- **開発規約** (`docs/dev-contract.md`) — データモデル・API・コーディング規約
 
 ## ライセンス
 

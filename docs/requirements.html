@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>要件定義書 | Sky Rent 統合予約・管理システム</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
+    color: #24303c; line-height: 1.85; background: #eef1f5;
+    font-size: 15px; -webkit-font-smoothing: antialiased;
+  }
+  .sheet {
+    max-width: 860px; margin: 0 auto; background: #fff;
+    padding: 56px 60px 72px;
+    box-shadow: 0 2px 18px rgba(28,74,122,.10);
+  }
+
+  /* ---- 見出し ---- */
+  h1, h2, h3, h4 { color: #1c4a7a; line-height: 1.45; }
+  h2 {
+    font-size: 20px; margin: 46px 0 16px; padding: 10px 0 10px 16px;
+    border-left: 6px solid #1c4a7a; background: #f2f6fb;
+    border-radius: 0 4px 4px 0;
+  }
+  h3 { font-size: 16.5px; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1.5px solid #d6e0ea; }
+  h4 { font-size: 14.5px; margin: 20px 0 8px; color: #2b5c8f; }
+  p { margin: 9px 0; }
+  ul, ol { margin: 8px 0 12px 1.4em; }
+  li { margin: 4px 0; }
+  strong { color: #163a5f; }
+  a { color: #1976c5; }
+  code {
+    font-family: "SF Mono", "Consolas", "Menlo", monospace;
+    background: #eef3f8; color: #1c4a7a; padding: 1px 6px;
+    border-radius: 4px; font-size: 12.5px;
+  }
+
+  /* ---- 表紙 ---- */
+  .cover { min-height: 92vh; display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 40px 0; }
+  .cover .mark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 78px; height: 78px; border-radius: 18px; background: #1c4a7a;
+    color: #fff; font-size: 42px; font-weight: bold; font-family: serif;
+    margin: 0 auto 26px; box-shadow: 0 8px 22px rgba(28,74,122,.28);
+  }
+  .cover .kicker { letter-spacing: .32em; color: #6b7c8d; font-size: 13px; margin-bottom: 20px; }
+  .cover h1 { font-size: 34px; letter-spacing: .04em; line-height: 1.4; }
+  .cover .subtitle { color: #4a5a6a; font-size: 15px; margin-top: 16px; line-height: 1.9; }
+  .cover .divider { width: 64px; height: 3px; background: #1c4a7a; margin: 30px auto; border-radius: 2px; }
+  .cover .meta-box {
+    display: inline-block; text-align: left; margin-top: 12px;
+    border: 1px solid #d6e0ea; border-radius: 8px; padding: 20px 30px;
+    background: #f8fafc; min-width: 340px;
+  }
+  .cover .meta-box dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 20px; font-size: 13.5px; }
+  .cover .meta-box dt { color: #6b7c8d; }
+  .cover .meta-box dd { color: #24303c; font-weight: 600; }
+  .cover .foot { margin-top: 40px; color: #9aa8b5; font-size: 12px; }
+
+  /* ---- 目次 ---- */
+  .toc { border: 1px solid #d6e0ea; border-radius: 10px; padding: 24px 30px; background: #f8fafc; }
+  .toc h2.toc-title { border: none; background: none; padding: 0 0 12px; margin: 0 0 14px; border-bottom: 2px solid #1c4a7a; border-radius: 0; font-size: 19px; }
+  .toc ol { list-style: none; margin: 0; counter-reset: toc; }
+  .toc > ol > li { counter-increment: toc; margin: 7px 0; }
+  .toc > ol > li > a { display: flex; align-items: baseline; text-decoration: none; color: #24303c; }
+  .toc > ol > li > a::before { content: counter(toc) "."; color: #1c4a7a; font-weight: 700; min-width: 26px; }
+  .toc > ol > li > a .tt { flex: 1; }
+  .toc > ol > li > a:hover .tt { color: #1976c5; text-decoration: underline; }
+  .toc .dots { flex: 1; border-bottom: 1px dotted #b8c6d3; margin: 0 8px 4px; }
+
+  /* ---- 表 ---- */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 20px; font-size: 13px; }
+  th, td { border: 1px solid #cfdae5; padding: 8px 11px; text-align: left; vertical-align: top; }
+  thead th { background: #1c4a7a; color: #fff; font-weight: 600; }
+  tbody tr:nth-child(even) { background: #f5f8fb; }
+  th.num, td.num { text-align: center; white-space: nowrap; width: 42px; }
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* 実装状況セル */
+  .done { text-align: center; color: #157347; font-weight: 700; white-space: nowrap; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; white-space: nowrap; }
+  .badge.impl { background: #e3f3e9; color: #157347; border: 1px solid #a9d9bd; }
+  .badge.future { background: #fdf1e0; color: #b56a12; border: 1px solid #f0cf9f; }
+  .badge.core { background: #e7eef8; color: #1c4a7a; border: 1px solid #b9cee6; }
+
+  /* ---- 注記・ボックス ---- */
+  .callout {
+    border: 1px solid #cfdae5; border-left: 4px solid #1c4a7a;
+    background: #f6f9fc; border-radius: 0 6px 6px 0;
+    padding: 12px 18px; margin: 16px 0; font-size: 13.5px;
+  }
+  .callout .lbl { display: block; color: #1c4a7a; font-weight: 700; font-size: 12.5px; margin-bottom: 3px; }
+  .callout.accent { border-left-color: #b56a12; background: #fdf9f2; }
+  .callout.accent .lbl { color: #b56a12; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .chip { background: #eef3f8; border: 1px solid #cfdae5; color: #2b5c8f; border-radius: 16px; padding: 3px 13px; font-size: 12.5px; }
+
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 14px 0; }
+  .cat-card { border: 1px solid #d6e0ea; border-radius: 8px; padding: 13px 15px; background: #fbfcfe; }
+  .cat-card .ci { font-size: 22px; }
+  .cat-card b { display: block; color: #1c4a7a; margin: 3px 0; font-size: 14px; }
+  .cat-card small { color: #6b7c8d; font-size: 11.5px; }
+  .cat-card .tag { display: inline-block; font-size: 10.5px; margin-top: 5px; padding: 1px 7px; border-radius: 8px; background: #e7eef8; color: #1c4a7a; }
+  .cat-card .tag.item { background: #f0ece0; color: #8a6a1a; }
+
+  .lead { font-size: 15px; color: #3a4a5a; }
+  .sec-intro { color: #52616f; font-size: 14px; margin-bottom: 6px; }
+
+  hr.pb { border: none; border-top: 1px dashed #cfdae5; margin: 34px 0; }
+  .section { }
+
+  .footer-note { margin-top: 50px; padding-top: 18px; border-top: 1px solid #d6e0ea; color: #8a99a7; font-size: 12px; text-align: center; }
+
+  .anchor { scroll-margin-top: 16px; }
+
+  /* ---- 印刷 (A4) ---- */
+  @media print {
+    body { background: #fff; font-size: 10.5pt; }
+    .sheet { box-shadow: none; max-width: none; margin: 0; padding: 0; }
+    @page { size: A4; margin: 18mm 16mm; }
+    h2 { page-break-after: avoid; }
+    h3, h4 { page-break-after: avoid; }
+    table, .callout, .cat-card, .toc { page-break-inside: avoid; }
+    thead { display: table-header-group; }
+    tr { page-break-inside: avoid; }
+    .cover { min-height: auto; height: 100vh; page-break-after: always; }
+    .toc { page-break-after: always; border: none; background: none; padding: 0; }
+    .page-break { page-break-before: always; }
+    a { color: #1c4a7a; text-decoration: none; }
+    thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tbody tr:nth-child(even) { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge, .done, .cat-card .tag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  @media (max-width: 640px) {
+    .sheet { padding: 30px 18px 44px; }
+    .cover h1 { font-size: 26px; }
+    .cover .meta-box { min-width: 0; width: 100%; padding: 16px 18px; }
+    h2 { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <!-- ============== 表紙 ============== -->
+  <section class="cover">
+    <div class="mark">空</div>
+    <div class="kicker">SKY RENT — SYSTEM REQUIREMENTS</div>
+    <h1>要件定義書</h1>
+    <div class="subtitle">
+      レンタカー・キッチンカー・特殊車両・家電・工具<br>
+      統合予約サイト &amp; 管理システム
+    </div>
+    <div class="divider"></div>
+    <div class="meta-box">
+      <dl>
+        <dt>文書名</dt><dd>要件定義書（実装反映版）</dd>
+        <dt>バージョン</dt><dd>v3.1</dd>
+        <dt>作成日</dt><dd>2026年7月10日</dd>
+        <dt>対象システム</dt><dd>Sky Rent 統合予約・管理システム</dd>
+        <dt>準拠発注書</dt><dd>要件定義書 v3.0</dd>
+        <dt>ステータス</dt><dd>実装完了・納品版</dd>
+      </dl>
+    </div>
+    <div class="foot">© 2026 Sky Rent. 本書は発注書（要件定義書 v3.0）に基づき、実装済みシステムの内容を反映して作成されたものです。</div>
+  </section>
+
+  <!-- ============== 目次 ============== -->
+  <section class="toc page-break">
+    <h2 class="toc-title">目次</h2>
+    <ol>
+      <li><a href="#s1"><span class="tt">プロジェクト概要と目的</span><span class="dots"></span></a></li>
+      <li><a href="#s2"><span class="tt">運営体制・拠点情報</span><span class="dots"></span></a></li>
+      <li><a href="#s3"><span class="tt">ターゲットユーザー</span><span class="dots"></span></a></li>
+      <li><a href="#s4"><span class="tt">システム全体構成</span><span class="dots"></span></a></li>
+      <li><a href="#s5"><span class="tt">機能要件</span><span class="dots"></span></a></li>
+      <li><a href="#s6"><span class="tt">オプション品目一覧</span><span class="dots"></span></a></li>
+      <li><a href="#s7"><span class="tt">会員・ポイント制度</span><span class="dots"></span></a></li>
+      <li><a href="#s8"><span class="tt">決済方法</span><span class="dots"></span></a></li>
+      <li><a href="#s9"><span class="tt">非機能要件</span><span class="dots"></span></a></li>
+      <li><a href="#s10"><span class="tt">納品物</span><span class="dots"></span></a></li>
+      <li><a href="#s11"><span class="tt">将来拡張</span><span class="dots"></span></a></li>
+    </ol>
+    <div class="callout" style="margin-top:20px;">
+      <span class="lbl">凡例</span>
+      本書の機能要件表では、各要件の対応状況を次のバッジで示します。
+      <span class="badge impl">○ 実装済</span> 本システムに実装済みの機能 ／
+      <span class="badge future">拡張</span> 設計上の受け口を用意し、将来対応する項目。
+    </div>
+  </section>
+
+  <!-- ============== 1. 概要 ============== -->
+  <section class="section page-break">
+    <h2 id="s1" class="anchor">1. プロジェクト概要と目的</h2>
+
+    <h3>1.1 背景と目的</h3>
+    <p class="lead">
+      Sky Rent は、<strong>一般レンタカー</strong>に加え、<strong>キッチンカー・キャンピングカー・ダンプ等の特殊車両</strong>、
+      さらに<strong>家電・工具といった物品単体レンタル</strong>までを、単一のプラットフォームで扱う
+      <strong>統合予約サイト兼管理システム</strong>です。
+    </p>
+    <p>
+      車両と物品では貸出単位・必要情報（免許の要否、在庫数の考え方）・表示すべきスペックが大きく異なります。
+      本システムはこれらの差異を吸収し、一般利用者にはカテゴリごとに最適化された検索・予約体験を、
+      運営者には全カテゴリ・全拠点を横断した一元管理を提供します。
+    </p>
+
+    <h3>1.2 最重要要件 — カテゴリ拡張のノーコード化</h3>
+    <div class="callout accent">
+      <span class="lbl">本プロジェクトの最重要要件</span>
+      新しい取り扱いカテゴリ（例：新ジャンルの車両や物品）の追加を、
+      <strong>エンジニアの実装作業を一切必要とせず、管理画面の操作のみで完結</strong>できること。
+      料金プラン・スペック項目・オプションを含め、運営者自身が自由に定義・変更できることを設計の中核に据えています。
+    </div>
+    <p>
+      この要件は、<strong>EAV（Entity–Attribute–Value）／JSONカラム方式のカスタム項目定義</strong>によって実現しています。
+      カテゴリごとに「どんなスペック項目を持つか」を管理画面から定義でき、その定義が
+      車両・物品の登録フォーム、予約サイトのスペック表示、検索の絞り込み条件へ<strong>自動的に反映</strong>されます。
+      （詳細は「4. システム全体構成」および「5. 機能要件」を参照）
+    </p>
+
+    <h3>1.3 参考サービス</h3>
+    <p>
+      一般レンタカーの予約体験・車両詳細の表現については <code>rentacar-samurai</code> を、
+      多カテゴリ・柔軟なマスタ運用については同種サービスを参考とし、
+      これらを一つのシステムへ統合・発展させる位置づけです。
+    </p>
+
+    <h3>1.4 取り扱いカテゴリ（初期シード）</h3>
+    <p class="sec-intro">初期状態で以下6カテゴリを収録しています。いずれも管理画面から追加・変更・無効化が可能です。</p>
+    <div class="cat-grid">
+      <div class="cat-card"><span class="ci">🚗</span><b>一般レンタカー</b><small>コンパクト〜ワゴン・SUV・軽</small><br><span class="tag">車両</span></div>
+      <div class="cat-card"><span class="ci">🍳</span><b>キッチンカー</b><small>移動販売・イベント出店向け</small><br><span class="tag">車両</span></div>
+      <div class="cat-card"><span class="ci">🏕️</span><b>キャンピングカー</b><small>車中泊・アウトドア</small><br><span class="tag">車両</span></div>
+      <div class="cat-card"><span class="ci">🚚</span><b>特殊車両</b><small>ダンプ・軽トラ・高所作業車</small><br><span class="tag">車両</span></div>
+      <div class="cat-card"><span class="ci">🔌</span><b>家電レンタル</b><small>業務用家電の単品貸出</small><br><span class="tag item">物品</span></div>
+      <div class="cat-card"><span class="ci">🛠️</span><b>工具レンタル</b><small>DIY・現場用プロ工具</small><br><span class="tag item">物品</span></div>
+    </div>
+  </section>
+
+  <!-- ============== 2. 運営体制 ============== -->
+  <section class="section page-break">
+    <h2 id="s2" class="anchor">2. 運営体制・拠点情報</h2>
+
+    <h3>2.1 運営前提</h3>
+    <ul>
+      <li><strong>4拠点</strong>での営業。各拠点に常駐スタッフは置かない<strong>非常駐運営</strong>を前提とする。</li>
+      <li>全体の対応スタッフは<strong>2〜3名</strong>。少人数での運営を成立させるため、
+        全拠点の状況を<strong>一画面で一元管理</strong>できること、および<strong>スマートフォン対応</strong>が必須。</li>
+      <li>非常駐運営を補うため、予約受付・返却・入金状況の変化は<strong>メール自動通知／通知ログ</strong>で把握できる設計とする。</li>
+    </ul>
+    <div class="callout">
+      <span class="lbl">設計上の含意</span>
+      「少人数・非常駐」という運営制約が、ダッシュボードの一元表示、スマホ最適化された管理画面、
+      自動通知（<code>SkyRentStore.notify()</code>）といった機能の設計根拠となっています。
+    </div>
+
+    <h3>2.2 拠点情報（初期シード）</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th class="num">#</th><th>拠点名</th><th>所在地</th><th>営業時間</th><th>定休日</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="num">1</td><td>札幌本店</td><td>北海道札幌市中央区北1条西1-1-1</td><td>9:00–19:00</td><td>年中無休</td></tr>
+        <tr><td class="num">2</td><td>千歳空港店</td><td>北海道千歳市美々987-22</td><td>8:00–20:00</td><td>年中無休</td></tr>
+        <tr><td class="num">3</td><td>旭川駅前店</td><td>北海道旭川市宮下通8-3-1</td><td>9:00–18:00</td><td>水曜定休</td></tr>
+        <tr><td class="num">4</td><td>函館店</td><td>北海道函館市若松町12-8</td><td>9:00–18:00</td><td>水曜定休</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="sec-intro">
+      拠点は管理画面「店舗・従業員管理」から追加・編集でき、営業時間・定休日・電話番号・住所を拠点単位で設定できます。
+      車両・物品は拠点に紐づき、検索・在庫・ガントチャートはすべて拠点を横断して扱います。
+    </p>
+  </section>
+
+  <!-- ============== 3. ターゲットユーザー ============== -->
+  <section class="section page-break">
+    <h2 id="s3" class="anchor">3. ターゲットユーザー</h2>
+    <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th style="width:24%">利用者区分</th><th>想定利用者</th><th>主な利用シーン</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>一般利用者（個人）</strong></td>
+          <td>旅行・レジャー・日常利用の個人客</td>
+          <td>レンタカー／キャンピングカーの予約、家電・工具の短期レンタル</td>
+        </tr>
+        <tr>
+          <td><strong>一般利用者（法人）</strong></td>
+          <td>イベント事業者・工事業者・行政等</td>
+          <td>キッチンカー出店、特殊車両での工事・運搬、請求書払いでの継続利用</td>
+        </tr>
+        <tr>
+          <td><strong>自社スタッフ</strong></td>
+          <td>運営スタッフ 2〜3名（非常駐）</td>
+          <td>予約・在庫・帳票・入金・マスタの管理（PC／スマホ両対応）</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="sec-intro">
+      一般利用者向けの<strong>予約サイト</strong>と、スタッフ向けの<strong>管理画面</strong>の2系統で構成します。
+      法人利用者に対しては、管理者が許可した会員に限り<strong>請求書払い</strong>を提供します（詳細は「8. 決済方法」）。
+    </p>
+  </section>
+
+  <!-- ============== 4. システム全体構成 ============== -->
+  <section class="section page-break">
+    <h2 id="s4" class="anchor">4. システム全体構成</h2>
+
+    <h3>4.1 構成概要</h3>
+    <p>
+      本システムは<strong>予約サイト（一般利用者向け）</strong>と<strong>管理画面（スタッフ向け）</strong>の2系統からなり、
+      両者は共通のデータ層・料金エンジンを介して同一のマスタを参照します。
+    </p>
+    <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th style="width:26%">レイヤー</th><th>構成要素</th><th>役割</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>プレゼンテーション</strong></td><td>予約サイト（検索・詳細・予約フロー・マイページ）／管理画面（約40画面）</td><td>利用者・スタッフの操作UI。レスポンシブ対応。</td></tr>
+        <tr><td><strong>ロジック</strong></td><td><code>SkyRentPricing</code>（料金エンジン）／<code>SkyRentAPI</code></td><td>料金計算・空き判定・予約生成などの業務ロジック。</td></tr>
+        <tr><td><strong>データアクセス</strong></td><td><code>SkyRentStore</code></td><td>全データの読み書きを一元化する抽象化レイヤー。</td></tr>
+        <tr><td><strong>データストア</strong></td><td>ブラウザ内 <code>localStorage</code>（デモ）／将来はGAS・AWS等のバックエンド</td><td>永続化。API境界を保ったまま差し替え可能。</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>4.2 実装形態</h3>
+    <ul>
+      <li><strong>静的サイト構成</strong>：素の HTML / CSS / JavaScript で実装し、ビルド工程を持たない。
+        <code>GitHub Pages</code> によるホスティングで動作する。</li>
+      <li><strong>データ層の抽象化</strong>：全データアクセスを <code>SkyRentStore</code> / <code>SkyRentAPI</code> に集約。
+        デモではブラウザ内 <code>localStorage</code> を使用するが、同一のAPIシグネチャを保ったまま
+        <strong>GAS・AWS 等の本番バックエンドへ差し替え可能</strong>な設計とする。</li>
+      <li><strong>差し替え容易性</strong>：画面側は <code>localStorage</code> を直接操作せず、必ず抽象化レイヤー経由で読み書きする規約とし、
+        バックエンド移行時の影響範囲をデータ層に限定する。</li>
+    </ul>
+
+    <h3>4.3 カテゴリ拡張エンジン（EAV / カスタム項目）</h3>
+    <p>
+      最重要要件である「ノーコードでのカテゴリ拡張」は、カテゴリ定義に持たせた
+      <strong>カスタム項目定義（<code>customFieldDefs</code>）</strong>によって実現します。
+      1つのカスタム項目は「キー・表示名・型（テキスト／数値／選択）・単位・選択肢・検索対象フラグ」で構成されます。
+    </p>
+    <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>この定義を編集すると…</th><th>自動的に連動する箇所</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>カテゴリのカスタム項目を追加／変更</td><td>車両・物品マスタ登録フォームの<strong>入力欄が自動生成</strong>される</td></tr>
+        <tr><td>各車両・物品にカスタム値を入力</td><td>予約サイトの<strong>スペック表示</strong>に自動反映される</td></tr>
+        <tr><td>項目に「検索対象」フラグを立てる</td><td>予約サイトの<strong>絞り込みフィルタ</strong>に自動で追加される</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="sec-intro">
+      これにより、新カテゴリの追加・スペック項目の増減・絞り込み条件の変更がすべて管理画面
+      （<code>categories.html</code> のカスタム項目エディタ）で完結し、エンジニアの介在を不要とします。
+    </p>
+
+    <h3>4.4 データモデル概要</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th style="width:22%">エンティティ</th><th>内容</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>categories</strong></td><td>カテゴリ定義。種別（車両／物品）・アイコン・カスタム項目定義（EAV）を保持。</td></tr>
+        <tr><td><strong>locations</strong></td><td>拠点（4拠点）。営業時間・定休日・連絡先。</td></tr>
+        <tr><td><strong>assets</strong></td><td>車両・物品の統合マスタ。料金プラン・在庫数・必要免許・車検/点検期限・カスタム値。</td></tr>
+        <tr><td><strong>options</strong></td><td>オプション。共通／カテゴリ専用の2階層、課金単位（1日あたり／1回あたり）。</td></tr>
+        <tr><td><strong>members</strong></td><td>会員。ポイント残高・クーポン・請求書払い許可フラグ・利用履歴。</td></tr>
+        <tr><td><strong>reservations</strong></td><td>予約。期間・オプション・料金内訳・決済方法・状態（確定/貸出中/返却済/取消）。</td></tr>
+        <tr><td><strong>invoices</strong></td><td>請求書。対象予約・金額・入金状況（未払い/支払済）・支払期限。</td></tr>
+        <tr><td><strong>settings</strong></td><td>ポイント設定・振込先・ハイシーズン設定などの運用パラメータ。</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="sec-intro">
+      車両（<code>type: vehicle</code>）と物品（<code>type: item</code>）は同一の <code>assets</code> マスタで扱い、
+      物品は在庫数（<code>stock &gt; 1</code> 可）、車両は在庫数 1・車検/点検期限を持つ、という差分を属性で表現します。
+      詳細なスキーマ・API仕様は別紙「基本設計書」および「開発規約（dev-contract）」を参照してください。
+    </p>
+  </section>
+
+  <!-- ============== 5. 機能要件 ============== -->
+  <section class="section page-break">
+    <h2 id="s5" class="anchor">5. 機能要件</h2>
+    <p class="sec-intro">
+      各要件について、本システムでの実装状況を「実装状況」列に明記します。
+      <span class="badge impl">○ 実装済</span> は本システムで動作する機能、
+      <span class="badge future">拡張</span> は設計上の受け口のみ用意した将来対応項目です。
+    </p>
+
+    <h3>5.1 予約サイト（一般利用者向け）</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th class="num">#</th><th style="width:20%">機能</th><th>要件内容</th><th style="width:34%">実装状況</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="num">1</td><td><strong>検索</strong></td>
+          <td>日時・拠点・カテゴリでの検索。加えてカテゴリ別の絞り込み（家電＝品目種別／対応電圧、工具＝用途／サイズ 等）。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>search.html</code>。カテゴリの検索対象カスタム項目が絞り込みUIに自動反映。数値項目は「以上」、選択・テキストは完全一致で <code>searchAvailable()</code> が判定。</td>
+        </tr>
+        <tr>
+          <td class="num">2</td><td><strong>車両・物品詳細</strong></td>
+          <td>カテゴリ固有スペックを表示（キッチンカー＝キッチン寸法／搭載機材、キャンピングカー＝就寝人数／ベッド数、特殊車両＝最大積載量／荷台寸法 等）。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>detail.html</code>。カテゴリの <code>customFieldDefs</code> に沿ってスペック表を自動描画。単位付き表示に対応。</td>
+        </tr>
+        <tr>
+          <td class="num">3</td><td><strong>オプション（2分類）</strong></td>
+          <td>共通オプション（免責補償等）とカテゴリ専用オプションの2分類で提示。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>optionsForCategory()</code> が共通／専用を分けて返却し、詳細・予約フローで区分表示。</td>
+        </tr>
+        <tr>
+          <td class="num">4</td><td><strong>要免許車両の明示</strong></td>
+          <td>免許・資格が必要な車両は詳細に明示し、予約フロー内に確認ステップを設ける。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>requiredLicense</code> を詳細に明示し、予約フローで免許確認ステップ（<code>licenseConfirmed</code>）を必須化。</td>
+        </tr>
+        <tr>
+          <td class="num">5</td><td><strong>予約フロー</strong></td>
+          <td>車両予約では免許証情報を入力。物品予約では免許欄を非表示にする動的な切り替え。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>booking.html</code>。カテゴリ種別（車両／物品）に応じ免許証入力欄・確認ステップを動的に表示／非表示。</td>
+        </tr>
+        <tr>
+          <td class="num">6</td><td><strong>確認メール自動送信</strong></td>
+          <td>予約完了時に確認メールを自動送信。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>SkyRentStore.notify()</code> で送信内容をログ化（デモ）。本番は実送信APIへ差し替え可能な設計。</td>
+        </tr>
+        <tr>
+          <td class="num">7</td><td><strong>決済</strong></td>
+          <td>初期リリースは現地決済のみ。</td>
+          <td><span class="badge impl">○ 実装済</span> 予約フローで現地決済を確定。<code>payment.method</code> を拡張し将来のオンライン決済に対応可能。</td>
+        </tr>
+        <tr>
+          <td class="num">8</td><td><strong>会員機能</strong></td>
+          <td>会員登録・ログイン・予約履歴・ポイント残高・クーポン確認。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>mypage.html</code>。登録・ログイン、予約履歴、ポイント残高、保有クーポンを一覧表示。</td>
+        </tr>
+        <tr>
+          <td class="num">9</td><td><strong>多言語対応</strong></td>
+          <td>日本語・英語対応。将来的に中国語・韓国語へ拡張。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>SkyRentI18n</code> による日英切替。言語トグルとイベント連動。中韓は辞書追加で拡張可能。</td>
+        </tr>
+        <tr>
+          <td class="num">10</td><td><strong>レスポンシブ</strong></td>
+          <td>スマートフォンを最優先とするレスポンシブ対応。</td>
+          <td><span class="badge impl">○ 実装済</span> スマホファーストのレイアウト。全画面がモバイル幅で動作。</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>5.2 管理画面（スタッフ向け）</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th class="num">#</th><th style="width:20%">機能</th><th>要件内容</th><th style="width:34%">実装状況</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="num">1</td><td><strong>ダッシュボード</strong></td>
+          <td>全4拠点の本日の出発・返却、未処理予約、売上サマリを一画面で。スマホ対応。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>dashboard.html</code>。拠点別サマリ・未処理アラート・売上・週次グラフ・自動通知ログを集約表示。</td>
+        </tr>
+        <tr>
+          <td class="num">2</td><td><strong>ガントチャート式予約表</strong></td>
+          <td>時間単位・日単位で拠点を横断して予約状況を可視化。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>reservation-table.html</code>。日／時間単位の切替、拠点グループ表示、物品の段積み表示に対応。</td>
+        </tr>
+        <tr>
+          <td class="num">3</td><td><strong>帳票出力</strong></td>
+          <td>車両＝貸渡証・車輌チェックシート・領収書、物品＝物品貸出書・領収書。物品貸出書は品目名・数量・貸出期間・料金を記載。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>forms.html</code>。貸渡証／車輌チェックシート／領収書／物品貸出書をA4印刷対応で出力。</td>
+        </tr>
+        <tr>
+          <td class="num">4</td><td><strong>車両・物品マスタ管理</strong></td>
+          <td>カテゴリの自由作成・紐付け、料金プラン（時間／日／ハイシーズン／会員ランク別）、オプションCRUD、車検・メンテ期限（車両のみ）、物品在庫数。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>vehicles.html</code> / <code>categories.html</code> / <code>options.html</code>。カテゴリ自由作成、料金プラン（時間・日・週・月・ハイシーズン加算）、在庫数、車検/点検期限を管理。</td>
+        </tr>
+        <tr>
+          <td class="num">5</td><td><strong>顧客・会員管理</strong></td>
+          <td>利用履歴・ポイント残高の確認、ポイントの手動付与・調整。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>members.html</code> / <code>customers.html</code>。履歴・残高の確認、手動ポイント付与・減算、クーポン発行、請求書払い許可フラグの付与。</td>
+        </tr>
+        <tr>
+          <td class="num">6</td><td><strong>店舗・従業員管理</strong></td>
+          <td>4拠点の営業時間・定休日、従業員の権限管理。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>stores.html</code> / <code>employees.html</code>。拠点の営業時間・定休日、従業員アカウントと権限を管理。</td>
+        </tr>
+        <tr>
+          <td class="num">7</td><td><strong>予約管理・状態遷移</strong></td>
+          <td>予約の状態管理と入金記録。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>reservation-list.html</code>。確定→貸出中→返却済の状態遷移、入金記録に対応。返却時に自動ポイント付与。</td>
+        </tr>
+        <tr>
+          <td class="num">8</td><td><strong>請求書管理</strong></td>
+          <td>請求書の発行・入金状況・月次一括請求。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>invoices.html</code>。発行（月次一括対応）・入金状況（未払い/支払済）・印刷に対応（詳細は「8. 決済方法」）。</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="callout">
+      <span class="lbl">補足</span>
+      上表の主要画面に加え、価格プラン・ハイシーズン設定・ポイント設定・稼働率/売上レポート・SEO/コンテンツ設定など、
+      運用を支える補助画面を管理画面（<code>manage/</code> 配下）に多数備えています。
+    </div>
+  </section>
+
+  <!-- ============== 6. オプション ============== -->
+  <section class="section page-break">
+    <h2 id="s6" class="anchor">6. オプション品目一覧</h2>
+    <p class="sec-intro">
+      オプションは<strong>共通</strong>（全車両カテゴリに適用）と<strong>カテゴリ専用</strong>の2階層で管理します。
+      すべて管理画面（<code>options.html</code>）から追加・変更・削除でき、
+      新カテゴリを作成した際は当該カテゴリへの紐付けも設定できます。課金単位は「1日あたり」「1回あたり」を品目ごとに選択します。
+    </p>
+
+    <h4>6.1 共通オプション（全車両カテゴリ）</h4>
+    <div class="chip-row">
+      <span class="chip">免責補償（保険免責）</span>
+      <span class="chip">チャイルドシート</span>
+      <span class="chip">スタッドレスタイヤ</span>
+      <span class="chip">ETC車載器</span>
+    </div>
+
+    <h4>6.2 キッチンカー専用オプション（約10品目）</h4>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th class="num">#</th><th>品目</th><th class="num">#</th><th>品目</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>発電機（2.8kVA）</td><td class="num">6</td><td>のぼり旗セット（5本）</td></tr>
+        <tr><td class="num">2</td><td>追加プロパンガス（8kg）</td><td class="num">7</td><td>追加テント・タープ</td></tr>
+        <tr><td class="num">3</td><td>ポータブル電源</td><td class="num">8</td><td>ポップアップバナー</td></tr>
+        <tr><td class="num">4</td><td>フライヤー</td><td class="num">9</td><td>延長コード（20m）</td></tr>
+        <tr><td class="num">5</td><td>鉄板（600mm）</td><td class="num">10</td><td>追加冷蔵庫</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h4>6.3 キャンピングカー専用オプション</h4>
+    <div class="chip-row">
+      <span class="chip">寝具セット（1名分）</span>
+      <span class="chip">BBQセット</span>
+      <span class="chip">ポータブルトイレ</span>
+      <span class="chip">外部電源ケーブル</span>
+    </div>
+
+    <h4>6.4 特殊車両専用オプション</h4>
+    <div class="chip-row">
+      <span class="chip">荷台シート（カバー）</span>
+      <span class="chip">ロープ・固定具セット</span>
+      <span class="chip">台車・手押し車</span>
+    </div>
+
+    <div class="callout">
+      <span class="lbl">オプション設定の柔軟性</span>
+      各オプションは対象カテゴリ（共通＝全車両カテゴリ／特定カテゴリ）・価格・課金単位を持ち、有効／無効を切り替えられます。
+      物品カテゴリ（家電・工具）は共通オプションの対象外とし、必要に応じて専用オプションを紐付けられます。
+    </div>
+  </section>
+
+  <!-- ============== 7. 会員・ポイント ============== -->
+  <section class="section page-break">
+    <h2 id="s7" class="anchor">7. 会員・ポイント制度</h2>
+
+    <h3>7.1 会員機能</h3>
+    <ul>
+      <li>会員登録・ログイン。予約履歴、ポイント残高、保有クーポンをマイページで確認。</li>
+      <li>個人・法人の区別を保持。法人会員には管理者判断で請求書払いを許可できる（「8. 決済方法」参照）。</li>
+    </ul>
+
+    <h3>7.2 ポイント・クーポンの仕組み</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th style="width:32%">項目</th><th>仕様</th></tr></thead>
+      <tbody>
+        <tr><td><strong>ポイント付与</strong></td><td>利用完了（返却）ごとに <strong>1pt</strong> を自動付与。</td></tr>
+        <tr><td><strong>クーポン自動発行</strong></td><td>累計 <strong>10pt</strong> 到達で <strong>¥1,000クーポン</strong>を自動発行。</td></tr>
+        <tr><td><strong>クーポン利用</strong></td><td>次回予約時に自動で割引適用。</td></tr>
+        <tr><td><strong>有効期限</strong></td><td>最終利用日から <strong>1年</strong>（管理画面から変更可能）。</td></tr>
+        <tr><td><strong>管理者操作</strong></td><td>ポイントの手動付与・減算、クーポンの手動発行が可能。</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="callout">
+      <span class="lbl">実装状況 <span class="badge impl">○ 実装済</span></span>
+      予約を「返却済」に更新すると <code>updateReservation()</code> が自動でポイントを付与し、閾値到達時にクーポンを自動発行します。
+      付与量・閾値・クーポン額・有効期限（月数）は <code>points.html</code> から設定でき（<code>pointSettings</code>）、
+      手動付与・減算は <code>adjustPoints()</code>、手動クーポン発行は <code>issueCouponManually()</code> で行えます。
+    </div>
+  </section>
+
+  <!-- ============== 8. 決済方法 ============== -->
+  <section class="section page-break">
+    <h2 id="s8" class="anchor">8. 決済方法</h2>
+
+    <h3>8.1 現地決済（基本）</h3>
+    <p>
+      初期リリースの標準決済手段は<strong>現地決済</strong>です。予約時にオンライン課金は行わず、
+      貸出時に拠点で精算します。<span class="badge impl">○ 実装済</span>
+    </p>
+
+    <h3>8.2 請求書払い（法人・行政のみ）</h3>
+    <p>
+      法人・行政の利用者に限り、<strong>請求書払い</strong>を提供します。
+      不特定の会員に選択肢を見せないよう、<strong>許可制</strong>で運用します。
+    </p>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th style="width:32%">要件</th><th>仕様・実装状況</th></tr></thead>
+      <tbody>
+        <tr><td><strong>許可制</strong></td><td>管理画面で<strong>請求書払い許可フラグ</strong>（<code>invoiceAllowed</code>）を付与した会員に限り選択可能。<span class="badge impl">○</span></td></tr>
+        <tr><td><strong>選択肢の非表示制御</strong></td><td>フラグが無い会員の予約フローには請求書払いの選択肢を<strong>表示しない</strong>。<span class="badge impl">○</span></td></tr>
+        <tr><td><strong>請求書発行・印刷</strong></td><td>会社名・住所・案件名・金額・振込先を記載した請求書を発行・印刷。<span class="badge impl">○</span></td></tr>
+        <tr><td><strong>発行履歴・入金状況</strong></td><td>発行履歴と入金状況（未払い／支払済）を管理。<span class="badge impl">○</span></td></tr>
+        <tr><td><strong>月次一括請求</strong></td><td>複数予約をまとめた月次一括請求に対応。<span class="badge impl">○</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="sec-intro">
+      許可フラグの付与は <code>members.html</code>、請求書の発行・入金管理・印刷は <code>invoices.html</code>、
+      振込先は <code>settings.billing</code> で管理します。
+    </p>
+
+    <h3>8.3 オンライン事前決済（将来対応）</h3>
+    <p>
+      Stripe 等によるオンライン事前決済は<strong>初期リリース対象外</strong>です。<span class="badge future">拡張</span>
+      ただし予約の <code>payment.method</code> を拡張可能な形で保持しており、
+      決済手段の追加を見越した受け口を設計に組み込んでいます（「11. 将来拡張」参照）。
+    </p>
+  </section>
+
+  <!-- ============== 9. 非機能要件 ============== -->
+  <section class="section page-break">
+    <h2 id="s9" class="anchor">9. 非機能要件</h2>
+    <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th style="width:20%">分類</th><th>要件</th><th style="width:34%">実装状況</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>レスポンシブ</strong></td>
+          <td>スマートフォンを最優先とし、PC・タブレット・スマホで利用可能なこと。管理画面もスマホで操作可能なこと。</td>
+          <td><span class="badge impl">○ 実装済</span> 予約サイトはスマホファースト。管理画面はハンバーガーメニューでモバイル対応、表は横スクロール。</td>
+        </tr>
+        <tr>
+          <td><strong>多言語</strong></td>
+          <td>日本語・英語対応。将来的に中国語・韓国語へ拡張可能なこと。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>SkyRentI18n</code> による日英切替。辞書追加のみで言語拡張が可能な構造。</td>
+        </tr>
+        <tr>
+          <td><strong>拡張性</strong></td>
+          <td>カテゴリ・オプション・料金体系をノーコードで拡張できること。料金計算モジュールが将来の週割・月割にも対応できること。</td>
+          <td><span class="badge impl">○ 実装済</span> EAVによるカテゴリ拡張、<code>SkyRentPricing</code> による時間/日/週/月の自動選択＋ハイシーズン加算。会員ランク別・将来割引を見据えた拡張設計。</td>
+        </tr>
+        <tr>
+          <td><strong>運用性</strong></td>
+          <td>少人数・非常駐運営を成立させる自動通知と一元管理。</td>
+          <td><span class="badge impl">○ 実装済</span> 予約・返却・入金の変化を <code>notify()</code> でログ化。ダッシュボードで全拠点を一元把握。</td>
+        </tr>
+        <tr>
+          <td><strong>保守性・移植性</strong></td>
+          <td>バックエンド差し替えの影響を局所化できること。</td>
+          <td><span class="badge impl">○ 実装済</span> データアクセスを <code>SkyRentStore</code> / <code>SkyRentAPI</code> に集約。<code>localStorage</code> の直接操作を禁止する規約で移植性を担保。</td>
+        </tr>
+        <tr>
+          <td><strong>セキュリティ</strong></td>
+          <td>入力値由来のクロスサイトスクリプティング（XSS）等を防止すること。</td>
+          <td><span class="badge impl">○ 実装済</span> ユーザー入力・データ由来文字列は <code>esc()</code> でHTMLエスケープする規約を全画面で徹底。<span class="badge future">拡張</span> 認証・通信の本格的なセキュリティは本番バックエンド移行時に実装。</td>
+        </tr>
+        <tr>
+          <td><strong>データ保全</strong></td>
+          <td>運用データのバックアップ・復元手段を備えること。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>profile.html</code> からデータのバックアップ／復元が可能。</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="callout accent">
+      <span class="lbl">セキュリティに関する注記</span>
+      デモ版はブラウザ内 <code>localStorage</code> を用いるため、パスワードは平文で保持し、認証は簡易実装です。
+      本番運用では、後述のバックエンド移行に合わせて<strong>パスワードハッシュ化・サーバー側認証・HTTPS通信・アクセス権限制御</strong>を実装する前提です。
+    </div>
+  </section>
+
+  <!-- ============== 10. 納品物 ============== -->
+  <section class="section page-break">
+    <h2 id="s10" class="anchor">10. 納品物</h2>
+    <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th class="num">#</th><th style="width:26%">納品物</th><th>内容</th><th style="width:16%">状況</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="num">1</td><td><strong>要件定義書</strong></td><td>本書。目的・機能要件・実装状況をまとめた仕様書（v3.1・実装反映版）。</td><td><span class="badge impl">○ 本書</span></td></tr>
+        <tr><td class="num">2</td><td><strong>基本設計書</strong></td><td>システム構成図・画面遷移図・DBスキーマ・API仕様・拡張設計。</td><td><span class="badge impl">○ 提供</span></td></tr>
+        <tr><td class="num">3</td><td><strong>システム一式</strong></td><td>予約サイト・管理画面のソースコード一式（静的サイト構成）。</td><td><span class="badge impl">○ 提供</span></td></tr>
+        <tr><td class="num">4</td><td><strong>インフラ</strong></td><td>ホスティング・バックエンドの構成（要相談）。デモは GitHub Pages。</td><td><span class="badge future">要相談</span></td></tr>
+        <tr><td class="num">5</td><td><strong>管理者マニュアル</strong></td><td>管理画面の操作手順書。日々の運用からカテゴリ追加までを解説。</td><td><span class="badge impl">○ 提供</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="sec-intro">
+      納品ドキュメント一式は <code>docs/</code> 配下に収録しています（要件定義書・基本設計書・管理者マニュアル・開発規約）。
+      インフラ構成は運用規模・本番バックエンドの選定にあわせて別途ご相談のうえ確定します。
+    </p>
+  </section>
+
+  <!-- ============== 11. 将来拡張 ============== -->
+  <section class="section page-break">
+    <h2 id="s11" class="anchor">11. 将来拡張</h2>
+    <p class="sec-intro">
+      以下は初期リリース対象外としつつ、設計上の受け口（拡張ポイント）を用意している項目です。
+      いずれも既存のデータモデル・API境界を保ったまま追加できるよう設計しています。
+    </p>
+    <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th style="width:24%">拡張項目</th><th>内容</th><th style="width:36%">設計上の受け口（拡張ポイント）</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>オンライン決済（Stripe等）</strong></td>
+          <td>予約時のオンライン事前決済。</td>
+          <td>予約の <code>payment.method</code> を拡張可能な列挙として保持。決済手段の追加・決済ステータス管理を後付けできる構造。</td>
+        </tr>
+        <tr>
+          <td><strong>メール実送信</strong></td>
+          <td>確認メール・通知メールの実送信。</td>
+          <td>現状は <code>notify()</code> が送信内容をログ化。同メソッドの実装を実送信API（SMTP／メール配信サービス）へ差し替えるだけで有効化。</td>
+        </tr>
+        <tr>
+          <td><strong>本番バックエンド移行</strong></td>
+          <td><code>localStorage</code> から GAS・AWS 等の本番バックエンドへ移行。</td>
+          <td>データアクセスを <code>SkyRentStore</code> / <code>SkyRentAPI</code> に集約済み。API境界を保ったままバックエンド実装を差し替え可能。</td>
+        </tr>
+        <tr>
+          <td><strong>多言語（中国語・韓国語）</strong></td>
+          <td>日英に加え中韓へ拡張。</td>
+          <td><code>SkyRentI18n</code> の辞書に言語を追加するのみで対応。UIは既に言語切替に対応済み。</td>
+        </tr>
+        <tr>
+          <td><strong>料金体系の拡張</strong></td>
+          <td>会員ランク別料金、週・月の長期割引の高度化。</td>
+          <td><code>SkyRentPricing</code> がプラン選択・割引・ハイシーズン加算をモジュール化。割引ルールの追加を局所変更で実現。</td>
+        </tr>
+        <tr>
+          <td><strong>認証・セキュリティ強化</strong></td>
+          <td>パスワードハッシュ化・サーバー側認証・権限制御。</td>
+          <td>会員・従業員・権限のデータモデルを保持済み。バックエンド移行と同時に本格的な認証基盤を実装。</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="callout">
+      <span class="lbl">拡張方針</span>
+      本システムは「まず動く形で全機能を提供し、本番運用に向けてデータ層・決済・通知・認証を段階的に強化する」ことを前提に設計しています。
+      いずれの拡張も画面・業務ロジックの再実装を最小化できるよう、責務を分離しています。
+    </div>
+  </section>
+
+  <div class="footer-note">
+    Sky Rent 統合予約・管理システム／要件定義書 v3.1（2026年7月10日）<br>
+    © 2026 Sky Rent. 本書は発注書（要件定義書 v3.0）に基づき作成された納品ドキュメントです。
+  </div>
+
+</div>
+</body>
+</html>

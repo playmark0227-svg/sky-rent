@@ -3,254 +3,239 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sky Rent | レンタカー予約</title>
-  <meta name="description" content="Sky Rent のレンタカーオンライン予約ページ。ご希望の日時から空車を検索し、その場でご予約いただけます。">
+  <title>Sky Rent | レンタカー・キッチンカー・特殊車両・家電・工具の統合予約</title>
+  <meta name="description" content="レンタカーからキッチンカー・キャンピングカー・特殊車両、家電・工具の単品レンタルまで。4拠点の空き状況をリアルタイム検索し、その場でご予約いただけます。">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/public.css">
   <script>
-    // ===== 管理画面で設定したコンテンツ・テーマカラーを反映 =====
-    (function() {
+    // ===== 管理画面で設定したコンテンツ・テーマカラーを反映 + favicon =====
+    (function () {
       try {
         // favicon (ブランドアイコン)
-        (function() {
+        (function () {
           const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0a6ebd"/><text x="32" y="44" font-size="34" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="bold">✈</text></svg>';
           const href = 'data:image/svg+xml,' + encodeURIComponent(svg);
           const icon = document.createElement('link'); icon.rel = 'icon'; icon.href = href; document.head.appendChild(icon);
           const apple = document.createElement('link'); apple.rel = 'apple-touch-icon'; apple.href = href; document.head.appendChild(apple);
         })();
-        const content = JSON.parse(localStorage.getItem('sky-rent.settings.content') || '{}');
         const seo = JSON.parse(localStorage.getItem('sky-rent.settings.seo') || '{}');
         const site = JSON.parse(localStorage.getItem('sky-rent.settings.site') || '{}');
-        // SEO反映
         if (seo.title) document.title = seo.title;
-        if (seo.description) {
-          const m = document.querySelector('meta[name="description"]');
-          if (m) m.setAttribute('content', seo.description);
-        }
-        if (seo.keywords) {
-          let kw = document.querySelector('meta[name="keywords"]');
-          if (!kw) { kw = document.createElement('meta'); kw.name = 'keywords'; document.head.appendChild(kw); }
-          kw.setAttribute('content', seo.keywords);
-        }
-        // テーマカラー反映
+        if (seo.description) { const m = document.querySelector('meta[name="description"]'); if (m) m.setAttribute('content', seo.description); }
+        if (seo.keywords) { const kw = document.createElement('meta'); kw.name = 'keywords'; kw.content = seo.keywords; document.head.appendChild(kw); }
         if (site.themeColor) {
           const s = document.createElement('style');
-          s.textContent = `:root { --color-primary: ${site.themeColor} !important; --color-primary-dark: ${shadeColor(site.themeColor, -15)} !important; }`;
+          s.textContent = ':root { --color-primary: ' + site.themeColor + ' !important; --color-primary-dark: ' + shadeColor(site.themeColor, -15) + ' !important; }';
           document.head.appendChild(s);
         }
-        // GA4 タグ動的注入
         const ga = JSON.parse(localStorage.getItem('sky-rent.settings.ga') || '{}');
         if (ga.ga4Id && /^G-/.test(ga.ga4Id)) {
-          const s = document.createElement('script');
-          s.async = true;
-          s.src = 'https://www.googletagmanager.com/gtag/js?id=' + ga.ga4Id;
-          document.head.appendChild(s);
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', ga.ga4Id);
-          window.gtag = gtag;
+          const s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + ga.ga4Id; document.head.appendChild(s);
+          window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', ga.ga4Id); window.gtag = gtag;
         }
-
         function shadeColor(hex, percent) {
-          const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
-          if (!m) return hex;
+          const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i); if (!m) return hex;
           let r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
           r = Math.max(0, Math.min(255, r + Math.round(r * percent / 100)));
           g = Math.max(0, Math.min(255, g + Math.round(g * percent / 100)));
           b = Math.max(0, Math.min(255, b + Math.round(b * percent / 100)));
-          return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+          return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
         }
-      } catch (e) { console.warn('Settings apply failed:', e); }
+      } catch (e) { console.warn('settings apply failed', e); }
     })();
   </script>
 </head>
 <body>
   <header class="site-header">
     <div class="container header-inner">
-      <a href="index.html" class="logo">
-        <span class="logo-mark">✈</span>
-        <span class="logo-text">Sky Rent</span>
-      </a>
+      <a href="index.html" class="logo"><span class="logo-mark">✈</span><span class="logo-text">Sky Rent</span></a>
       <nav class="site-nav">
-        <a href="#feature">特徴</a>
-        <a href="#search">予約する</a>
-        <a href="#access">店舗情報</a>
+        <a href="index.html#categories" data-i18n="nav.categories">カテゴリ</a>
+        <a href="search.html" data-i18n="nav.search">予約する</a>
+        <a href="index.html#locations" data-i18n="nav.locations">店舗一覧</a>
+        <a href="mypage.html" data-i18n="nav.mypage">マイページ</a>
         <a href="manage/dashboard.html" class="nav-admin">管理画面</a>
+        <button class="lang-btn" data-lang-toggle type="button">EN</button>
       </nav>
     </div>
   </header>
 
   <section class="hero">
     <div class="container hero-inner">
-      <h1 class="hero-title">空(そら)へ、自由を。<br>Sky Rent.</h1>
-      <p class="hero-lead">Googleカレンダーと連動した、新しいレンタカー予約。</p>
-      <a href="#search" class="btn btn-primary btn-lg">空車を検索する</a>
+      <h1 class="hero-title" data-i18n="hero.title">空(そら)へ、自由を。Sky Rent.</h1>
+      <p class="hero-lead" data-i18n="hero.lead">レンタカーからキッチンカー・特殊車両・家電・工具まで。ぜんぶ、Webで予約完了。</p>
+      <a href="#search" class="btn btn-primary btn-lg" data-i18n="hero.cta">空きを検索する</a>
     </div>
   </section>
 
-  <section id="feature" class="section">
-    <div class="container">
-      <h2 class="section-title">Sky Rent の特徴</h2>
-      <div class="features">
-        <div class="feature-card">
-          <div class="feature-icon">📅</div>
-          <h3>カレンダー自動照合</h3>
-          <p>Googleカレンダーの予定と店舗の在庫を自動で突き合わせ、リアルタイムに空き状況を表示。</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">⚡</div>
-          <h3>その場で予約完了</h3>
-          <p>面倒な電話・メールのやり取り不要。Web上で完結する24時間予約システム。</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🔒</div>
-          <h3>二重予約を防止</h3>
-          <p>予約確定時に再度照合 + ロック処理。同時アクセス時のダブルブッキングを防ぎます。</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
+  <!-- 検索バー -->
   <section id="search" class="section section-alt">
     <div class="container">
-      <h2 class="section-title">ご予約</h2>
-
-      <!-- Step 1: 日時選択 -->
-      <div id="step-search" class="step-pane active">
-        <div class="step-header">
-          <span class="step-num">STEP 1</span>
-          <h3>ご利用日時を選択</h3>
+      <h2 class="section-title" data-i18n="search.title">空き状況を検索</h2>
+      <form class="p-searchbar" id="searchbar">
+        <div class="fg">
+          <label data-i18n="search.category">カテゴリ</label>
+          <select id="s-category"></select>
         </div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="start">貸出 (受取)</label>
-            <input type="datetime-local" id="start" required>
-          </div>
-          <div class="form-group">
-            <label for="end">返却</label>
-            <input type="datetime-local" id="end" required>
-          </div>
+        <div class="fg">
+          <label data-i18n="search.location">利用拠点</label>
+          <select id="s-location"></select>
         </div>
-        <div class="form-actions">
-          <button id="btn-search" class="btn btn-primary">空車を検索 →</button>
+        <div class="fg">
+          <label data-i18n="search.start">出発日時 (受取)</label>
+          <input type="datetime-local" id="s-start">
         </div>
-        <p id="search-error" class="error-text" hidden></p>
-      </div>
-
-      <!-- Step 2: 車両選択 -->
-      <div id="step-vehicles" class="step-pane">
-        <div class="step-header">
-          <span class="step-num">STEP 2</span>
-          <h3>車両を選択</h3>
-          <button class="btn-link" data-back="search">← 日時を変更</button>
+        <div class="fg">
+          <label data-i18n="search.end">返却日時</label>
+          <input type="datetime-local" id="s-end">
         </div>
-        <p id="search-summary" class="search-summary"></p>
-        <div id="vehicle-list" class="vehicle-list"></div>
-      </div>
-
-      <!-- Step 3: お客様情報 -->
-      <div id="step-form" class="step-pane">
-        <div class="step-header">
-          <span class="step-num">STEP 3</span>
-          <h3>お客様情報を入力</h3>
-          <button class="btn-link" data-back="vehicles">← 車両を変更</button>
-        </div>
-
-        <div class="reservation-summary">
-          <h4>ご予約内容</h4>
-          <dl id="summary-dl"></dl>
-        </div>
-
-        <form id="reservation-form" class="form-grid">
-          <div class="form-group">
-            <label for="customerName">お名前 <span class="req">*</span></label>
-            <input type="text" id="customerName" name="customerName" required maxlength="60">
-          </div>
-          <div class="form-group">
-            <label for="customerEmail">メールアドレス <span class="req">*</span></label>
-            <input type="email" id="customerEmail" name="customerEmail" required>
-          </div>
-          <div class="form-group">
-            <label for="customerPhone">電話番号</label>
-            <input type="tel" id="customerPhone" name="customerPhone" placeholder="090-1234-5678">
-          </div>
-          <div class="form-group full">
-            <label for="note">備考</label>
-            <textarea id="note" name="note" rows="3" placeholder="ご要望などあればご記入ください"></textarea>
-          </div>
-          <div class="form-actions full">
-            <button type="submit" class="btn btn-primary btn-lg">この内容で予約する</button>
-          </div>
-        </form>
-        <p id="submit-error" class="error-text" hidden></p>
-      </div>
-
-      <!-- Step 4: 完了 -->
-      <div id="step-complete" class="step-pane">
-        <div class="complete-card">
-          <div class="complete-icon">✓</div>
-          <h3>ご予約ありがとうございました</h3>
-          <p>ご登録のメールアドレス宛に予約確認メールをお送りしました。</p>
-          <dl id="complete-dl" class="complete-dl"></dl>
-          <a href="index.html" class="btn btn-secondary">トップに戻る</a>
-        </div>
-      </div>
-
+        <button type="submit" class="btn btn-primary" data-i18n="search.submit">検索する</button>
+      </form>
     </div>
   </section>
 
-  <section id="access" class="section">
+  <!-- カテゴリ -->
+  <section id="categories" class="section">
     <div class="container">
-      <h2 class="section-title">店舗情報</h2>
-      <div class="access-grid">
-        <div>
-          <h3 id="store-name">Sky Rent 本店</h3>
-          <p id="store-info">営業時間: <span id="store-hours">9:00 - 19:00 (年中無休)</span><br>
-             TEL: <span id="store-tel">0000-00-0000</span><br>
-             <span id="store-address"></span></p>
-        </div>
-        <div class="access-note">
-          <p id="store-intro">※詳細はお問合せください</p>
-        </div>
+      <h2 class="section-title" data-i18n="nav.categories">カテゴリから探す</h2>
+      <div class="cat-grid" id="cat-grid"></div>
+    </div>
+  </section>
+
+  <!-- 特徴 -->
+  <section class="section section-alt">
+    <div class="container">
+      <h2 class="section-title" id="feature-title">Sky Rent の特徴</h2>
+      <div class="features">
+        <div class="feature-card"><div class="feature-icon">📅</div><h3 id="f1t">リアルタイム空車照合</h3><p id="f1p">4拠点の在庫と予約状況を自動照合。ダブルブッキングを防ぎ、24時間その場で予約完了。</p></div>
+        <div class="feature-card"><div class="feature-icon">🧾</div><h3 id="f2t">オプションもまとめて</h3><p id="f2p">保険・チャイルドシートから発電機・調理機材まで、車両に合ったオプションを予約時に選択。</p></div>
+        <div class="feature-card"><div class="feature-icon">🎁</div><h3 id="f3t">使うほどおトク</h3><p id="f3p">ご利用ごとにポイントが貯まり、10ポイントで¥1,000クーポンを自動発行。次回予約で割引。</p></div>
       </div>
     </div>
   </section>
 
-  <script>
-    // 管理画面で設定したコンテンツを反映
-    (function() {
-      try {
-        const c = JSON.parse(localStorage.getItem('sky-rent.settings.content') || '{}');
-        if (c.catchCopy) {
-          const el = document.querySelector('.hero-title');
-          if (el) el.innerHTML = c.catchCopy.replace(/。/g, '。<br>');
-        }
-        if (c.subCopy) {
-          const el = document.querySelector('.hero-lead');
-          if (el) el.textContent = c.subCopy;
-        }
-        if (c.businessHours) document.querySelector('#store-hours').textContent = c.businessHours;
-        if (c.phone) document.querySelector('#store-tel').textContent = c.phone;
-        if (c.address) document.querySelector('#store-address').textContent = c.address;
-        if (c.storeIntro) document.querySelector('#store-intro').textContent = c.storeIntro;
-      } catch (e) {}
-    })();
-  </script>
+  <!-- ご利用の流れ -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title" id="flow-title">ご利用の流れ</h2>
+      <div class="cat-grid" id="flow-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))"></div>
+    </div>
+  </section>
+
+  <!-- 店舗一覧 -->
+  <section id="locations" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title" data-i18n="nav.locations">店舗一覧</h2>
+      <div class="cat-grid" id="loc-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"></div>
+    </div>
+  </section>
 
   <footer class="site-footer">
     <div class="container">
-      <p>&copy; 2026 Sky Rent</p>
+      <p data-i18n="footer.copyright">© 2026 Sky Rent</p>
+      <p style="opacity:.6;font-size:12px;margin-top:6px">デモ環境 (データはお使いのブラウザ内に保存されます)</p>
     </div>
   </footer>
 
-  <!-- ローディングオーバーレイ -->
-  <div id="loading" class="loading" hidden>
-    <div class="spinner"></div>
-    <p id="loading-text">処理中...</p>
-  </div>
-
   <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/pricing.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/api.js"></script>
-  <script src="js/app.js"></script>
+  <script>
+  (function () {
+    const S = window.SkyRentStore, I = window.SkyRentI18n;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    const isEn = () => I.getLang() === 'en';
+    const catName = c => isEn() && c.nameEn ? c.nameEn : c.name;
+
+    // 局所辞書 (i18n 辞書外のトップページ固有テキスト)
+    const L = {
+      feature: { ja: 'Sky Rent の特徴', en: 'Why Sky Rent' },
+      f1t: { ja: 'リアルタイム空車照合', en: 'Real-time Availability' },
+      f1p: { ja: '4拠点の在庫と予約状況を自動照合。ダブルブッキングを防ぎ、24時間その場で予約完了。', en: 'Auto-matches stock & bookings across 4 locations. No double-booking, 24/7 instant reservation.' },
+      f2t: { ja: 'オプションもまとめて', en: 'Options Included' },
+      f2p: { ja: '保険・チャイルドシートから発電機・調理機材まで、車両に合ったオプションを予約時に選択。', en: 'From insurance & child seats to generators & cooking gear — pick options that fit your rental.' },
+      f3t: { ja: '使うほどおトク', en: 'Rewards as You Go' },
+      f3p: { ja: 'ご利用ごとにポイントが貯まり、10ポイントで¥1,000クーポンを自動発行。次回予約で割引。', en: 'Earn a point per use; 10 points auto-issues a ¥1,000 coupon for your next booking.' },
+      flow: { ja: 'ご利用の流れ', en: 'How It Works' },
+      steps: {
+        ja: [['🔎', '1. 検索', '日時・拠点・カテゴリで空きを検索'], ['📝', '2. 予約', 'オプションを選び情報を入力'], ['💴', '3. 現地決済', '当日、拠点で受取・お支払い'], ['🎁', '4. 返却', '返却完了でポイント付与']],
+        en: [['🔎', '1. Search', 'Find availability by date, location & category'], ['📝', '2. Book', 'Choose options & enter your details'], ['💴', '3. Pay on-site', 'Pick up & pay at the location'], ['🎁', '4. Return', 'Earn points on return']]
+      },
+      count: { ja: n => n + '台・点', en: n => n + ' items' }
+    };
+    const tt = (k) => L[k][isEn() ? 'en' : 'ja'];
+
+    function fmtLocal(d) {
+      const p = n => String(n).padStart(2, '0');
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+    }
+
+    function initSearchbar() {
+      const cats = S.categories();
+      const locs = S.locations();
+      $('#s-category').innerHTML = '<option value="">' + I.t('search.all') + '</option>' +
+        cats.map(c => '<option value="' + c.categoryId + '">' + esc(catName(c)) + '</option>').join('');
+      $('#s-location').innerHTML = '<option value="">' + I.t('search.all') + '</option>' +
+        locs.map(l => '<option value="' + l.locationId + '">' + esc(isEn() && l.nameEn ? l.nameEn : l.name) + '</option>').join('');
+      const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(10, 0, 0, 0);
+      const t2 = new Date(t); t2.setDate(t2.getDate() + 1);
+      if (!$('#s-start').value) $('#s-start').value = fmtLocal(t);
+      if (!$('#s-end').value) $('#s-end').value = fmtLocal(t2);
+    }
+
+    $('#searchbar').addEventListener('submit', e => {
+      e.preventDefault();
+      const p = new URLSearchParams();
+      if ($('#s-category').value) p.set('category', $('#s-category').value);
+      if ($('#s-location').value) p.set('location', $('#s-location').value);
+      if ($('#s-start').value) p.set('start', new Date($('#s-start').value).toISOString());
+      if ($('#s-end').value) p.set('end', new Date($('#s-end').value).toISOString());
+      location.href = 'search.html?' + p.toString();
+    });
+
+    function renderCategories() {
+      const cats = S.categories();
+      $('#cat-grid').innerHTML = cats.map(c => {
+        const cnt = S.assets({ categoryId: c.categoryId, activeOnly: true }).length;
+        return '<a class="cat-card" href="search.html?category=' + c.categoryId + '">' +
+          '<div class="ci">' + esc(c.icon || '📦') + '</div>' +
+          '<h3>' + esc(catName(c)) + '</h3>' +
+          '<p>' + esc(isEn() ? '' : (c.description || '')) + '</p>' +
+          '<span class="cnt">' + tt('count')(cnt) + '</span></a>';
+      }).join('');
+    }
+
+    function renderFeatures() {
+      $('#feature-title').textContent = tt('feature');
+      ['f1t', 'f1p', 'f2t', 'f2p', 'f3t', 'f3p'].forEach(k => { const el = $('#' + k); if (el) el.textContent = tt(k); });
+      $('#flow-title').textContent = tt('flow');
+      $('#flow-grid').innerHTML = tt('steps').map(s =>
+        '<div class="cat-card" style="cursor:default"><div class="ci">' + s[0] + '</div><h3>' + esc(s[1]) + '</h3><p>' + esc(s[2]) + '</p></div>'
+      ).join('');
+    }
+
+    function renderLocations() {
+      $('#loc-grid').innerHTML = S.locations().map(l =>
+        '<div class="cat-card" style="cursor:default;text-align:left;padding:18px 20px">' +
+        '<h3 style="color:var(--color-primary);margin-bottom:8px">' + esc(isEn() && l.nameEn ? l.nameEn : l.name) + '</h3>' +
+        '<p style="line-height:1.8">' + esc(l.address) + '<br>' + I.t('loc.tel') + ': ' + esc(l.tel) + '<br>' +
+        I.t('loc.hours') + ': ' + esc(l.hours) + '<br>' + I.t('loc.holiday') + ': ' + esc(l.holiday) + '</p></div>'
+      ).join('');
+    }
+
+    function renderNotices() {
+      const notices = S.read('notices', []);
+      // お知らせ管理 (notices) があればトップに反映 — 無ければ何もしない
+    }
+
+    function renderAll() { initSearchbar(); renderCategories(); renderFeatures(); renderLocations(); }
+    document.addEventListener('DOMContentLoaded', renderAll);
+    document.addEventListener('sky-rent:langchange', renderAll);
+    if (document.readyState !== 'loading') renderAll();
+  })();
+  </script>
 </body>
 </html>

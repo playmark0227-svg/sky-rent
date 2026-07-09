@@ -3,71 +3,211 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>車輌管理 | Sky Rent 管理画面</title>
+  <title>車両・物品管理 | Sky Rent 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
 </head>
 <body>
   <div data-include="topbar"></div>
 
   <main class="main">
-    <h1 class="page-title">車輌管理</h1>
-    <p class="page-note">登録車輌の追加・編集・削除を行います。ここで編集した内容は予約サイトの空車検索にも即反映されます。</p>
+    <h1 class="page-title">車両・物品管理</h1>
+    <p class="page-note">レンタカー・キッチンカー・特殊車両などの車両、家電・工具などの物品を一元管理します。カテゴリを選ぶと、そのカテゴリで定義したカスタム項目の入力欄が自動で切り替わります。編集内容は予約サイトへ即反映されます。</p>
 
-    <div style="text-align:right;margin-bottom:10px">
-      <button id="btn-add" class="btn btn-primary">+ 車輌追加</button>
-    </div>
+    <section class="card filter-bar">
+      <div class="filter-group"><label>カテゴリ</label><select id="f-cat"></select></div>
+      <div class="filter-group"><label>拠点</label><select id="f-loc"></select></div>
+      <div class="filter-group"><label>キーワード</label><input type="text" id="f-kw" placeholder="名称・ナンバー"></div>
+      <span style="flex:1"></span>
+      <button id="btn-add" class="btn btn-primary">+ 追加</button>
+    </section>
 
     <section class="card">
       <table class="data-table list">
         <thead>
-          <tr>
-            <th>車輌ID</th>
-            <th>車種</th>
-            <th>クラス</th>
-            <th>ナンバー</th>
-            <th>定員</th>
-            <th>料金/日</th>
-            <th>状態</th>
-            <th></th>
-          </tr>
+          <tr><th>ID</th><th></th><th>名称</th><th>カテゴリ</th><th>拠点</th><th>料金/日</th><th>在庫</th><th>必要免許</th><th>車検</th><th>状態</th><th></th></tr>
         </thead>
-        <tbody id="tbl"></tbody>
+        <tbody id="tbl"><tr class="empty"><td colspan="11">読み込み中...</td></tr></tbody>
       </table>
     </section>
   </main>
 
-  <script src="partials.js"></script>
-  <script src="js/crud.js"></script>
-  <script>
-  SkyRentCRUD.init({
-    storageKey: 'vehicles',
-    idPrefix: 'V',
-    columns: [
-      { key: 'vehicleId', label: '車輌ID', code: true, readonly: true },
-      { key: 'name', label: '車種', bold: true, required: true },
-      { key: 'class', label: 'クラス', type: 'select', options: ['コンパクト','ミドル','ミニバン','SUV','軽自動車','バン','トラック','マイクロバス','二輪'] },
-      { key: 'plate', label: 'ナンバー' },
-      { key: 'capacity', label: '定員', type: 'number', center: true,
-        format: v => v ? v + '名' : '-' },
-      { key: 'pricePerDay', label: '料金/日', type: 'number',
-        format: SkyRentCRUD.helpers.yen },
-      { key: 'active', label: '状態', type: 'status',
-        statusLabel: v => v === true || v === 'true' ? '稼働中' : '休止中' }
-    ],
-    defaults: [
-      { vehicleId: 'V001', name: 'コンパクト (ヴィッツ等)', class: 'コンパクト', plate: '札幌 500 あ 1234', capacity: 5, pricePerDay: 5500,  active: true },
-      { vehicleId: 'V002', name: 'ミドル (カローラ等)',     class: 'ミドル',     plate: '札幌 500 あ 5678', capacity: 5, pricePerDay: 7700,  active: true },
-      { vehicleId: 'V003', name: 'ミニバン (ノア等)',       class: 'ミニバン',   plate: '札幌 500 あ 9012', capacity: 7, pricePerDay: 11000, active: true },
-      { vehicleId: 'V004', name: 'SUV (ハリアー等)',        class: 'SUV',        plate: '札幌 500 あ 3456', capacity: 5, pricePerDay: 13200, active: true },
-      { vehicleId: 'V005', name: '軽自動車 (N-BOX等)',      class: '軽自動車',   plate: '札幌 580 か 7788', capacity: 4, pricePerDay: 4400,  active: true },
-      { vehicleId: 'V006', name: 'ワゴン (セレナ等)',       class: 'ミニバン',   plate: '札幌 500 さ 2233', capacity: 8, pricePerDay: 12100, active: true },
-      { vehicleId: 'V007', name: 'バン (ハイエース等)',     class: 'バン',       plate: '札幌 400 す 4455', capacity: 6, pricePerDay: 14300, active: true },
-      { vehicleId: 'V008', name: '高級セダン (クラウン等)', class: 'ミドル',     plate: '札幌 300 た 6677', capacity: 5, pricePerDay: 16500, active: true }
-    ]
-  });
+  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
 
-  // 注: storageKey が 'vehicles' なので localStorage の sky-rent.vehicles に保存
-  // js/api.js の listVehicles() が同じキーを参照するため、予約サイトに即反映される
+  <script src="partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/pricing.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+  (function () {
+    const S = window.SkyRentStore;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    function fmtD(iso){if(!iso)return '';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate());}
+    function toISO(dateVal){ return dateVal ? new Date(dateVal + 'T00:00:00').toISOString() : null; }
+    function toDateInput(iso){ if(!iso) return ''; const d=new Date(iso); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+
+    function initFilters() {
+      $('#f-cat').innerHTML = '<option value="">全カテゴリ</option>' + S.categories(true).map(c => '<option value="' + c.categoryId + '">' + esc(c.name) + '</option>').join('');
+      $('#f-loc').innerHTML = '<option value="">全拠点</option>' + S.locations().map(l => '<option value="' + l.locationId + '">' + esc(l.name) + '</option>').join('');
+      $('#f-cat').addEventListener('change', render);
+      $('#f-loc').addEventListener('change', render);
+      $('#f-kw').addEventListener('input', render);
+    }
+
+    function render() {
+      const cat = $('#f-cat').value, loc = $('#f-loc').value, kw = $('#f-kw').value.trim().toLowerCase();
+      let arr = S.assets({ categoryId: cat || undefined, locationId: loc || undefined });
+      if (kw) arr = arr.filter(a => (a.name || '').toLowerCase().includes(kw) || (a.plate || '').toLowerCase().includes(kw));
+      const now = new Date();
+      if (!arr.length) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="11" style="text-align:center;padding:24px;color:#888">該当なし</td></tr>'; return; }
+      $('#tbl').innerHTML = arr.map(a => {
+        const c = S.getCategory(a.categoryId), l = S.getLocation(a.locationId);
+        const isItem = c && c.type === 'item';
+        let shaken = '-';
+        if (a.shakenDate) { const dl = Math.ceil((new Date(a.shakenDate) - now) / 86400000); shaken = '<span style="' + (dl < 90 ? 'color:#c0392b;font-weight:700' : '') + '">' + fmtD(a.shakenDate) + '</span>'; }
+        return '<tr>' +
+          '<td><code>' + esc(a.assetId) + '</code></td>' +
+          '<td style="font-size:20px;text-align:center">' + esc(a.image || '📦') + '</td>' +
+          '<td><strong>' + esc(a.name) + '</strong></td>' +
+          '<td>' + esc(c ? c.name : '') + '</td>' +
+          '<td>' + esc(l ? l.name : '') + '</td>' +
+          '<td>¥' + (a.priceDay || 0).toLocaleString() + '</td>' +
+          '<td style="text-align:center">' + (isItem ? (a.stock || 1) + '点' : '1台') + '</td>' +
+          '<td>' + (a.requiredLicense ? '<span class="chip">要免許</span>' : '<span style="color:#bbb">不要</span>') + '</td>' +
+          '<td>' + (isItem ? '<span style="color:#bbb">-</span>' : shaken) + '</td>' +
+          '<td><span class="status ' + (a.active !== false ? 'status-confirmed' : 'status-cancelled') + '">' + (a.active !== false ? '稼働中' : '休止中') + '</span></td>' +
+          '<td style="text-align:center"><a href="#" class="detail-link" data-edit="' + esc(a.assetId) + '">編集</a></td>' +
+          '</tr>';
+      }).join('');
+      $('#tbl').querySelectorAll('[data-edit]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); openModal(a.dataset.edit); }));
+    }
+
+    function customFieldInput(def, value) {
+      const v = value == null ? '' : value;
+      if (def.type === 'select') {
+        return '<select data-cf="' + esc(def.key) + '"><option value="">-</option>' + (def.options || []).map(o => '<option' + (String(v) === String(o) ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select>';
+      }
+      const t = def.type === 'number' ? 'number' : 'text';
+      return '<input type="' + t + '" data-cf="' + esc(def.key) + '" value="' + esc(v) + '">';
+    }
+
+    function buildCustomFields(cat, asset) {
+      if (!cat || !cat.customFieldDefs || !cat.customFieldDefs.length) return '<p style="color:#999;font-size:12px;padding:4px 0">このカテゴリにはカスタム項目がありません。</p>';
+      return cat.customFieldDefs.map(def =>
+        '<div class="crud-field"><label>' + esc(def.label) + (def.unit ? ' (' + esc(def.unit) + ')' : '') + '</label>' + customFieldInput(def, (asset.customFields || {})[def.key]) + '</div>'
+      ).join('');
+    }
+
+    function openModal(assetId) {
+      const isNew = !assetId;
+      const a = isNew
+        ? { assetId: '', categoryId: S.categories()[0].categoryId, locationId: S.locations()[0].locationId, name: '', nameEn: '', image: '🚗', plate: '', capacity: '', priceHour: '', priceDay: '', priceWeek: '', priceMonth: '', stock: 1, requiredLicense: '', shakenDate: null, maintenanceDate: null, active: true, customFields: {} }
+        : Object.assign({}, S.getAsset(assetId));
+
+      const cats = S.categories(true), locs = S.locations();
+      function typeFieldsHtml(cat) {
+        const isItem = cat && cat.type === 'item';
+        if (isItem) {
+          return '<div class="crud-field"><label>在庫数 <span style="color:#c0392b">*</span></label><input type="number" id="a-stock" min="1" value="' + (a.stock || 1) + '"></div>';
+        }
+        return '<div class="crud-field"><label>必要免許・資格</label><input type="text" id="a-license" value="' + esc(a.requiredLicense || '') + '" placeholder="例: 準中型免許以上 (不要なら空欄)"></div>' +
+          '<div class="crud-field"><label>車検満了日</label><input type="date" id="a-shaken" value="' + toDateInput(a.shakenDate) + '"></div>' +
+          '<div class="crud-field"><label>次回点検日</label><input type="date" id="a-maint" value="' + toDateInput(a.maintenanceDate) + '"></div>';
+      }
+
+      const html =
+        '<div class="crud-modal-bg"></div><div class="crud-modal-card" style="min-width:600px">' +
+        '<div class="crud-modal-head"><h3>' + (isNew ? '車両・物品を追加' : '編集') + '</h3><button class="crud-close" type="button">×</button></div>' +
+        '<div style="padding:6px 0">' +
+          '<div class="crud-field"><label>カテゴリ <span style="color:#c0392b">*</span></label><select id="a-cat">' + cats.map(c => '<option value="' + c.categoryId + '"' + (c.categoryId === a.categoryId ? ' selected' : '') + '>' + esc(c.name) + ' (' + (c.type === 'item' ? '物品' : '車両') + ')</option>').join('') + '</select></div>' +
+          '<div class="crud-field"><label>名称 <span style="color:#c0392b">*</span></label><input type="text" id="a-name" value="' + esc(a.name) + '"></div>' +
+          '<div class="crud-field"><label>英語名</label><input type="text" id="a-nameEn" value="' + esc(a.nameEn || '') + '"></div>' +
+          '<div class="crud-field"><label>拠点 <span style="color:#c0392b">*</span></label><select id="a-loc">' + locs.map(l => '<option value="' + l.locationId + '"' + (l.locationId === a.locationId ? ' selected' : '') + '>' + esc(l.name) + '</option>').join('') + '</select></div>' +
+          '<div class="crud-field"><label>アイコン (絵文字)</label><input type="text" id="a-image" value="' + esc(a.image || '') + '" maxlength="4" style="max-width:80px;flex:none"></div>' +
+          '<div class="crud-field"><label>ナンバー</label><input type="text" id="a-plate" value="' + esc(a.plate || '') + '"></div>' +
+          '<div class="crud-field"><label>定員</label><input type="number" id="a-cap" value="' + (a.capacity || '') + '" style="max-width:120px;flex:none"></div>' +
+          '<div class="crud-field"><label>料金 (円)</label><div style="flex:1;display:flex;gap:6px;flex-wrap:wrap">' +
+            '<input type="number" id="a-ph" placeholder="時間" value="' + (a.priceHour || '') + '" style="width:90px">' +
+            '<input type="number" id="a-pd" placeholder="日 *" value="' + (a.priceDay || '') + '" style="width:90px">' +
+            '<input type="number" id="a-pw" placeholder="週" value="' + (a.priceWeek || '') + '" style="width:90px">' +
+            '<input type="number" id="a-pm" placeholder="月" value="' + (a.priceMonth || '') + '" style="width:90px"></div></div>' +
+          '<div id="type-fields">' + typeFieldsHtml(S.getCategory(a.categoryId)) + '</div>' +
+          '<div style="padding:10px 20px 4px"><strong class="card-section-title" id="cf-title">カスタム項目</strong></div>' +
+          '<div id="custom-fields">' + buildCustomFields(S.getCategory(a.categoryId), a) + '</div>' +
+          '<div class="crud-field"><label>状態</label><select id="a-active"><option value="true"' + (a.active !== false ? ' selected' : '') + '>稼働中</option><option value="false"' + (a.active === false ? ' selected' : '') + '>休止中</option></select></div>' +
+        '</div>' +
+        '<div class="crud-modal-foot">' +
+          (isNew ? '' : '<button type="button" class="btn btn-gray" id="a-delete" style="background:#c0392b">削除</button>') +
+          '<span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">キャンセル</button><button type="button" class="btn btn-primary" id="a-save">保存</button>' +
+        '</div></div>';
+
+      let modal = document.getElementById('crud-modal');
+      if (!modal) { modal = document.createElement('div'); modal.id = 'crud-modal'; modal.className = 'crud-modal'; document.body.appendChild(modal); }
+      modal.innerHTML = html;
+      const close = () => modal.remove();
+      modal.querySelector('.crud-modal-bg').addEventListener('click', close);
+      modal.querySelector('.crud-close').addEventListener('click', close);
+      modal.querySelector('.crud-cancel').addEventListener('click', close);
+
+      // カテゴリ変更で 種別欄 + カスタム項目欄 を再構築 (現在の入力値は保持しない=カテゴリ変更時の想定)
+      modal.querySelector('#a-cat').addEventListener('change', function () {
+        const cat = S.getCategory(this.value);
+        // 既存 customFields はそのまま渡す (キーが一致すれば維持)
+        const cur = collectCustomFields();
+        modal.querySelector('#type-fields').innerHTML = typeFieldsHtml(cat);
+        modal.querySelector('#custom-fields').innerHTML = buildCustomFields(cat, { customFields: Object.assign({}, a.customFields, cur) });
+      });
+
+      function collectCustomFields() {
+        const out = {};
+        modal.querySelectorAll('[data-cf]').forEach(el => { if (el.value !== '') out[el.dataset.cf] = el.value; });
+        return out;
+      }
+
+      modal.querySelector('#a-save').addEventListener('click', () => {
+        const name = modal.querySelector('#a-name').value.trim();
+        const catId = modal.querySelector('#a-cat').value;
+        const cat = S.getCategory(catId);
+        const isItem = cat && cat.type === 'item';
+        if (!name) { alert('名称は必須です'); return; }
+        if (!modal.querySelector('#a-pd').value) { alert('日貸し料金は必須です'); return; }
+        const num = id => { const v = modal.querySelector(id).value; return v === '' ? null : Number(v); };
+        const obj = {
+          assetId: isNew ? S.genId('A', 'assets', 'assetId') : a.assetId,
+          categoryId: catId, locationId: modal.querySelector('#a-loc').value,
+          name: name, nameEn: modal.querySelector('#a-nameEn').value.trim(),
+          image: modal.querySelector('#a-image').value.trim() || '📦',
+          plate: modal.querySelector('#a-plate').value.trim(),
+          capacity: num('#a-cap'),
+          priceHour: num('#a-ph'), priceDay: num('#a-pd'), priceWeek: num('#a-pw'), priceMonth: num('#a-pm'),
+          stock: isItem ? (parseInt((modal.querySelector('#a-stock') || {}).value, 10) || 1) : 1,
+          requiredLicense: isItem ? '' : ((modal.querySelector('#a-license') || {}).value || '').trim(),
+          shakenDate: isItem ? null : toISO((modal.querySelector('#a-shaken') || {}).value),
+          maintenanceDate: isItem ? null : toISO((modal.querySelector('#a-maint') || {}).value),
+          active: modal.querySelector('#a-active').value === 'true',
+          customFields: collectCustomFields()
+        };
+        S.upsert('assets', 'assetId', obj);
+        close(); render();
+      });
+
+      const del = modal.querySelector('#a-delete');
+      if (del) del.addEventListener('click', () => {
+        const used = S.list('reservations').some(r => r.assetId === a.assetId && r.status !== 'cancelled');
+        if (used) { alert('この車両・物品には有効な予約が紐づいているため削除できません。'); return; }
+        if (!confirm('「' + a.name + '」を削除しますか?')) return;
+        S.removeById('assets', 'assetId', a.assetId);
+        close(); render();
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initFilters();
+      $('#btn-add').addEventListener('click', () => openModal(null));
+      render();
+    });
+  })();
   </script>
 </body>
 </html>

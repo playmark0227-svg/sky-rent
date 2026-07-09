@@ -10,47 +10,89 @@
   <div data-include="topbar"></div>
 
   <main class="main">
-    <h1 class="page-title">店舗管理</h1>
-    <p class="page-note">店舗情報を編集して保存できます。多店舗運営時は「+ 店舗追加」で増やせます。</p>
+    <h1 class="page-title">店舗 (拠点) 管理</h1>
+    <p class="page-note">4拠点の店舗情報・営業時間・定休日を管理します。ここで設定した拠点は予約サイトの検索条件・管理画面のフィルタに自動反映されます。</p>
 
-    <div style="text-align:right;margin-bottom:10px">
-      <button id="btn-add" class="btn btn-primary">+ 店舗追加</button>
-    </div>
+    <div style="text-align:right;margin-bottom:10px"><button id="btn-add" class="btn btn-primary">+ 拠点追加</button></div>
 
     <section class="card">
       <table class="data-table list">
-        <thead><tr><th>店舗ID</th><th>店舗名</th><th>住所</th><th>電話番号</th><th>営業時間</th><th>担当者</th><th>状態</th><th></th></tr></thead>
-        <tbody id="tbl"></tbody>
+        <thead><tr><th>拠点ID</th><th>拠点名</th><th>住所</th><th>TEL</th><th>営業時間</th><th>定休日</th><th>登録数</th><th>表示順</th><th></th></tr></thead>
+        <tbody id="tbl"><tr class="empty"><td colspan="9">読み込み中...</td></tr></tbody>
       </table>
     </section>
   </main>
 
   <script src="partials.js"></script>
-  <script src="js/crud.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/pricing.js"></script>
+  <script src="../js/api.js"></script>
   <script>
-  SkyRentCRUD.init({
-    storageKey: 'stores',
-    idPrefix: 'S',
-    columns: [
-      { key: 'id', label: '店舗ID', code: true, readonly: true },
-      { key: 'name', label: '店舗名', bold: true, required: true },
-      { key: 'address', label: '住所' },
-      { key: 'phone', label: '電話番号', type: 'tel' },
-      { key: 'hours', label: '営業時間' },
-      { key: 'manager', label: '担当者' },
-      { key: 'active', label: '状態', type: 'status' }
-    ],
-    defaults: [
-      {
-        id: 'S001', name: 'Sky Rent 本店',
-        address: '東京都〇〇区〇〇 1-2-3',
-        phone: '03-0000-0000',
-        hours: '9:00-19:00 (年中無休)',
-        manager: '山田 太郎',
-        active: true
-      }
-    ]
-  });
+  (function () {
+    const S = window.SkyRentStore;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+    function render() {
+      const locs = S.locations();
+      $('#tbl').innerHTML = locs.map(l => {
+        const cnt = S.assets({ locationId: l.locationId }).length;
+        return '<tr>' +
+          '<td><code>' + esc(l.locationId) + '</code></td>' +
+          '<td><strong>' + esc(l.name) + '</strong>' + (l.nameEn ? '<br><small style="color:#999">' + esc(l.nameEn) + '</small>' : '') + '</td>' +
+          '<td>' + esc(l.address) + '</td><td>' + esc(l.tel) + '</td><td>' + esc(l.hours) + '</td><td>' + esc(l.holiday) + '</td>' +
+          '<td style="text-align:center">' + cnt + '</td><td style="text-align:center">' + (l.sort || '-') + '</td>' +
+          '<td style="text-align:center"><a href="#" class="detail-link" data-edit="' + esc(l.locationId) + '">編集</a></td></tr>';
+      }).join('');
+      $('#tbl').querySelectorAll('[data-edit]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); openModal(a.dataset.edit); }));
+    }
+
+    function openModal(locationId) {
+      const isNew = !locationId;
+      const l = isNew ? { locationId: '', name: '', nameEn: '', address: '', tel: '', hours: '9:00-19:00', holiday: 'なし (年中無休)', sort: 99 } : Object.assign({}, S.getLocation(locationId));
+      const html =
+        '<div class="crud-modal-bg"></div><div class="crud-modal-card">' +
+        '<div class="crud-modal-head"><h3>' + (isNew ? '拠点追加' : '拠点編集') + '</h3><button class="crud-close" type="button">×</button></div>' +
+        '<div style="padding:6px 0">' +
+          '<div class="crud-field"><label>拠点名 <span style="color:#c0392b">*</span></label><input type="text" id="l-name" value="' + esc(l.name) + '"></div>' +
+          '<div class="crud-field"><label>英語名</label><input type="text" id="l-nameEn" value="' + esc(l.nameEn || '') + '"></div>' +
+          '<div class="crud-field"><label>住所 <span style="color:#c0392b">*</span></label><input type="text" id="l-address" value="' + esc(l.address) + '"></div>' +
+          '<div class="crud-field"><label>TEL</label><input type="text" id="l-tel" value="' + esc(l.tel) + '"></div>' +
+          '<div class="crud-field"><label>営業時間</label><input type="text" id="l-hours" value="' + esc(l.hours) + '" placeholder="9:00-19:00"></div>' +
+          '<div class="crud-field"><label>定休日</label><input type="text" id="l-holiday" value="' + esc(l.holiday) + '" placeholder="水曜定休 / なし"></div>' +
+          '<div class="crud-field"><label>表示順</label><input type="number" id="l-sort" value="' + (l.sort || 99) + '" style="max-width:100px;flex:none"></div>' +
+        '</div>' +
+        '<div class="crud-modal-foot">' + (isNew ? '' : '<button type="button" class="btn btn-gray" id="l-delete" style="background:#c0392b">削除</button>') +
+          '<span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">キャンセル</button><button type="button" class="btn btn-primary" id="l-save">保存</button></div></div>';
+      let modal = document.getElementById('crud-modal');
+      if (!modal) { modal = document.createElement('div'); modal.id = 'crud-modal'; modal.className = 'crud-modal'; document.body.appendChild(modal); }
+      modal.innerHTML = html;
+      const close = () => modal.remove();
+      modal.querySelector('.crud-modal-bg').addEventListener('click', close);
+      modal.querySelector('.crud-close').addEventListener('click', close);
+      modal.querySelector('.crud-cancel').addEventListener('click', close);
+      modal.querySelector('#l-save').addEventListener('click', () => {
+        const name = modal.querySelector('#l-name').value.trim(), addr = modal.querySelector('#l-address').value.trim();
+        if (!name || !addr) { alert('拠点名と住所は必須です'); return; }
+        S.upsert('locations', 'locationId', {
+          locationId: isNew ? ('loc-' + Date.now()) : l.locationId,
+          name: name, nameEn: modal.querySelector('#l-nameEn').value.trim(), address: addr,
+          tel: modal.querySelector('#l-tel').value.trim(), hours: modal.querySelector('#l-hours').value.trim(),
+          holiday: modal.querySelector('#l-holiday').value.trim(), sort: parseInt(modal.querySelector('#l-sort').value, 10) || 99
+        });
+        close(); render();
+      });
+      const del = modal.querySelector('#l-delete');
+      if (del) del.addEventListener('click', () => {
+        if (S.assets({ locationId: l.locationId }).length > 0) { alert('この拠点には車両・物品が登録されているため削除できません。'); return; }
+        if (!confirm('拠点「' + l.name + '」を削除しますか?')) return;
+        S.removeById('locations', 'locationId', l.locationId); close(); render();
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { $('#btn-add').addEventListener('click', () => openModal(null)); render(); });
+  })();
   </script>
 </body>
 </html>

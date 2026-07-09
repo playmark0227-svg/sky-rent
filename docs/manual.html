@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理者向けマニュアル | Sky Rent</title>
+  <style>
+    :root{
+      --navy:#1c4a7a;
+      --navy-d:#15375d;
+      --navy-l:#2e6bab;
+      --ink:#2a2f36;
+      --sub:#5b6672;
+      --line:#d8e0ea;
+      --line2:#e8edf3;
+      --bg:#f4f6f9;
+      --tint:#eef4fa;
+      --tip:#eef8f2;
+      --tip-b:#2e7d5b;
+      --warn:#fdf3e7;
+      --warn-b:#c9821f;
+      --imp:#fdeeee;
+      --imp-b:#c0392b;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{
+      font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","YuGothic","Meiryo",sans-serif;
+      color:var(--ink);background:var(--bg);line-height:1.85;
+      font-size:15px;-webkit-font-smoothing:antialiased;
+    }
+    .sheet{max-width:860px;margin:0 auto;background:#fff;padding:0 0 60px;box-shadow:0 1px 30px rgba(20,40,70,.06);}
+
+    /* ============ 表紙 ============ */
+    .cover{
+      text-align:center;padding:120px 40px 130px;
+      background:linear-gradient(160deg,var(--navy),var(--navy-d));color:#fff;
+    }
+    .cover .mark{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:88px;height:88px;border-radius:20px;background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.35);
+      font-family:"Yu Mincho",serif;font-weight:700;font-size:50px;margin-bottom:28px;
+    }
+    .cover .doctype{font-size:14px;letter-spacing:.4em;opacity:.85;margin-bottom:20px;padding-left:.4em;}
+    .cover h1{font-size:34px;font-weight:700;letter-spacing:.04em;line-height:1.4;margin-bottom:14px;}
+    .cover .sysname{font-size:15px;opacity:.9;line-height:1.9;max-width:560px;margin:0 auto;}
+    .cover .rule{width:60px;height:3px;background:rgba(255,255,255,.6);margin:34px auto;border-radius:2px;}
+    .cover .meta{
+      display:inline-block;text-align:left;margin-top:8px;font-size:13px;
+      background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);
+      border-radius:8px;padding:18px 26px;
+    }
+    .cover .meta div{display:flex;gap:14px;padding:3px 0;}
+    .cover .meta b{display:inline-block;min-width:96px;opacity:.75;font-weight:400;}
+
+    /* ============ 共通ブロック ============ */
+    .body-pad{padding:0 54px;}
+    h2.chapter{
+      font-size:23px;color:var(--navy);font-weight:700;
+      margin:0 0 4px;padding:54px 0 14px;border-bottom:3px solid var(--navy);
+      display:flex;align-items:baseline;gap:14px;
+    }
+    h2.chapter .no{
+      display:inline-flex;align-items:center;justify-content:center;
+      min-width:40px;height:40px;padding:0 8px;border-radius:9px;background:var(--navy);color:#fff;
+      font-size:19px;flex:none;align-self:center;
+    }
+    h3.sec{
+      font-size:16px;color:var(--navy-d);font-weight:700;margin:30px 0 10px;
+      padding-left:12px;border-left:5px solid var(--navy-l);
+    }
+    h4.sub{font-size:14.5px;color:var(--ink);font-weight:700;margin:22px 0 8px;}
+    p{margin:9px 0;}
+    .lead{color:var(--sub);font-size:14px;margin:2px 0 6px;}
+    a{color:var(--navy-l);}
+    strong{color:var(--navy-d);}
+    ul,ol{margin:8px 0 8px 6px;padding-left:26px;}
+    li{margin:5px 0;}
+    ol.steps{counter-reset:st;list-style:none;padding-left:0;margin:12px 0;}
+    ol.steps>li{
+      position:relative;padding:8px 4px 8px 46px;margin:0;border-bottom:1px dashed var(--line2);
+    }
+    ol.steps>li:last-child{border-bottom:none;}
+    ol.steps>li::before{
+      counter-increment:st;content:counter(st);
+      position:absolute;left:6px;top:9px;
+      width:28px;height:28px;border-radius:50%;background:var(--tint);color:var(--navy);
+      border:1.5px solid var(--navy-l);font-weight:700;font-size:14px;
+      display:flex;align-items:center;justify-content:center;
+    }
+
+    /* パンくず (画面の開き方) */
+    .path{
+      display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+      background:var(--tint);border:1px solid var(--line);border-radius:8px;
+      padding:11px 15px;margin:10px 0;font-size:13.5px;
+    }
+    .path .lbl{font-weight:700;color:var(--navy);margin-right:4px;}
+    .path .crumb{background:#fff;border:1px solid var(--line);border-radius:5px;padding:3px 10px;font-weight:600;color:var(--navy-d);}
+    .path .arw{color:var(--navy-l);font-weight:700;}
+
+    /* コールアウト */
+    .call{border-radius:8px;padding:13px 16px 13px 18px;margin:14px 0;font-size:13.5px;border:1px solid;}
+    .call .h{font-weight:700;display:block;margin-bottom:3px;}
+    .call.tip{background:var(--tip);border-color:#bfe3d0;}
+    .call.tip .h{color:var(--tip-b);}
+    .call.warn{background:var(--warn);border-color:#f0dcbd;}
+    .call.warn .h{color:var(--warn-b);}
+    .call.imp{background:var(--imp);border-color:#f2c9c6;}
+    .call.imp .h{color:var(--imp-b);}
+    .call ul{margin:6px 0 2px;}
+
+    /* テーブル */
+    table.tbl{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+    table.tbl th,table.tbl td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;}
+    table.tbl thead th{background:var(--navy);color:#fff;font-weight:600;}
+    table.tbl tbody th{background:var(--tint);color:var(--navy-d);font-weight:700;white-space:nowrap;width:150px;}
+    table.tbl tbody tr:nth-child(even) td{background:#fafcfe;}
+    .tbl-wrap{overflow-x:auto;}
+
+    code,.kbd{
+      font-family:"SFMono-Regular",Consolas,"Courier New",monospace;
+      background:#eef2f6;border:1px solid #dbe4ee;border-radius:4px;padding:1px 6px;font-size:12.5px;color:var(--navy-d);
+    }
+    .badge{display:inline-block;background:var(--navy-l);color:#fff;border-radius:4px;padding:1px 8px;font-size:12px;font-weight:600;}
+    .badge.g{background:var(--tip-b);}
+    .badge.gray{background:#8a97a4;}
+    .badge.red{background:var(--imp-b);}
+
+    /* 目次 */
+    .toc{padding:44px 54px 10px;}
+    .toc h2{font-size:20px;color:var(--navy);border-bottom:2px solid var(--line);padding-bottom:10px;margin-bottom:18px;}
+    .toc ol{list-style:none;padding:0;margin:0;counter-reset:toc;}
+    .toc li{counter-increment:toc;margin:0;}
+    .toc a{
+      display:flex;align-items:baseline;gap:12px;text-decoration:none;color:var(--ink);
+      padding:9px 6px;border-bottom:1px dotted var(--line);
+    }
+    .toc a:hover{background:var(--tint);}
+    .toc a .n{color:var(--navy);font-weight:700;min-width:26px;text-align:right;}
+    .toc a .t{flex:1;}
+    .toc a .t small{color:var(--sub);font-weight:400;font-size:12.5px;display:block;}
+    .toc a .star{color:#c9821f;font-size:12px;font-weight:700;}
+
+    .footer{padding:40px 54px 0;text-align:center;color:#98a2ad;font-size:12px;border-top:1px solid var(--line2);margin-top:50px;}
+    .backtop{font-size:12px;color:var(--navy-l);text-decoration:none;float:right;margin-top:6px;}
+    .backtop:hover{text-decoration:underline;}
+    .intro-note{background:var(--tint);border-left:4px solid var(--navy);padding:14px 18px;border-radius:0 8px 8px 0;margin:16px 0;font-size:14px;}
+
+    /* ============ 印刷 ============ */
+    @media print{
+      body{background:#fff;font-size:11pt;line-height:1.6;}
+      .sheet{box-shadow:none;max-width:none;padding:0;}
+      @page{margin:16mm 15mm;}
+      .cover{min-height:auto;padding:130px 20px;page-break-after:always;
+        -webkit-print-color-adjust:exact;print-color-adjust:exact;
+        background:var(--navy)!important;color:#fff!important;}
+      .toc{page-break-after:always;padding:10px 0;}
+      .body-pad{padding:0;}
+      h2.chapter{page-break-before:always;padding-top:8px;}
+      h2.chapter,h3.sec,h4.sub{page-break-after:avoid;}
+      .call,table.tbl,ol.steps>li,.path{page-break-inside:avoid;}
+      thead{display:table-header-group;}
+      .backtop{display:none;}
+      a{color:var(--ink);text-decoration:none;}
+      .cover .mark,.cover .rule,.cover .meta,
+      table.tbl thead th,.no,.badge{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    }
+    @media (max-width:640px){
+      .body-pad,.toc{padding-left:20px;padding-right:20px;}
+      .cover{padding:70px 22px 80px;}
+      .cover h1{font-size:26px;}
+      h2.chapter{font-size:20px;}
+    }
+  </style>
+</head>
+<body>
+<div class="sheet" id="top">
+
+  <!-- ================= 表紙 ================= -->
+  <div class="cover">
+    <div class="mark">空</div>
+    <div class="doctype">A D M I N I S T R A T O R ' S　M A N U A L</div>
+    <h1>管理者向けマニュアル<br>操作手順書</h1>
+    <div class="sysname">
+      Sky Rent<br>
+      レンタカー・キッチンカー・特殊車両・家電・工具　統合予約／管理システム
+    </div>
+    <div class="rule"></div>
+    <div class="meta">
+      <div><b>文書名</b><span>管理者向けマニュアル (操作手順書)</span></div>
+      <div><b>対象システム</b><span>Sky Rent 統合予約・管理システム</span></div>
+      <div><b>対象読者</b><span>店舗運営スタッフ (2〜3名)</span></div>
+      <div><b>バージョン</b><span>v1.0</span></div>
+      <div><b>発行日</b><span>2026年7月10日</span></div>
+    </div>
+  </div>
+
+  <!-- ================= 目次 ================= -->
+  <nav class="toc" id="toc">
+    <h2>目　次</h2>
+    <ol>
+      <li><a href="#ch1"><span class="n">1</span><span class="t">はじめに<small>システムの概要・ログイン方法・スマートフォンでの使い方</small></span></a></li>
+      <li><a href="#ch2"><span class="n">2</span><span class="t">毎日の運用フロー<small>ダッシュボード確認 → 出発・返却 → 貸出・返却処理 → 未処理アラート対応</small></span></a></li>
+      <li><a href="#ch3"><span class="n">3</span><span class="t">予約の管理<small>絞り込み・詳細・状態の変更・キャンセル・入金記録・ガントチャートの見方</small></span></a></li>
+      <li><a href="#ch4"><span class="n">4</span><span class="t">帳票の出力<small>貸渡証・車輌チェックシート・領収書・物品貸出書の出し方と印刷</small></span></a></li>
+      <li><a href="#ch5"><span class="n">5</span><span class="t"><span class="star">★</span> 新しいカテゴリを追加する<small>例:「冷凍車」を追加する通し手順 (最重要)</small></span></a></li>
+      <li><a href="#ch6"><span class="n">6</span><span class="t">車両・物品の登録と在庫・車検期限の管理</span></a></li>
+      <li><a href="#ch7"><span class="n">7</span><span class="t">オプション管理<small>共通オプションとカテゴリ専用オプション</small></span></a></li>
+      <li><a href="#ch8"><span class="n">8</span><span class="t">会員・ポイント・クーポン<small>請求書払い許可の付与・ポイント手動調整・自動発行のしくみ</small></span></a></li>
+      <li><a href="#ch9"><span class="n">9</span><span class="t">請求書の発行と入金管理<small>月次一括請求の手順</small></span></a></li>
+      <li><a href="#ch10"><span class="n">10</span><span class="t">拠点・スタッフ 各種設定<small>営業時間・定休日・ポイント設定・振込先</small></span></a></li>
+      <li><a href="#ch11"><span class="n">11</span><span class="t">データのバックアップと復元</span></a></li>
+      <li><a href="#ch12"><span class="n">12</span><span class="t">トラブルシューティング<small>データの初期化・デモデータの再投入</small></span></a></li>
+    </ol>
+  </nav>
+
+  <div class="body-pad">
+
+  <!-- ================= 1. はじめに ================= -->
+  <h2 class="chapter" id="ch1"><span class="no">1</span>はじめに</h2>
+
+  <h3 class="sec">1.1　このシステムについて</h3>
+  <p class="lead">■ 目的：このマニュアルで何ができるようになるか</p>
+  <p>
+    Sky Rent は、<strong>一般レンタカー</strong>・<strong>キッチンカー</strong>・<strong>キャンピングカー</strong>・<strong>特殊車両 (ダンプ等)</strong> の車両レンタルと、
+    <strong>家電・工具などの物品レンタル</strong> を、ひとつの予約サイト・ひとつの管理画面でまとめて扱えるシステムです。
+    お客様が使う「予約サイト」と、スタッフが使う「管理画面」の 2 つで構成されています。
+    本書では <strong>管理画面</strong> の使い方を、はじめての方でも迷わないように順を追って説明します。
+  </p>
+  <div class="intro-note">
+    本システムは <strong>4 拠点・常駐スタッフなし・2〜3 名で運営</strong> することを前提に作られています。
+    どの画面もスマートフォンで操作でき、全 4 拠点をこの 1 つの画面でまとめて管理できます。
+  </div>
+
+  <h3 class="sec">1.2　ログインする</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">管理画面ログインページ</span><span class="arw">＝</span><span class="crumb"><code>manage/login.html</code></span></div>
+  <ol class="steps">
+    <li>ブラウザで管理画面のログインページを開きます。</li>
+    <li><strong>事業者コード（またはメールアドレス）</strong> と <strong>パスワード</strong> を入力します。</li>
+    <li>次回から手入力を省きたい場合は <strong>「ログイン状態を保持する」</strong> にチェックを入れます。</li>
+    <li><strong>「ログイン」</strong> を押すと、自動的にダッシュボード（トップ画面）が開きます。</li>
+  </ol>
+  <div class="call tip"><span class="h">ヒント</span>
+    現在は<strong>デモ環境</strong>のため、ログイン画面では任意の値でログインできます。パスワードを忘れた場合は、ログイン画面下部の <strong>「パスワードをお忘れですか?」</strong> から再設定リンクを送信できます。
+  </div>
+
+  <h3 class="sec">1.3　画面の見方（メニューの位置）</h3>
+  <p>ログイン後、画面の一番上に紺色の帯（トップメニュー）が表示されます。ここから全ての機能へ移動できます。本書では、この移動経路を <span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">予約一覧</span></span> のように示します。</p>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>メニュー</th><th>主な内容</th></tr></thead>
+    <tbody>
+      <tr><th>予約管理</th><td>ダッシュボード／貸渡予約表（ガント）／予約一覧／帳票出力／予約キャンセル一覧／車検予約一覧／点検予約一覧</td></tr>
+      <tr><th>各種管理</th><td>カテゴリ管理／車両・物品管理／オプション管理／顧客・会員管理／請求書管理／料金プラン管理／定休日管理／ハイシーズン管理</td></tr>
+      <tr><th>分析</th><td>売上集計／車輌稼働率／Google Analytics 連携設定</td></tr>
+      <tr><th>社内管理</th><td>店舗管理／従業員管理／貸渡実績報告書（陸運局）／定期報告書類の印刷</td></tr>
+      <tr><th>予約サイト設定</th><td>予約サイト設定／ポイント・クーポン設定／コンテンツ管理／お知らせ管理 など</td></tr>
+      <tr><th>右上（お名前）</th><td>プロフィール編集／予約サイトを表示／システムドキュメント／ログアウト</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="sec">1.4　スマートフォンでの使い方</h3>
+  <ul>
+    <li>画面がせまいときは、上部メニューが右上の <strong>三本線ボタン（≡）</strong> にまとまります。タップするとメニューが開きます。</li>
+    <li>横に長い表は、<strong>指で左右にスクロール</strong>して続きを見られます。</li>
+    <li>ダッシュボードや予約一覧もスマホに対応しているので、外出先や現地でも確認・処理ができます。</li>
+  </ul>
+
+  <h3 class="sec">1.5　ログアウト</h3>
+  <p>作業を終えるときは、画面右上の <strong>お名前 ▸ ログアウト</strong> を選びます。共有端末を使っている場合は、必ずログアウトしてください。</p>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  <!-- ================= 2. 毎日の運用フロー ================= -->
+  <h2 class="chapter" id="ch2"><span class="no">2</span>毎日の運用フロー</h2>
+  <p class="lead">■ 目的：開店から閉店まで、その日の出発・返却をもれなく処理する</p>
+  <p>この章は「毎日、最初に開く画面」と「一日の作業の流れ」をまとめたものです。まずはこの流れを覚えれば、日々の運用はスムーズに進みます。</p>
+
+  <h3 class="sec">2.1　朝：ダッシュボードで今日の予定を確認する</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">ダッシュボード</span><span class="arw">（＝ログイン直後の画面）</span></div>
+  <ol class="steps">
+    <li>画面上部の日付が <strong>本日</strong> になっているか確認します。ちがう場合は <strong>「本日を表示」</strong> を押します。</li>
+    <li>特定の拠点だけ見たいときは <strong>拠点</strong> を選んで <strong>「検索」</strong> を押します（初期は全拠点）。</li>
+    <li>上段の 4 枚のカード（<strong>本日の予約受付／本日の出発／本日の帰着／今月の売上</strong>）で、今日の全体像をつかみます。</li>
+    <li><strong>「拠点別サマリー」</strong>で、4 拠点それぞれの「出発・帰着・貸出中」の件数を確認します。</li>
+    <li>赤い枠の <strong>「未処理アラート」</strong>が出ていたら、内容を確認します（後述 2.4）。</li>
+  </ol>
+
+  <h3 class="sec">2.2　日中：出発（貸出）の処理をする</h3>
+  <p>ダッシュボード中央の <strong>「本日の出発予定」</strong>に、その日に貸し出す予約が一覧表示されます。お客様が来店したら、その予約を「貸出中」にします。</p>
+  <ol class="steps">
+    <li>ダッシュボードの <strong>「予約一覧へ」</strong>、または <span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">予約一覧</span></span> を開きます。</li>
+    <li>該当の予約の行の右端 <strong>「詳細」</strong> を押します。</li>
+    <li>免許証番号などを確認し、<strong>「🚗 貸出処理（出発）」</strong> ボタンを押します。状態が <span class="badge">確定</span> → <span class="badge">貸出中</span> に変わります。</li>
+    <li>必要に応じて、貸渡証などの帳票を印刷します（第 4 章）。</li>
+  </ol>
+
+  <h3 class="sec">2.3　夕方：帰着（返却）の処理をする</h3>
+  <p>ダッシュボードの <strong>「本日の帰着予定」</strong>に、返却予定の予約が表示されます。車両・物品が戻ってきたら「返却済」にします。</p>
+  <ol class="steps">
+    <li>予約一覧で対象予約の <strong>「詳細」</strong> を開きます。</li>
+    <li>車両の傷や燃料、物品の数量・破損を確認します（車輌チェックシートを活用）。</li>
+    <li><strong>「✅ 返却処理」</strong> ボタンを押します。状態が <span class="badge">貸出中</span> → <span class="badge gray">返却済</span> に変わります。</li>
+    <li>現地決済で未入金の場合は、同じ画面の <strong>「入金を記録」</strong> で入金済にします。</li>
+  </ol>
+  <div class="call tip"><span class="h">ヒント：ポイントは返却時に自動で付きます</span>
+    会員のお客様の予約を「返却済」にすると、<strong>ポイントが自動で付与</strong>されます。累計が一定に達すると割引クーポンも自動発行されます（第 8 章）。スタッフが手動で付ける必要はありません。
+  </div>
+
+  <h3 class="sec">2.4　未処理アラートへの対応</h3>
+  <p>ダッシュボードの赤い枠「未処理アラート」には、<strong>処理が滞っている予約（出発予定なのに未処理、返却予定を過ぎている等）</strong>が表示されます。内容を確認し、2.2／2.3 の手順で処理してください。</p>
+
+  <h3 class="sec">2.5　閉店前のチェック</h3>
+  <ul>
+    <li>本日の出発・帰着が <strong>すべて処理済み</strong> か、ダッシュボードで再確認します。</li>
+    <li>画面下部の <strong>「自動通知ログ（メール送信）」</strong> で、確認メールなどが送られているかを確認できます。</li>
+    <li><strong>「車検の期限が近い車両」</strong> に表示があれば、車検の手配を検討します（第 6 章）。</li>
+  </ul>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  <!-- ================= 3. 予約の管理 ================= -->
+  <h2 class="chapter" id="ch3"><span class="no">3</span>予約の管理</h2>
+  <p class="lead">■ 目的：予約を探し、内容を確認し、状態（貸出・返却・キャンセル）や入金を管理する</p>
+
+  <h3 class="sec">3.1　予約一覧を開く・絞り込む</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">予約一覧</span></div>
+  <ol class="steps">
+    <li>上部の絞り込み条件を設定します：<strong>期間 ／ 状態 ／ 拠点 ／ カテゴリ ／ キーワード</strong>（顧客名・対象・予約ID）。</li>
+    <li><strong>「検索」</strong> を押すと、条件に合う予約が表示されます。</li>
+    <li>表の上に <strong>件数と合計金額（キャンセル分を除く）</strong> が表示されます。</li>
+  </ol>
+
+  <h3 class="sec">3.2　予約の状態（ステータス）の意味</h3>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>状態</th><th>意味</th><th>次にできる操作</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge">確定</span></td><td>予約を受け付けた状態（まだ出発していない）</td><td>貸出処理／キャンセル／入金記録</td></tr>
+      <tr><td><span class="badge">貸出中</span></td><td>お客様に貸し出し中（出発済み）</td><td>返却処理／キャンセル／入金記録</td></tr>
+      <tr><td><span class="badge gray">返却済</span></td><td>返却が完了した状態</td><td>（会員はこの時点でポイント付与）</td></tr>
+      <tr><td><span class="badge red">キャンセル</span></td><td>取り消された予約</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="sec">3.3　詳細を開いて操作する</h3>
+  <p>各行右端の <strong>「詳細」</strong> を押すと、予約の全情報（対象・期間・借受人・連絡先・免許証番号・支払方法・料金内訳）が表示されます。画面下部のボタンで、状態を進めたり入金を記録したりできます。</p>
+  <ul>
+    <li><strong>貸出処理（出発）</strong>：<span class="badge">確定</span> の予約を <span class="badge">貸出中</span> にします。</li>
+    <li><strong>返却処理</strong>：<span class="badge">貸出中</span> の予約を <span class="badge gray">返却済</span> にします（会員はポイント自動付与）。</li>
+    <li><strong>予約をキャンセル</strong>：確定・貸出中の予約を取り消します。</li>
+    <li><strong>入金を記録</strong>：現地決済で未入金の予約を「入金済」にします。</li>
+    <li><strong>帳票出力</strong>：帳票の画面へ移動します（第 4 章）。</li>
+  </ul>
+  <div class="call warn"><span class="h">ご注意</span>
+    状態を戻す（返却済 → 貸出中など）操作は基本的に行いません。押す前に確認ダイアログが出ますので、内容をよく確認してから実行してください。
+  </div>
+
+  <h3 class="sec">3.4　ガントチャート（貸渡予約表）で全体を見る</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">貸渡予約表（ガント）</span></div>
+  <p>いつ・どの車両（物品）が・どれだけ埋まっているかを、横棒グラフのカレンダーで一目で確認できます。</p>
+  <ul>
+    <li><strong>表示開始日</strong>と<strong>表示単位</strong>（7日／14日／30日／時間単位24時間）を選べます。</li>
+    <li><strong>拠点・カテゴリ</strong>で絞り込めます。拠点を「全拠点」にすると、拠点ごとにグループ分けして表示されます。</li>
+    <li>色の意味（凡例）：<span class="badge g">確定=緑</span> <span class="badge">貸出中=青</span> <span class="badge gray">返却済=グレー</span> <span class="badge red">キャンセル=赤</span></li>
+    <li>横棒を<strong>クリック</strong>すると、その予約の詳細へ移動します。</li>
+    <li>在庫が複数ある物品は、同じ行の中に<strong>段（レーン）を分けて重ねて</strong>表示されます。</li>
+  </ul>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  <!-- ================= 4. 帳票の出力 ================= -->
+  <h2 class="chapter" id="ch4"><span class="no">4</span>帳票の出力</h2>
+  <p class="lead">■ 目的：貸渡証・車輌チェックシート・領収書・物品貸出書を印刷（またはPDF保存）する</p>
+
+  <h3 class="sec">4.1　帳票画面を開く</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">帳票出力</span></div>
+  <p>レンタルの種類によって、出せる帳票が自動で変わります。</p>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>レンタル種別</th><th>出力できる帳票</th></tr></thead>
+    <tbody>
+      <tr><th>車両（レンタカー・キッチンカー・特殊車両 等）</th><td>貸渡証 ／ 車輌チェックシート ／ 領収書</td></tr>
+      <tr><th>物品（家電・工具 等）</th><td>物品貸出書 ／ 領収書</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="sec">4.2　印刷の手順</h3>
+  <ol class="steps">
+    <li>期間・状態・キーワードで対象の予約を検索します。</li>
+    <li>対象予約の行にある帳票ボタン（例：<strong>貸渡証</strong>／<strong>チェックシート</strong>／<strong>領収書</strong>）を押します。</li>
+    <li>プレビューが表示されるので、内容を確認します。</li>
+    <li><strong>「印刷」</strong> を押すと、ブラウザの印刷画面が開きます。用紙は <strong>A4</strong> で出力できます。</li>
+  </ol>
+  <div class="call tip"><span class="h">ヒント：PDFで保存したいとき</span>
+    印刷画面の「送信先／プリンター」で <strong>「PDFに保存」</strong> を選ぶと、印刷せずにPDFファイルとして保存できます。メールでお客様に送りたいときに便利です。
+  </div>
+
+  <h3 class="sec">4.3　各帳票の内容</h3>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>帳票</th><th>記載されるおもな内容</th></tr></thead>
+    <tbody>
+      <tr><th>貸渡証</th><td>貸渡人・借受人・車両・ナンバー・定員・貸渡／返却日時・料金内訳・必要免許・注意事項・署名欄</td></tr>
+      <tr><th>車輌チェックシート</th><td>外装キズ・タイヤ・灯火・車内清掃・燃料残量・走行距離を「出発時／返却時」でチェック</td></tr>
+      <tr><th>領収書</th><td>金額（税込）・内税表示。5万円以上は収入印紙欄が付きます</td></tr>
+      <tr><th>物品貸出書</th><td>品目名・数量・貸出期間・料金・オプション・注意事項・署名欄</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  <!-- ================= 5. 新しいカテゴリを追加する ================= -->
+  <h2 class="chapter" id="ch5"><span class="no">5</span>新しいカテゴリを追加する ★</h2>
+  <p class="lead">■ 目的：エンジニアに頼らず、管理画面だけで新しいレンタル種別を追加し、予約サイトに反映させる</p>
+  <div class="intro-note">
+    このシステムの<strong>いちばん大切な機能</strong>です。新しい取扱品目（例：冷凍車）が増えても、<strong>プログラムの変更は不要</strong>。以下の 4 ステップだけで、予約サイトの検索条件・スペック表示まで自動で反映されます。ここでは例として「<strong>冷凍車</strong>」を追加してみます。
+  </div>
+
+  <h3 class="sec">STEP 1　カテゴリを作る</h3>
+  <div class="path"><span class="lbl">画面</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">カテゴリ管理</span><span class="arw">▸</span><span class="crumb">＋ カテゴリ追加</span></div>
+  <ol class="steps">
+    <li><strong>「＋ カテゴリ追加」</strong> を押します。</li>
+    <li><strong>カテゴリ名</strong>に「冷凍車」と入力します。</li>
+    <li><strong>種別</strong>を選びます。車で運ぶものは <strong>「車両レンタル（免許入力・車検管理あり）」</strong>、家電・工具のような物単体は <strong>「物品レンタル（在庫数管理・免許入力なし）」</strong> を選びます。→ 冷凍車は「車両レンタル」。</li>
+    <li><strong>アイコン（絵文字）</strong>・<strong>説明文</strong>・<strong>表示順</strong>を入力します。</li>
+    <li><strong>カスタム項目</strong>（そのカテゴリだけのスペック欄・検索条件）を <strong>「＋ 項目を追加」</strong> で定義します。冷凍車の例：
+      <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>項目名</th><th>種類</th><th>単位／選択肢</th><th>フィルタ表示</th></tr></thead>
+        <tbody>
+          <tr><td>庫内温度帯</td><td>選択式</td><td>冷蔵, 冷凍, 超低温</td><td>ON</td></tr>
+          <tr><td>庫内容積</td><td>数値</td><td>単位：L</td><td>ON</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </li>
+    <li><strong>「保存」</strong> を押します。</li>
+  </ol>
+  <div class="call tip"><span class="h">「フィルタ表示」とは？</span>
+    チェックを入れると、その項目が<strong>予約サイトの検索絞り込み</strong>に表示されます。検索では、<strong>数値の項目は「入力値以上」</strong>、<strong>選択式・テキストの項目は「完全一致」</strong>で絞り込まれます。
+  </div>
+
+  <h3 class="sec">STEP 2　その車両（物品）を登録する</h3>
+  <div class="path"><span class="lbl">画面</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">車両・物品管理</span><span class="arw">▸</span><span class="crumb">＋ 追加</span></div>
+  <ol class="steps">
+    <li><strong>「＋ 追加」</strong> を押します。</li>
+    <li><strong>カテゴリ</strong>で「冷凍車」を選びます。すると、STEP 1 で定義した <strong>「庫内温度帯」「庫内容積」の入力欄が自動で出現</strong>します。</li>
+    <li><strong>名称・拠点・アイコン・ナンバー・定員・料金</strong>を入力します（<strong>日貸し料金は必須</strong>）。</li>
+    <li>車両なので、<strong>必要免許（例：準中型免許以上）・車検満了日・次回点検日</strong>も入力できます。</li>
+    <li>カスタム項目（庫内温度帯・庫内容積）に値を入れます。</li>
+    <li><strong>「保存」</strong> を押します。</li>
+  </ol>
+
+  <h3 class="sec">STEP 3　オプションを紐付ける（必要な場合）</h3>
+  <div class="path"><span class="lbl">画面</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">オプション管理</span><span class="arw">▸</span><span class="crumb">＋ オプション追加</span></div>
+  <ol class="steps">
+    <li>そのカテゴリだけのオプションが必要なら <strong>「＋ オプション追加」</strong> を押します。</li>
+    <li>名称・料金・課金単位を入力し、<strong>適用範囲</strong>で <strong>「カテゴリを指定」→「冷凍車」</strong> にチェックして保存します。</li>
+  </ol>
+  <p>免責補償などの <strong>共通オプション</strong>は、新しく作った車両カテゴリにも <strong>自動で付く</strong>ので、個別の設定は不要です。</p>
+
+  <h3 class="sec">STEP 4　予約サイトで確認する</h3>
+  <div class="path"><span class="lbl">画面</span><span class="crumb">右上のお名前</span><span class="arw">▸</span><span class="crumb">予約サイトを表示</span></div>
+  <ul>
+    <li>検索のカテゴリに <strong>「冷凍車」</strong> が表示される。</li>
+    <li>絞り込み条件に <strong>「庫内温度帯」「庫内容積」</strong> が表示される。</li>
+    <li>車両の詳細ページに、入力したスペックが表示される。</li>
+  </ul>
+  <div class="call imp"><span class="h">この 4 ステップで完結します</span>
+    カテゴリを作る → 車両（物品）を登録 → オプション紐付け → 予約サイトで確認。<strong>プログラム改修は一切不要</strong>です。物品カテゴリ（家電・工具など）の場合は、STEP 2 で「在庫数」を入力します（免許・車検欄は表示されません）。
+  </div>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  <!-- ================= 6. 車両・物品の登録 ================= -->
+  <h2 class="chapter" id="ch6"><span class="no">6</span>車両・物品の登録と在庫・車検期限の管理</h2>
+  <p class="lead">■ 目的：一台ごと・一品ごとの登録／編集／休止／削除、在庫数、車検・点検期限を管理する</p>
+
+  <h3 class="sec">6.1　一覧を開く</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">車両・物品管理</span></div>
+  <p>カテゴリ・拠点・キーワードで絞り込めます。<strong>車検満了日が 90 日以内</strong>の車両は、日付が<strong>赤字</strong>で表示されます。</p>
+
+  <h3 class="sec">6.2　登録・編集する</h3>
+  <ol class="steps">
+    <li>新規は <strong>「＋ 追加」</strong>、既存は行の <strong>「編集」</strong> を押します。</li>
+    <li><strong>カテゴリ</strong>を選ぶと、そのカテゴリのカスタム項目の入力欄に自動で切り替わります。</li>
+    <li><strong>料金</strong>は「時間・日・週・月」を入力できます（<strong>日は必須</strong>）。空欄のプランは適用されず、システムが期間に応じて<strong>最適な料金プランを自動選択</strong>します。</li>
+    <li><strong>車両</strong>の場合：必要免許（不要なら空欄）・車検満了日・次回点検日を入力。</li>
+    <li><strong>物品</strong>の場合：<strong>在庫数</strong>（2 以上も可）を入力。免許・車検欄は表示されません。</li>
+    <li><strong>状態</strong>を「稼働中／休止中」で設定して <strong>「保存」</strong>。</li>
+  </ol>
+
+  <h3 class="sec">6.3　在庫の考え方</h3>
+  <ul>
+    <li><strong>車両</strong>は 1 台ずつ登録します（在庫は常に 1）。同型が複数あるときは複数登録します。</li>
+    <li><strong>物品</strong>は 1 種類につき「在庫数」でまとめて管理できます（例：延長コード 5 本 → 在庫数 5）。</li>
+    <li>一時的に貸出を止めたいときは、削除せず <strong>「休止中」</strong> にします。休止中は予約サイトに表示されません。</li>
+  </ul>
+
+  <h3 class="sec">6.4　車検・点検期限の管理</h3>
+  <ul>
+    <li>車検満了日が近い車両は、<strong>ダッシュボード下部「車検の期限が近い車両」</strong>と、車両一覧の<strong>赤字</strong>で知らせます。</li>
+    <li>まとめて確認したいときは <span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">車検予約一覧</span></span> / <span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">点検予約一覧</span></span> を開きます。</li>
+  </ul>
+  <div class="call warn"><span class="h">削除できないとき</span>
+    有効な予約が紐づいている車両・物品は削除できません。先に予約を返却・キャンセル処理してから削除してください。使わなくなっただけなら「休止中」で十分です。
+  </div>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  <!-- ================= 7. オプション管理 ================= -->
+  <h2 class="chapter" id="ch7"><span class="no">7</span>オプション管理</h2>
+  <p class="lead">■ 目的：免責補償などの共通オプションと、カテゴリ専用オプション（発電機など）を管理する</p>
+
+  <h3 class="sec">7.1　2 種類のオプション</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">オプション管理</span></div>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>種類</th><th>適用範囲</th><th>例</th></tr></thead>
+    <tbody>
+      <tr><th>共通オプション</th><td>すべての<strong>車両</strong>カテゴリに自動で付きます</td><td>免責補償・チャイルドシート・スタッドレス・ETC</td></tr>
+      <tr><th>カテゴリ専用</th><td>指定したカテゴリにだけ表示されます</td><td>発電機・追加プロパンガス（キッチンカー）／寝具・BBQ（キャンピングカー）／荷台シート・ロープ（特殊車両）</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="font-size:13.5px;color:var(--sub)">※ 共通オプションは物品カテゴリ（家電・工具）には付きません。</p>
+
+  <h3 class="sec">7.2　追加・編集する</h3>
+  <ol class="steps">
+    <li><strong>「＋ オプション追加」</strong> を押します。</li>
+    <li><strong>名称・料金</strong>を入力します。</li>
+    <li><strong>課金単位</strong>を選びます：<strong>「1日あたり」</strong>（利用日数分かかる）または <strong>「1回」</strong>（レンタル1回につき）。</li>
+    <li><strong>適用範囲</strong>を選びます：<strong>「共通（全車両カテゴリ）」</strong>か <strong>「カテゴリを指定」</strong>（チェックボックスで複数選択可）。</li>
+    <li>状態（有効／無効）を選んで <strong>「保存」</strong>。</li>
+  </ol>
+  <div class="call tip"><span class="h">ヒント</span>
+    新しいカテゴリを作ったら、そのカテゴリ専用オプションもこの画面で紐付けられます。今は使わないオプションは、削除せず <strong>「無効」</strong> にしておけば、あとで簡単に復活できます。
+  </div>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  <!-- ================= 8. 会員・ポイント・クーポン ================= -->
+  <h2 class="chapter" id="ch8"><span class="no">8</span>会員・ポイント・クーポン</h2>
+  <p class="lead">■ 目的：会員情報の確認、ポイントの手動調整、クーポン発行、請求書払い許可の付与を行う</p>
+
+  <h3 class="sec">8.1　会員一覧を開く</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">顧客・会員管理</span></div>
+  <ul>
+    <li>上部に <strong>会員数／請求書払い許可／未使用クーポン</strong>の合計が表示されます。</li>
+    <li>キーワード・種別（個人／法人）・「請求書払い許可のみ」で絞り込めます。</li>
+    <li><strong>「＋ 会員追加」</strong>で、電話予約のお客様などを手動で登録できます（初期パスワードは <code>demo1234</code>）。</li>
+  </ul>
+
+  <h3 class="sec">8.2　会員詳細でできること</h3>
+  <p>行の <strong>「詳細」</strong> を開くと、次の操作ができます。</p>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>操作</th><th>やり方</th></tr></thead>
+    <tbody>
+      <tr><th>請求書払い許可</th><td><strong>「許可を付与／解除」</strong>ボタン。付与すると、その会員は予約時に「請求書払い」を選べるようになります（第 9 章）。法人・行政向け。</td></tr>
+      <tr><th>ポイント手動調整</th><td>「増減（例：+5 / −3）」と「事由」を入力して <strong>「反映」</strong>。</td></tr>
+      <tr><th>クーポン手動発行</th><td>金額と事由を入力して <strong>「発行」</strong>。お詫びやキャンペーンに。</td></tr>
+      <tr><th>履歴の確認</th><td>保有クーポン・ポイント履歴・利用履歴を一覧で確認できます。</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="sec">8.3　ポイント・クーポン自動発行のしくみ</h3>
+  <p>スタッフが操作しなくても、次のように自動で動きます（数値は設定変更できます。第 10 章）。</p>
+  <ol class="steps">
+    <li>予約を <strong>「返却済」</strong>にすると、会員に <strong>ポイントが自動付与</strong>（初期：1 回で 1pt）。</li>
+    <li>累計が <strong>しきい値（初期：10pt）</strong> に達すると、<strong>¥1,000 クーポンが自動発行</strong>されます。</li>
+    <li>そのクーポンは、次回予約時の料金から <strong>自動で割引</strong>されます。</li>
+    <li>ポイントは <strong>最終利用日から 1 年（初期設定）</strong> で失効します。</li>
+  </ol>
+  <div class="call tip"><span class="h">ヒント</span>
+    ポイントが付くのは <strong>会員のお客様</strong>だけです。会員登録なしのゲスト予約にはポイントは付きません。
+  </div>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  <!-- ================= 9. 請求書 ================= -->
+  <h2 class="chapter" id="ch9"><span class="no">9</span>請求書の発行と入金管理</h2>
+  <p class="lead">■ 目的：法人・行政向けに請求書を発行・印刷し、入金状況を管理する（月次一括対応）</p>
+
+  <div class="call imp"><span class="h">前提：先に「請求書払い許可」を付与</span>
+    請求書払いは、<strong>「請求書払い許可」を付けた会員</strong>だけが使えます（第 8 章）。許可がない会員は、予約フローに請求書払いの選択肢が出ず、この画面の宛先にも表示されません。
+  </div>
+
+  <h3 class="sec">9.1　請求書画面を開く</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">請求書管理</span></div>
+  <p>上部に <strong>未払い請求額／今月発行額／発行済み件数</strong>が表示されます。</p>
+
+  <h3 class="sec">9.2　請求書を発行する（月次一括）</h3>
+  <ol class="steps">
+    <li><strong>「＋ 請求書を発行」</strong> を押します。</li>
+    <li><strong>宛先会員</strong>を選びます（許可済みの会員のみ表示）。</li>
+    <li>その会員の <strong>未請求の予約が一覧表示</strong>されます。請求したい予約に<strong>チェック</strong>を入れます。<strong>「全選択」</strong>で一度にまとめられます。→ 複数を選べば<strong>月次一括請求</strong>になります。</li>
+    <li><strong>請求先住所・案件名</strong>（初期は「◯年◯月分 レンタル料金」）・<strong>支払期限</strong>（初期は翌月末）を確認・調整します。</li>
+    <li>合計額を確認して <strong>「発行する」</strong> を押します。</li>
+  </ol>
+
+  <h3 class="sec">9.3　印刷する</h3>
+  <ol class="steps">
+    <li>一覧で対象請求書の <strong>「詳細」</strong> を開きます。</li>
+    <li>プレビューを確認し <strong>「印刷」</strong> を押します（A4／PDF保存）。</li>
+  </ol>
+  <p>請求書には、会社名・住所・案件名・金額・<strong>振込先口座</strong>が印字されます。振込先は <span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">予約サイト設定</span><span class="arw">▸</span><span class="crumb">ポイント・クーポン設定</span></span> で設定します（第 10 章）。</p>
+
+  <h3 class="sec">9.4　入金を管理する</h3>
+  <ul>
+    <li>入金があったら、一覧の <strong>「入金確認」</strong>、または詳細内の <strong>「入金を記録」</strong> で <span class="badge g">支払済</span> にします。</li>
+    <li>誤って支払済にした場合は、詳細の <strong>「未払いに戻す」</strong> で戻せます。</li>
+    <li>未回収の把握は、上部の <strong>「未払い請求額」</strong>で行えます。</li>
+  </ul>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  <!-- ================= 10. 各種設定 ================= -->
+  <h2 class="chapter" id="ch10"><span class="no">10</span>拠点・スタッフ 各種設定</h2>
+  <p class="lead">■ 目的：拠点情報・営業時間・定休日、従業員、ポイント制度、振込先を設定する</p>
+
+  <h3 class="sec">10.1　店舗（拠点）の設定</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">社内管理</span><span class="arw">▸</span><span class="crumb">店舗管理</span></div>
+  <ul>
+    <li>拠点名・住所・TEL・<strong>営業時間・定休日</strong>・表示順を編集できます。</li>
+    <li>ここで設定した拠点は、<strong>予約サイトの検索条件・管理画面のフィルタに自動反映</strong>されます。</li>
+    <li>車両・物品が紐づいている拠点は削除できません（先に移動・削除が必要）。</li>
+  </ul>
+
+  <h3 class="sec">10.2　従業員（スタッフ）の設定</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">社内管理</span><span class="arw">▸</span><span class="crumb">従業員管理</span></div>
+  <p>氏名・メール・所属店舗・<strong>権限</strong>・状態を管理します。権限で操作できる範囲が変わります。</p>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>権限</th><th>できること</th></tr></thead>
+    <tbody>
+      <tr><th>管理者</th><td>すべての操作が可能（削除含む）</td></tr>
+      <tr><th>店舗スタッフ</th><td>予約・顧客・車輌の編集が可能。設定変更・従業員管理は不可</td></tr>
+      <tr><th>整備担当</th><td>車検・点検情報のみ編集可</td></tr>
+      <tr><th>閲覧のみ</th><td>データの確認のみ（編集不可）</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="sec">10.3　ポイント制度と振込先の設定</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">予約サイト設定</span><span class="arw">▸</span><span class="crumb">ポイント・クーポン設定</span></div>
+  <ul>
+    <li><strong>ポイント制度</strong>：1回で付与するポイント／クーポン発行に必要なポイント／自動発行クーポンの額面／有効期限（ヶ月）を設定します。画面下部の <strong>「現在の設定でのフロー」</strong> に、設定結果が文章で表示されます。</li>
+    <li><strong>請求書 振込先口座</strong>：銀行・支店名／口座種別／口座番号／名義。ここで設定した口座が<strong>請求書に印字</strong>されます（第 9 章）。</li>
+    <li>設定を変えたら、それぞれの <strong>「保存」</strong> を押します。</li>
+  </ul>
+
+  <h3 class="sec">10.4　繁忙期・定休日</h3>
+  <ul>
+    <li><strong>繁忙期の料金加算</strong>：<span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">ハイシーズン管理</span></span>（GW・夏休み・年末年始などの倍率）。</li>
+    <li><strong>定休日</strong>：<span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">定休日管理</span></span>。</li>
+  </ul>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  <!-- ================= 11. バックアップ ================= -->
+  <h2 class="chapter" id="ch11"><span class="no">11</span>データのバックアップと復元</h2>
+  <p class="lead">■ 目的：全データ（車両・予約・会員・設定）をファイルに保存し、必要なときに戻す</p>
+
+  <h3 class="sec">11.1　画面を開く</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">右上のお名前</span><span class="arw">▸</span><span class="crumb">プロフィール編集</span><span class="arw">▸</span><span class="crumb">データのバックアップ / 復元</span></div>
+  <p>このセクションに、現在の保存状況（車輌台数・予約件数・設定項目数）が表示されます。</p>
+
+  <h3 class="sec">11.2　バックアップする</h3>
+  <ol class="steps">
+    <li><strong>「⬇ バックアップをダウンロード」</strong> を押します。</li>
+    <li><code>sky-rent-backup-YYYYMMDD.json</code> というファイルが保存されます。パソコンや外部ストレージに保管してください。</li>
+  </ol>
+
+  <h3 class="sec">11.3　復元する</h3>
+  <ol class="steps">
+    <li><strong>「⬆ バックアップから復元」</strong> を押します。</li>
+    <li>保存しておいた <code>.json</code> ファイルを選びます。</li>
+    <li>確認メッセージで <strong>「OK」</strong> を押すと、現在のデータを上書きして復元し、画面が再読み込みされます。</li>
+  </ol>
+  <div class="call warn"><span class="h">大切なポイント</span>
+    復元は<strong>現在のデータを上書き</strong>します。大きな設定変更や初期化を行う前には、<strong>必ずバックアップ</strong>を取っておいてください。定期的なバックアップと、端末を移すときの引っ越しにも使えます。
+  </div>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  <!-- ================= 12. トラブルシューティング ================= -->
+  <h2 class="chapter" id="ch12"><span class="no">12</span>トラブルシューティング</h2>
+  <p class="lead">■ 目的：よくある困りごとを、自分たちで解決できるようにする</p>
+
+  <h3 class="sec">12.1　よくある質問（FAQ）</h3>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>こんなとき</th><th>対処</th></tr></thead>
+    <tbody>
+      <tr><td>表示がおかしい／最新に見えない</td><td>まずブラウザを<strong>再読み込み（更新）</strong>してください。多くはこれで直ります。</td></tr>
+      <tr><td>登録した車両が予約サイトに出ない</td><td>その車両・カテゴリ・拠点が <strong>「稼働中／有効」</strong> か、<strong>日貸し料金が入力済み</strong>かを確認してください。</td></tr>
+      <tr><td>請求書払いが選べない</td><td>対象会員に <strong>「請求書払い許可」</strong> が付いているか確認（第 8 章）。</td></tr>
+      <tr><td>ログインできない</td><td>デモ環境では任意の値でログインできます。パスワードはログイン画面の <strong>「パスワードをお忘れですか?」</strong> から再設定。</td></tr>
+      <tr><td>お客様にメールが届かない</td><td>本システムは送信内容を <strong>ダッシュボード下部「自動通知ログ」</strong> に記録します。実際のメール送信は本番環境で有効化されます。</td></tr>
+      <tr><td>車両・物品が削除できない</td><td>有効な予約が紐づいています。先に予約を処理してください。使わないだけなら「休止中」に。</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="sec">12.2　データを初期化する（全データ削除）</h3>
+  <div class="path"><span class="lbl">画面</span><span class="crumb">右上のお名前</span><span class="arw">▸</span><span class="crumb">プロフィール編集</span><span class="arw">▸</span><span class="crumb">危険ゾーン</span></div>
+  <ol class="steps">
+    <li><strong>必ず先にバックアップ</strong>を取ります（第 11 章）。</li>
+    <li><strong>「設定を初期化（全データ削除）」</strong> を押します。</li>
+    <li>確認が 2 回表示されます。両方 <strong>「OK」</strong> を押すと全データが削除され、画面が再読み込みされます。</li>
+  </ol>
+  <div class="call imp"><span class="h">元に戻せません</span>
+    初期化は取り消せません。必要なデータがある場合は、実行前に必ずバックアップしてください。
+  </div>
+
+  <h3 class="sec">12.3　デモデータを再投入する</h3>
+  <p>
+    初期化して画面を再読み込みすると、<strong>初期のサンプルデータが自動で再投入</strong>されます。
+    これには、基本のカテゴリ（一般レンタカー・キッチンカー・キャンピングカー・特殊車両・家電・工具）、4 拠点、サンプルの車両・物品、オプション、デモ会員、サンプル予約が含まれます。
+    操作の練習や、動作確認をやり直したいときに便利です。
+  </p>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>参考：デモ用の会員アカウント（予約サイト側）</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td><code>demo@example.com</code> / <code>demo1234</code></td><td>一般（個人）会員の例</td></tr>
+      <tr><td><code>corp@example.com</code> / <code>demo1234</code></td><td>法人会員の例（請求書払い許可あり）</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="sec">12.4　それでも解決しないとき</h3>
+  <p>上部メニューの <strong>「お問合せ」</strong>、または <strong>「よくあるご質問（FAQ）」</strong> をご確認ください。運用に関するご不明点は、保守窓口までご連絡ください。</p>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  </div><!-- /body-pad -->
+
+  <div class="footer">
+    Sky Rent 管理者向けマニュアル（操作手順書）v1.0　／　発行日 2026年7月10日<br>
+    © 2026 Sky Rent — 本ドキュメントは発注書（要件定義書 v3.0）に基づき作成されました。
+  </div>
+
+</div><!-- /sheet -->
+</body>
+</html>

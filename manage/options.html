@@ -11,45 +11,139 @@
 
   <main class="main">
     <h1 class="page-title">オプション管理</h1>
-    <p class="page-note">予約時に追加できるオプション品目。</p>
+    <p class="page-note">共通オプション (全車両カテゴリに適用) と、カテゴリ専用オプションを管理します。新しいカテゴリを追加した際も、ここからオプションを紐付けられます。</p>
 
-    <div style="text-align:right;margin-bottom:10px">
+    <section class="card filter-bar">
+      <div class="filter-group"><label>適用範囲</label>
+        <select id="f-scope"><option value="">すべて</option><option value="common">共通のみ</option></select>
+      </div>
+      <span style="flex:1"></span>
       <button id="btn-add" class="btn btn-primary">+ オプション追加</button>
-    </div>
+    </section>
 
     <section class="card">
       <table class="data-table list">
-        <thead><tr><th>ID</th><th>名称</th><th>料金</th><th>課金単位</th><th>在庫</th><th>必須</th><th>状態</th><th></th></tr></thead>
-        <tbody id="tbl"></tbody>
+        <thead>
+          <tr><th>オプション名</th><th>料金</th><th>課金単位</th><th>適用範囲</th><th>状態</th><th></th></tr>
+        </thead>
+        <tbody id="tbl"><tr class="empty"><td colspan="6">読み込み中...</td></tr></tbody>
       </table>
     </section>
   </main>
 
   <script src="partials.js"></script>
-  <script src="js/crud.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/pricing.js"></script>
+  <script src="../js/api.js"></script>
   <script>
-  SkyRentCRUD.init({
-    storageKey: 'options',
-    idPrefix: 'OP',
-    columns: [
-      { key: 'id', label: 'ID', code: true, readonly: true },
-      { key: 'name', label: '名称', bold: true, required: true },
-      { key: 'price', label: '料金', type: 'number', format: SkyRentCRUD.helpers.yen },
-      { key: 'unit', label: '課金単位', type: 'select', options: ['1日','1回','期間中','無制限'] },
-      { key: 'stock', label: '在庫' },
-      { key: 'recommend', label: '必須/推奨', type: 'select', options: ['-','推奨','必須'] },
-      { key: 'active', label: '状態', type: 'status' }
-    ],
-    defaults: [
-      { id: 'OP01', name: 'チャイルドシート',  price: 1100, unit: '1回', stock: '10個',    recommend: '-',   active: true },
-      { id: 'OP02', name: 'ジュニアシート',    price: 1100, unit: '1回', stock: '5個',     recommend: '-',   active: true },
-      { id: 'OP03', name: 'ETCカード貸出',     price: 330,  unit: '1日', stock: '20枚',    recommend: '-',   active: true },
-      { id: 'OP04', name: 'スタッドレスタイヤ',price: 2200, unit: '1日', stock: '4台分',   recommend: '-',   active: true },
-      { id: 'OP05', name: '免責補償(CDW)',     price: 1650, unit: '1日', stock: '無制限',  recommend: '推奨',active: true },
-      { id: 'OP06', name: 'NOC補償',           price: 550,  unit: '1日', stock: '無制限',  recommend: '-',   active: true },
-      { id: 'OP07', name: 'ペット同乗',        price: 3300, unit: '1回', stock: '-',       recommend: '-',   active: true }
-    ]
-  });
+  (function () {
+    const S = window.SkyRentStore;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    const unitLabel = t => t === 'per_rental' ? '1回' : '1日あたり';
+
+    function initFilter() {
+      const cats = S.categories(true);
+      $('#f-scope').innerHTML = '<option value="">すべて</option><option value="common">共通のみ</option>' + cats.map(c => '<option value="' + c.categoryId + '">' + esc(c.name) + '</option>').join('');
+      $('#f-scope').addEventListener('change', render);
+    }
+
+    function scopeCell(o) {
+      if (o.categoryIds == null) return '<span class="chip chip-common">共通 (全車両)</span>';
+      return o.categoryIds.map(id => { const c = S.getCategory(id); return '<span class="chip">' + esc(c ? c.name : id) + '</span>'; }).join('');
+    }
+
+    function render() {
+      const scope = $('#f-scope').value;
+      let arr = S.list('options');
+      if (scope === 'common') arr = arr.filter(o => o.categoryIds == null);
+      else if (scope) arr = arr.filter(o => Array.isArray(o.categoryIds) && o.categoryIds.indexOf(scope) >= 0);
+      if (!arr.length) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="6" style="text-align:center;padding:24px;color:#888">該当なし</td></tr>'; return; }
+      $('#tbl').innerHTML = arr.map(o =>
+        '<tr>' +
+        '<td><strong>' + esc(o.name) + '</strong></td>' +
+        '<td>¥' + Number(o.price).toLocaleString() + '</td>' +
+        '<td>' + unitLabel(o.priceType) + '</td>' +
+        '<td>' + scopeCell(o) + '</td>' +
+        '<td><span class="status ' + (o.active !== false ? 'status-confirmed' : 'status-cancelled') + '">' + (o.active !== false ? '有効' : '無効') + '</span></td>' +
+        '<td style="text-align:center"><a href="#" class="detail-link" data-edit="' + esc(o.optionId) + '">編集</a></td>' +
+        '</tr>'
+      ).join('');
+      $('#tbl').querySelectorAll('[data-edit]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); openModal(a.dataset.edit); }));
+    }
+
+    function openModal(optionId) {
+      const isNew = !optionId;
+      const o = isNew
+        ? { optionId: '', name: '', price: '', priceType: 'per_day', categoryIds: null, active: true }
+        : Object.assign({}, S.findById('options', 'optionId', optionId));
+      const cats = S.categories(true);
+      const isCommon = o.categoryIds == null;
+
+      const html =
+        '<div class="crud-modal-bg"></div><div class="crud-modal-card">' +
+        '<div class="crud-modal-head"><h3>' + (isNew ? 'オプション追加' : '編集') + '</h3><button class="crud-close" type="button">×</button></div>' +
+        '<div style="padding:6px 0">' +
+          '<div class="crud-field"><label>名称 <span style="color:#c0392b">*</span></label><input type="text" id="o-name" value="' + esc(o.name) + '"></div>' +
+          '<div class="crud-field"><label>料金 (円) <span style="color:#c0392b">*</span></label><input type="number" id="o-price" value="' + (o.price || '') + '"></div>' +
+          '<div class="crud-field"><label>課金単位</label><select id="o-type"><option value="per_day"' + (o.priceType !== 'per_rental' ? ' selected' : '') + '>1日あたり</option><option value="per_rental"' + (o.priceType === 'per_rental' ? ' selected' : '') + '>1回</option></select></div>' +
+          '<div class="crud-field"><label>状態</label><select id="o-active"><option value="true"' + (o.active !== false ? ' selected' : '') + '>有効</option><option value="false"' + (o.active === false ? ' selected' : '') + '>無効</option></select></div>' +
+          '<div class="crud-field" style="align-items:flex-start"><label style="padding-top:2px">適用範囲</label><div style="flex:1">' +
+            '<label style="display:block;margin-bottom:6px"><input type="radio" name="o-scope" value="common"' + (isCommon ? ' checked' : '') + '> 共通 (全車両カテゴリ)</label>' +
+            '<label style="display:block;margin-bottom:6px"><input type="radio" name="o-scope" value="specific"' + (!isCommon ? ' checked' : '') + '> カテゴリを指定</label>' +
+            '<div id="cat-checks" class="chk-group" style="margin-top:6px;padding-left:18px' + (isCommon ? ';opacity:.4' : '') + '">' +
+              cats.map(c => '<label><input type="checkbox" value="' + c.categoryId + '"' + (!isCommon && o.categoryIds.indexOf(c.categoryId) >= 0 ? ' checked' : '') + '> ' + esc(c.name) + (c.type === 'item' ? ' (物品)' : '') + '</label>').join('') +
+            '</div></div></div>' +
+        '</div>' +
+        '<div class="crud-modal-foot">' +
+          (isNew ? '' : '<button type="button" class="btn btn-gray" id="o-delete" style="background:#c0392b">削除</button>') +
+          '<span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">キャンセル</button><button type="button" class="btn btn-primary" id="o-save">保存</button>' +
+        '</div></div>';
+
+      let modal = document.getElementById('crud-modal');
+      if (!modal) { modal = document.createElement('div'); modal.id = 'crud-modal'; modal.className = 'crud-modal'; document.body.appendChild(modal); }
+      modal.innerHTML = html;
+      const close = () => modal.remove();
+      modal.querySelector('.crud-modal-bg').addEventListener('click', close);
+      modal.querySelector('.crud-close').addEventListener('click', close);
+      modal.querySelector('.crud-cancel').addEventListener('click', close);
+
+      const checks = modal.querySelector('#cat-checks');
+      modal.querySelectorAll('input[name="o-scope"]').forEach(r => r.addEventListener('change', () => {
+        checks.style.opacity = modal.querySelector('input[name="o-scope"]:checked').value === 'common' ? '.4' : '1';
+      }));
+
+      modal.querySelector('#o-save').addEventListener('click', () => {
+        const name = modal.querySelector('#o-name').value.trim();
+        const price = modal.querySelector('#o-price').value;
+        if (!name) { alert('名称は必須です'); return; }
+        if (price === '') { alert('料金は必須です'); return; }
+        const scope = modal.querySelector('input[name="o-scope"]:checked').value;
+        let categoryIds = null;
+        if (scope === 'specific') {
+          categoryIds = [...checks.querySelectorAll('input:checked')].map(c => c.value);
+          if (!categoryIds.length) { alert('適用するカテゴリを1つ以上選択してください'); return; }
+        }
+        const obj = {
+          optionId: isNew ? S.genId('OP', 'options', 'optionId') : o.optionId,
+          name: name, price: Number(price), priceType: modal.querySelector('#o-type').value,
+          categoryIds: categoryIds, active: modal.querySelector('#o-active').value === 'true'
+        };
+        S.upsert('options', 'optionId', obj);
+        close(); render();
+      });
+
+      const del = modal.querySelector('#o-delete');
+      if (del) del.addEventListener('click', () => { if (!confirm('「' + o.name + '」を削除しますか?')) return; S.removeById('options', 'optionId', o.optionId); close(); render(); });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initFilter();
+      $('#btn-add').addEventListener('click', () => openModal(null));
+      render();
+    });
+  })();
   </script>
 </body>
 </html>

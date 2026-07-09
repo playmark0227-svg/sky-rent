@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>システムドキュメント | Sky Rent</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif; background: #f4f6f9; color: #2a2a2a; line-height: 1.7; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 40px 20px 60px; }
+    .head { text-align: center; margin-bottom: 36px; }
+    .head .mark { display: inline-flex; align-items: center; justify-content: center; width: 60px; height: 60px; border-radius: 14px; background: #1c4a7a; color: #fff; font-size: 34px; font-family: serif; font-weight: bold; margin-bottom: 12px; }
+    .head h1 { font-size: 26px; color: #1c4a7a; }
+    .head p { color: #777; font-size: 14px; margin-top: 6px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; }
+    .card { background: #fff; border: 1px solid #e2e8ef; border-radius: 10px; padding: 22px; text-decoration: none; color: inherit; transition: all .18s; display: block; }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.08); border-color: #1c4a7a; }
+    .card .ic { font-size: 32px; margin-bottom: 10px; }
+    .card h3 { font-size: 16px; color: #1c4a7a; margin-bottom: 6px; }
+    .card p { font-size: 12.5px; color: #666; }
+    .links { text-align: center; margin-top: 34px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .links a { color: #1976c5; text-decoration: none; font-size: 14px; font-weight: 600; }
+    .links a:hover { text-decoration: underline; }
+    .note { text-align: center; color: #999; font-size: 12px; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <div class="mark">空</div>
+      <h1>Sky Rent システムドキュメント</h1>
+      <p>レンタカー・キッチンカー・特殊車両・家電・工具 統合予約システム / 納品ドキュメント一式</p>
+    </div>
+
+    <div class="grid">
+      <a class="card" href="requirements.html"><div class="ic">📋</div><h3>要件定義書</h3><p>本システムの目的・機能要件・実装状況をまとめた仕様書 (v3.1 実装反映版)。</p></a>
+      <a class="card" href="design.html"><div class="ic">🏗️</div><h3>基本設計書</h3><p>システム構成図・画面遷移図・DBスキーマ・API仕様・拡張設計。</p></a>
+      <a class="card" href="manual.html"><div class="ic">📖</div><h3>管理者向けマニュアル</h3><p>管理画面の操作手順書。日々の運用からカテゴリ追加まで。</p></a>
+      <a class="card" href="dev-contract.md"><div class="ic">⚙️</div><h3>開発規約</h3><p>データモデル・API・コーディング規約 (エンジニア向け内部資料)。</p></a>
+    </div>
+
+    <div class="links">
+      <a href="../index.html">← 予約サイトを表示</a>
+      <a href="../manage/dashboard.html">管理画面を開く →</a>
+    </div>
+    <p class="note">© 2026 Sky Rent — 本ドキュメントは発注書 (要件定義書 v3.0) に基づき作成されました。</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ご予約手続き | Sky Rent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/public.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">✈</span><span class="logo-text">Sky Rent</span></a>
+      <nav class="site-nav">
+        <a href="index.html#categories" data-i18n="nav.categories">カテゴリ</a>
+        <a href="search.html" data-i18n="nav.search">予約する</a>
+        <a href="mypage.html" data-i18n="nav.mypage">マイページ</a>
+        <button class="lang-btn" data-lang-toggle type="button">EN</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top:24px;padding-bottom:60px;max-width:840px">
+    <div class="steps" id="steps">
+      <span class="step done"><span class="n">1</span><span data-sk="s1">検索</span></span>
+      <span class="sep">›</span>
+      <span class="step done"><span class="n">2</span><span data-sk="s2">選択</span></span>
+      <span class="sep">›</span>
+      <span class="step active" data-step="input"><span class="n">3</span><span data-sk="s3">情報入力</span></span>
+      <span class="sep">›</span>
+      <span class="step" data-step="confirm"><span class="n">4</span><span data-sk="s4">確認</span></span>
+      <span class="sep">›</span>
+      <span class="step" data-step="done"><span class="n">5</span><span data-sk="s5">完了</span></span>
+    </div>
+
+    <h1 class="mb16" style="font-size:24px" data-i18n="booking.title">ご予約手続き</h1>
+
+    <!-- 予約内容サマリ -->
+    <div class="p-card mb16" id="summary-card"></div>
+
+    <!-- STEP 入力 -->
+    <div id="pane-input">
+      <div class="p-card" id="member-banner" style="margin-bottom:16px;display:none"></div>
+      <div class="p-card">
+        <h3 data-i18n="booking.customer">お客様情報</h3>
+        <form id="cust-form" style="margin-top:8px">
+          <div class="form-grid">
+            <div class="form-group"><label data-i18n="booking.name">お名前</label><input type="text" id="f-name" required maxlength="60"></div>
+            <div class="form-group"><label data-i18n="booking.kana">フリガナ</label><input type="text" id="f-kana" maxlength="60"></div>
+            <div class="form-group"><label data-i18n="booking.email">メールアドレス</label><input type="email" id="f-email" required></div>
+            <div class="form-group"><label data-i18n="booking.phone">電話番号</label><input type="tel" id="f-phone" placeholder="090-1234-5678"></div>
+            <div class="form-group full"><label data-i18n="booking.company">会社名 (法人の場合)</label><input type="text" id="f-company"></div>
+            <div class="form-group full" id="license-field">
+              <label data-i18n="booking.license">運転免許証番号</label>
+              <input type="text" id="f-license" placeholder="000000000000">
+              <small class="muted" data-i18n="booking.licenseNote">車両レンタルのため免許証情報の入力が必要です</small>
+            </div>
+          </div>
+          <div id="license-confirm-wrap" style="display:none;margin-top:8px"></div>
+
+          <div id="coupon-wrap" style="display:none;margin-top:16px">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px" data-i18n="booking.coupon">クーポンを利用する</label>
+            <select id="f-coupon" style="padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-family:inherit;width:100%"></select>
+          </div>
+
+          <div style="margin-top:16px">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px" data-i18n="booking.payment">お支払い方法</label>
+            <div id="pay-options"></div>
+          </div>
+
+          <div class="form-group full" style="margin-top:12px"><label data-i18n="booking.note">備考・ご要望</label><textarea id="f-note" rows="3"></textarea></div>
+
+          <p id="input-error" class="error-text" hidden></p>
+          <div class="form-actions"><button type="submit" class="btn btn-primary btn-lg" data-i18n="booking.confirm">入力内容の確認へ</button></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- STEP 確認 -->
+    <div id="pane-confirm" hidden>
+      <div class="p-card" id="confirm-body"></div>
+      <p id="confirm-error" class="error-text" hidden></p>
+      <div class="flex-sb mt16">
+        <button class="btn btn-secondary" id="btn-fix" data-i18n="booking.fix">← 入力内容を修正する</button>
+        <button class="btn btn-primary btn-lg" id="btn-submit" data-i18n="booking.submit">この内容で予約を確定する</button>
+      </div>
+    </div>
+
+    <!-- STEP 完了 -->
+    <div id="pane-done" hidden>
+      <div class="p-card done-wrap">
+        <div class="done-icon">✓</div>
+        <h2 style="font-size:22px" data-i18n="booking.done.title">ご予約ありがとうございました</h2>
+        <p class="muted mt8" id="done-text"></p>
+        <div class="price-box mt16" id="done-detail" style="text-align:left;max-width:440px;margin-left:auto;margin-right:auto"></div>
+        <div class="mt24" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <a href="index.html" class="btn btn-secondary" data-i18n="booking.done.top">トップに戻る</a>
+          <a href="mypage.html" class="btn btn-primary" data-i18n="booking.done.mypage">マイページで確認</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer"><div class="container"><p data-i18n="footer.copyright">© 2026 Sky Rent</p></div></footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/pricing.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+  (function () {
+    const S = window.SkyRentStore, I = window.SkyRentI18n, P = window.SkyRentPricing;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    const isEn = () => I.getLang() === 'en';
+    const assetName = a => isEn() && a.nameEn ? a.nameEn : a.name;
+
+    const L = {
+      s1:{ja:'検索',en:'Search'},s2:{ja:'選択',en:'Select'},s3:{ja:'情報入力',en:'Details'},s4:{ja:'確認',en:'Confirm'},s5:{ja:'完了',en:'Done'},
+      period:{ja:'期間',en:'Period'}, qty:{ja:'数量',en:'Qty'}, opts:{ja:'オプション',en:'Options'}, none:{ja:'なし',en:'None'},
+      days:{ja:n=>n+'日間',en:n=>n+' days'}, total:{ja:'合計 (税込)',en:'Total (tax incl.)'},
+      req:{ja:'は必須です',en:' is required'}, email:{ja:'メールアドレスの形式が正しくありません',en:'Invalid email format'},
+      needLic:{ja:'必要な免許・資格の保有確認にチェックしてください',en:'Please confirm you hold the required license'},
+      loginAs:{ja:'ログイン中',en:'Logged in as'}, guestNote:{ja:'会員の方はログインで情報が自動入力されます。',en:'Members: log in to auto-fill your details.'},
+      loginLink:{ja:'ログイン →',en:'Log in →'},
+      noCoupon:{ja:'クーポンを使わない',en:'Do not use a coupon'},
+      onsite:{ja:'現地決済 (現金・カード)',en:'Pay on-site (cash / card)'},
+      invoice:{ja:'請求書払い (法人・行政向け)',en:'Invoice billing (corporate / gov.)'},
+      doneOnsite:{ja:'ご登録のメールアドレス宛に予約確認メールをお送りしました。当日は拠点にてお支払いください。',en:'A confirmation email has been sent. Please pay on-site on the day.'},
+      doneInvoice:{ja:'ご登録のメールアドレス宛に予約確認メールをお送りしました。後日、請求書を送付いたします。',en:'A confirmation email has been sent. An invoice will be sent later.'},
+      resId:{ja:'予約ID',en:'Booking ID'}
+    };
+    const tt = k => L[k][isEn()?'en':'ja'];
+
+    // 予約内容の取り出し
+    let pending;
+    try { pending = JSON.parse(sessionStorage.getItem('sky-rent.pendingBooking') || 'null'); } catch (e) { pending = null; }
+    if (!pending || !pending.assetId) { location.href = 'search.html'; return; }
+    const asset = S.getAsset(pending.assetId);
+    const cat = asset ? S.getCategory(asset.categoryId) : null;
+    if (!asset || !cat) { location.href = 'search.html'; return; }
+    const isVehicle = cat.type === 'vehicle';
+    const allOpts = (function () { const o = S.optionsForCategory(asset.categoryId); return o.common.concat(o.specific); })();
+    const selectedOptions = allOpts.filter(o => (pending.optionIds || []).indexOf(o.optionId) >= 0);
+    let member = S.currentMember();
+    let chosenCoupon = null; // {couponId, amount}
+
+    function calc() {
+      return P.calculate({ asset: asset, start: pending.start, end: pending.end, quantity: pending.quantity, options: selectedOptions, coupon: chosenCoupon ? { amount: chosenCoupon.amount } : null });
+    }
+
+    function renderSummary() {
+      const c = calc();
+      const loc = S.getLocation(asset.locationId);
+      $('#summary-card').innerHTML =
+        '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">' +
+        '<div style="font-size:44px">' + esc(asset.image || '📦') + '</div>' +
+        '<div style="flex:1;min-width:200px"><div class="muted" style="font-size:12px">' + esc(isEn() && cat.nameEn ? cat.nameEn : cat.name) + ' ・ ' + esc(loc ? (isEn() && loc.nameEn ? loc.nameEn : loc.name) : '') + '</div>' +
+        '<div style="font-size:17px;font-weight:700">' + esc(assetName(asset)) + (pending.quantity > 1 ? ' × ' + pending.quantity : '') + '</div>' +
+        '<div class="muted" style="font-size:13px;margin-top:4px">' + fmtDT(pending.start) + ' 〜 ' + fmtDT(pending.end) + ' (' + tt('days')(c.days) + ')</div></div>' +
+        '<div style="text-align:right"><div class="muted" style="font-size:11px">' + tt('total') + '</div><div style="font-size:22px;font-weight:700;color:var(--color-primary)">¥' + c.total.toLocaleString() + '</div></div></div>';
+    }
+
+    function renderMemberBanner() {
+      const b = $('#member-banner');
+      if (member) {
+        b.style.display = 'block';
+        b.innerHTML = '<div class="flex-sb"><span>👤 ' + tt('loginAs') + ': <strong>' + esc(member.name) + '</strong> 様' + (member.invoiceAllowed ? ' <span class="badge stock">請求書払い可</span>' : '') + '</span><a href="mypage.html" class="muted" style="font-size:12px">' + I.t('mypage.title') + ' ↗</a></div>';
+      } else {
+        b.style.display = 'block';
+        b.innerHTML = '<span class="muted" style="font-size:13px">' + tt('guestNote') + '</span> <a href="mypage.html" style="color:var(--color-primary);font-weight:600;font-size:13px">' + tt('loginLink') + '</a>';
+      }
+    }
+
+    function prefillFromMember() {
+      if (!member) return;
+      $('#f-name').value = member.name || '';
+      $('#f-kana').value = member.nameKana || '';
+      $('#f-email').value = member.email || '';
+      $('#f-phone').value = member.phone || '';
+      $('#f-company').value = member.company || '';
+    }
+
+    function renderDynamicFields() {
+      // 免許欄: 車両カテゴリのみ表示
+      $('#license-field').style.display = isVehicle ? 'flex' : 'none';
+      // 必要資格の確認チェック
+      const w = $('#license-confirm-wrap');
+      if (asset.requiredLicense) {
+        w.style.display = 'block';
+        w.innerHTML = '<div class="license-box"><strong>⚠ ' + I.t('detail.license') + '</strong>' + esc(asset.requiredLicense) +
+          '<label class="opt-row" style="margin-top:8px;border:0"><input type="checkbox" id="f-licconf"><span class="on">' + I.t('booking.licenseConfirm') + '</span></label></div>';
+      } else { w.style.display = 'none'; w.innerHTML = ''; }
+
+      // クーポン (ログイン会員のみ)
+      const cw = $('#coupon-wrap');
+      const coupons = member ? S.unusedCoupons(member.memberId) : [];
+      if (coupons.length) {
+        cw.style.display = 'block';
+        $('#f-coupon').innerHTML = '<option value="">' + tt('noCoupon') + '</option>' +
+          coupons.map(c => '<option value="' + c.couponId + '" data-amt="' + c.amount + '">¥' + c.amount.toLocaleString() + ' クーポン (' + esc(c.reason || '') + ')</option>').join('');
+        $('#f-coupon').onchange = () => {
+          const opt = $('#f-coupon').selectedOptions[0];
+          chosenCoupon = $('#f-coupon').value ? { couponId: $('#f-coupon').value, amount: Number(opt.dataset.amt) } : null;
+          renderSummary();
+        };
+      } else { cw.style.display = 'none'; chosenCoupon = null; }
+
+      // 支払方法: 現地決済は常時 / 請求書払いは invoiceAllowed のみ
+      const po = $('#pay-options');
+      let html = '<label class="opt-row" style="border:0"><input type="radio" name="pay" value="onsite" checked><span class="on">' + tt('onsite') + '</span></label>';
+      if (member && member.invoiceAllowed) {
+        html += '<label class="opt-row" style="border:0"><input type="radio" name="pay" value="invoice"><span class="on">' + tt('invoice') + '</span></label>';
+      }
+      po.innerHTML = html;
+    }
+
+    function fmtDT(iso) { const d = new Date(iso); const p = n => String(n).padStart(2, '0'); return d.getFullYear() + '/' + p(d.getMonth() + 1) + '/' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+
+    // ===== 入力 → 確認 =====
+    $('#cust-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const err = $('#input-error'); err.hidden = true;
+      const name = $('#f-name').value.trim(), email = $('#f-email').value.trim(), phone = $('#f-phone').value.trim();
+      function fail(msg) { err.hidden = false; err.textContent = msg; }
+      if (!name) return fail(I.t('booking.name') + tt('req'));
+      if (!email) return fail(I.t('booking.email') + tt('req'));
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(tt('email'));
+      if (!phone) return fail(I.t('booking.phone') + tt('req'));
+      if (asset.requiredLicense) { const lc = $('#f-licconf'); if (!lc || !lc.checked) return fail(tt('needLic')); }
+      renderConfirm();
+      showPane('confirm');
+    });
+
+    function collect() {
+      const pay = (document.querySelector('input[name="pay"]:checked') || {}).value || 'onsite';
+      return {
+        name: $('#f-name').value.trim(), kana: $('#f-kana').value.trim(),
+        email: $('#f-email').value.trim(), phone: $('#f-phone').value.trim(),
+        company: $('#f-company').value.trim(), license: isVehicle ? $('#f-license').value.trim() : '',
+        note: $('#f-note').value.trim(), pay: pay,
+        licenseConfirmed: asset.requiredLicense ? !!($('#f-licconf') && $('#f-licconf').checked) : false
+      };
+    }
+
+    function renderConfirm() {
+      const d = collect(); const c = calc();
+      const rows = [
+        [I.t('booking.name'), d.name], [I.t('booking.kana'), d.kana || '-'],
+        [I.t('booking.email'), d.email], [I.t('booking.phone'), d.phone],
+        [I.t('booking.company'), d.company || '-']
+      ];
+      if (isVehicle) rows.push([I.t('booking.license'), d.license || '-']);
+      rows.push([I.t('booking.payment'), d.pay === 'invoice' ? tt('invoice') : tt('onsite')]);
+      rows.push([I.t('booking.note'), d.note || '-']);
+
+      $('#confirm-body').innerHTML =
+        '<h3 class="mb16">' + assetName(asset) + (pending.quantity > 1 ? ' × ' + pending.quantity : '') + '</h3>' +
+        '<div class="muted mb16" style="font-size:13px">' + fmtDT(pending.start) + ' 〜 ' + fmtDT(pending.end) + ' (' + tt('days')(c.days) + ')</div>' +
+        '<table class="spec-table mb16">' + rows.map(r => '<tr><th>' + esc(r[0]) + '</th><td>' + esc(r[1]) + '</td></tr>').join('') + '</table>' +
+        '<div class="price-box"><div class="price-lines">' + c.lines.map(l => '<div class="pl' + (l.amount < 0 ? ' minus' : '') + '"><span>' + esc(l.label) + '</span><span>' + (l.amount < 0 ? '-¥' + Math.abs(l.amount).toLocaleString() : '¥' + l.amount.toLocaleString()) + '</span></div>').join('') +
+        '</div><div class="price-total"><span>' + tt('total') + '</span><span class="amt">¥' + c.total.toLocaleString() + '</span></div></div>';
+    }
+
+    $('#btn-fix').addEventListener('click', () => showPane('input'));
+
+    $('#btn-submit').addEventListener('click', () => {
+      const d = collect(); const c = calc();
+      const err = $('#confirm-error'); err.hidden = true;
+      try {
+        const r = S.createReservation({
+          assetId: asset.assetId, quantity: pending.quantity,
+          customerName: d.name, customerEmail: d.email, customerPhone: d.phone,
+          company: d.company, licenseNo: d.license, memberId: member ? member.memberId : null,
+          start: pending.start, end: pending.end,
+          optionIds: selectedOptions.map(o => o.optionId),
+          options: selectedOptions.map(o => ({ optionId: o.optionId, name: o.name, price: o.price, priceType: o.priceType })),
+          paymentMethod: d.pay,
+          price: { total: c.total, lines: c.lines, breakdown: c.lines },
+          couponId: chosenCoupon ? chosenCoupon.couponId : null,
+          licenseConfirmed: d.licenseConfirmed, note: d.note
+        });
+        sessionStorage.removeItem('sky-rent.pendingBooking');
+        renderDone(r, d.pay, c);
+        showPane('done');
+      } catch (ex) {
+        err.hidden = false; err.textContent = ex.message;
+      }
+    });
+
+    function renderDone(r, pay, c) {
+      $('#done-text').textContent = pay === 'invoice' ? tt('doneInvoice') : tt('doneOnsite');
+      $('#done-detail').innerHTML =
+        '<div class="pl"><span>' + tt('resId') + '</span><span><strong>' + esc(r.reservationId) + '</strong></span></div>' +
+        '<div class="pl"><span>' + assetName(asset) + '</span><span>' + fmtDT(pending.start) + ' 〜</span></div>' +
+        '<div class="price-total"><span>' + tt('total') + '</span><span class="amt">¥' + c.total.toLocaleString() + '</span></div>';
+    }
+
+    function showPane(name) {
+      ['input', 'confirm', 'done'].forEach(p => { $('#pane-' + p).hidden = p !== name; });
+      document.querySelectorAll('#steps .step[data-step]').forEach(s => {
+        s.classList.remove('active', 'done');
+        const order = { input: 0, confirm: 1, done: 2 }, cur = order[name], mine = order[s.dataset.step];
+        if (mine < cur) s.classList.add('done'); else if (mine === cur) s.classList.add('active');
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function boot() {
+      document.querySelectorAll('[data-sk]').forEach(el => { el.textContent = tt(el.dataset.sk); });
+      member = S.currentMember();
+      renderSummary(); renderMemberBanner(); prefillFromMember(); renderDynamicFields();
+    }
+    document.addEventListener('DOMContentLoaded', boot);
+    document.addEventListener('sky-rent:langchange', () => { document.querySelectorAll('[data-sk]').forEach(el => { el.textContent = tt(el.dataset.sk); }); renderSummary(); renderMemberBanner(); renderDynamicFields(); });
+    if (document.readyState !== 'loading') boot();
+  })();
+  </script>
+</body>
+</html>

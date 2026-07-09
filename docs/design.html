@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>基本設計書 | Sky Rent</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #1c4a7a;
+    --navy-2: #2d6ca8;
+    --navy-soft: #eaf1f8;
+    --link: #1976c5;
+    --ink: #2a2f36;
+    --muted: #6a7683;
+    --line: #d5dde6;
+    --zebra: #f5f8fb;
+    --page: #f0f3f7;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
+    background: var(--page);
+    color: var(--ink);
+    line-height: 1.85;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet {
+    max-width: 860px;
+    margin: 24px auto;
+    background: #fff;
+    padding: 56px 60px 72px;
+    box-shadow: 0 4px 26px rgba(20, 40, 70, .09);
+    border-radius: 4px;
+  }
+
+  /* ---------- 表紙 ---------- */
+  .cover {
+    min-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 0;
+  }
+  .cover .mark {
+    width: 78px; height: 78px; margin: 0 auto 26px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--navy); color: #fff; border-radius: 18px;
+    font-family: serif; font-weight: 700; font-size: 44px;
+    box-shadow: 0 8px 22px rgba(28,74,122,.3);
+  }
+  .cover .doc-type { letter-spacing: .5em; color: var(--navy-2); font-size: 13px; font-weight: 700; margin-bottom: 20px; padding-left:.5em;}
+  .cover h1 { font-size: 40px; color: var(--navy); letter-spacing: .04em; line-height: 1.3; }
+  .cover .sub { font-size: 15px; color: var(--muted); margin-top: 16px; line-height: 1.9; }
+  .cover .rule { width: 64px; height: 4px; background: var(--navy); margin: 30px auto; border-radius: 2px; }
+  .cover .meta {
+    margin: 26px auto 0; border-collapse: collapse; font-size: 13px; min-width: 380px;
+  }
+  .cover .meta th, .cover .meta td { border: 1px solid var(--line); padding: 9px 18px; text-align: left; }
+  .cover .meta th { background: var(--navy-soft); color: var(--navy); font-weight: 700; white-space: nowrap; }
+  .cover .foot { margin-top: 44px; color: var(--muted); font-size: 12px; }
+
+  /* ---------- 目次 ---------- */
+  .toc { }
+  .toc h2 {
+    font-size: 20px; color: var(--navy); border-bottom: 3px solid var(--navy);
+    padding-bottom: 10px; margin-bottom: 22px; letter-spacing: .06em;
+  }
+  .toc ol { list-style: none; }
+  .toc > ol > li { margin: 6px 0; }
+  .toc a { text-decoration: none; color: var(--ink); display: flex; align-items: baseline; }
+  .toc a:hover { color: var(--link); }
+  .toc .t-no { color: var(--navy); font-weight: 700; min-width: 2.6em; }
+  .toc .t-name { flex: 0 0 auto; }
+  .toc .t-dots { flex: 1; border-bottom: 1px dotted #c3ccd6; margin: 0 8px; transform: translateY(-4px); }
+  .toc .lvl1 > a { font-weight: 700; font-size: 15px; padding: 7px 0; }
+  .toc .lvl1 { border-top: 1px solid #edf1f5; }
+  .toc .lvl1:first-child { border-top: none; }
+  .toc ol ol { margin: 2px 0 8px; }
+  .toc .lvl2 > a { font-size: 13px; color: #4a5560; padding: 2px 0 2px 2.6em; }
+  .toc .lvl2 .t-no { min-width: 3.2em; font-weight: 600; color: var(--navy-2); }
+
+  /* ---------- 章・見出し ---------- */
+  .chapter { padding-top: 8px; }
+  h2.h-chapter {
+    font-size: 23px; color: var(--navy); margin: 6px 0 24px;
+    padding: 14px 0 12px 18px; border-left: 8px solid var(--navy);
+    background: linear-gradient(90deg, var(--navy-soft), transparent);
+    letter-spacing: .04em;
+  }
+  h2.h-chapter .cno { color: var(--navy-2); margin-right: 14px; }
+  h3.h-sec {
+    font-size: 17px; color: var(--navy); margin: 34px 0 14px;
+    padding-bottom: 7px; border-bottom: 2px solid var(--line);
+  }
+  h3.h-sec .sno { color: var(--navy-2); margin-right: 10px; font-weight: 700; }
+  h4.h-sub { font-size: 14.5px; color: var(--navy-2); margin: 22px 0 10px; font-weight: 700; }
+  p { margin: 10px 0; }
+  .lead { color: #40474f; }
+  ul.bul, ol.num { margin: 10px 0 14px 4px; padding-left: 22px; }
+  ul.bul li, ol.num li { margin: 5px 0; }
+  ul.bul li::marker { color: var(--navy-2); }
+  strong { color: var(--navy); }
+  code {
+    font-family: "SFMono-Regular", "Consolas", "Menlo", monospace;
+    background: #eef2f6; color: #204066; padding: 1px 6px; border-radius: 4px; font-size: 12.5px;
+  }
+  .note-box {
+    background: var(--navy-soft); border: 1px solid #cfe0f0; border-left: 4px solid var(--navy-2);
+    border-radius: 6px; padding: 13px 18px; margin: 16px 0; font-size: 13px;
+  }
+  .note-box b { color: var(--navy); }
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 9px; border-radius: 20px;
+    background: var(--navy); color: #fff; vertical-align: middle; margin-left: 6px;
+  }
+  .tag.item { background: #7a5a1c; }
+  .tag.opt { background: #4a5560; }
+
+  /* ---------- 表 ---------- */
+  .tbl-wrap { overflow-x: auto; margin: 14px 0 8px; }
+  table.tbl { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  table.tbl caption { text-align: left; font-size: 13px; font-weight: 700; color: var(--navy-2); padding: 6px 2px; }
+  table.tbl th, table.tbl td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  table.tbl thead th { background: var(--navy); color: #fff; font-weight: 600; white-space: nowrap; }
+  table.tbl tbody tr:nth-child(even) { background: var(--zebra); }
+  table.tbl td code { background: #e9eef3; font-size: 12px; }
+  table.tbl .c-key { white-space: nowrap; font-family: "SFMono-Regular","Consolas","Menlo",monospace; color: #204066; font-size: 12px; }
+  table.tbl .c-type { white-space: nowrap; color: #7a5a1c; font-size: 11.5px; font-family: "SFMono-Regular","Consolas","Menlo",monospace; }
+  table.tbl.pk th:first-child, table.tbl.pk td:first-child { background: #f0f5fa; }
+  table.tbl.pk tbody tr:nth-child(even) td:first-child { background: #e8f0f7; }
+
+  /* ---------- 図 ---------- */
+  figure.fig { margin: 20px 0 10px; text-align: center; }
+  figure.fig .fig-frame { border: 1px solid var(--line); border-radius: 8px; background: #fbfcfe; padding: 14px; overflow-x: auto; }
+  figure.fig svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  figure.fig figcaption { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .legend { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+
+  a.back-top { display: inline-block; margin-top: 8px; font-size: 12px; color: var(--link); text-decoration: none; }
+  a.back-top:hover { text-decoration: underline; }
+
+  .docfoot { text-align: center; color: var(--muted); font-size: 12px; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); }
+
+  /* ---------- 印刷 ---------- */
+  @page { size: A4; margin: 18mm 15mm; }
+  @media print {
+    body { background: #fff; font-size: 10.5pt; line-height: 1.7; }
+    .sheet { max-width: none; margin: 0; padding: 0; box-shadow: none; border-radius: 0; }
+    .cover { min-height: 92vh; page-break-after: always; }
+    .toc { page-break-after: always; }
+    .chapter { page-break-before: always; }
+    h2.h-chapter, h3.h-sec, h4.h-sub { page-break-after: avoid; }
+    figure.fig, table.tbl, .tbl-wrap, .note-box { page-break-inside: avoid; }
+    figure.fig .fig-frame { background: #fff; }
+    a.back-top { display: none; }
+    a { color: var(--ink); text-decoration: none; }
+    table.tbl thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tr, td, th { page-break-inside: avoid; }
+  }
+
+  @media (max-width: 640px) {
+    .sheet { padding: 30px 18px 44px; margin: 0; }
+    .cover h1 { font-size: 30px; }
+    .cover .meta { min-width: 0; width: 100%; }
+    h2.h-chapter { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- =========================================================
+     表紙
+========================================================== -->
+<section class="sheet cover">
+  <div class="mark">空</div>
+  <div class="doc-type">BASIC DESIGN DOCUMENT</div>
+  <h1>基本設計書</h1>
+  <div class="sub">
+    Sky Rent 統合予約・管理システム<br>
+    レンタカー ／ キッチンカー ／ 特殊車両 ／ 家電 ／ 工具
+  </div>
+  <div class="rule"></div>
+  <table class="meta">
+    <tr><th>文書名</th><td>基本設計書 (画面遷移図・DBスキーマ・API仕様)</td></tr>
+    <tr><th>対象システム</th><td>Sky Rent 統合予約・管理システム</td></tr>
+    <tr><th>版数</th><td>v3.1 (実装反映版)</td></tr>
+    <tr><th>準拠仕様</th><td>要件定義書 v3.0 / 開発コントラクト dev-contract.md</td></tr>
+    <tr><th>作成日</th><td>2026-07-10</td></tr>
+    <tr><th>データ版</th><td>DATA_VERSION = 3</td></tr>
+  </table>
+  <div class="foot">本書は発注書 (要件定義書 v3.0) および開発コントラクトを唯一の正として作成された納品ドキュメントです。</div>
+</section>
+
+<!-- =========================================================
+     目次
+========================================================== -->
+<section class="sheet toc" id="top">
+  <h2>目次</h2>
+  <ol>
+    <li class="lvl1"><a href="#c1"><span class="t-no">1.</span><span class="t-name">システム構成</span><span class="t-dots"></span></a>
+      <ol>
+        <li class="lvl2"><a href="#c1-1"><span class="t-no">1.1</span><span class="t-name">構成方針</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c1-2"><span class="t-no">1.2</span><span class="t-name">システム構成図</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c1-3"><span class="t-no">1.3</span><span class="t-name">レイヤー構成とファイル</span><span class="t-dots"></span></a></li>
+      </ol>
+    </li>
+    <li class="lvl1"><a href="#c2"><span class="t-no">2.</span><span class="t-name">画面遷移図</span><span class="t-dots"></span></a>
+      <ol>
+        <li class="lvl2"><a href="#c2-1"><span class="t-no">2.1</span><span class="t-name">公開サイト (予約フロー)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c2-2"><span class="t-no">2.2</span><span class="t-name">管理画面 (ダッシュボード中心)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c2-3"><span class="t-no">2.3</span><span class="t-name">画面一覧</span><span class="t-dots"></span></a></li>
+      </ol>
+    </li>
+    <li class="lvl1"><a href="#c3"><span class="t-no">3.</span><span class="t-name">DBスキーマ (データモデル)</span><span class="t-dots"></span></a>
+      <ol>
+        <li class="lvl2"><a href="#c3-1"><span class="t-no">3.1</span><span class="t-name">エンティティ一覧とER図</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c3-2"><span class="t-no">3.2</span><span class="t-name">categories (カテゴリ / EAV定義)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c3-3"><span class="t-no">3.3</span><span class="t-name">locations (拠点)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c3-4"><span class="t-no">3.4</span><span class="t-name">assets (車両・物品 統合マスタ)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c3-5"><span class="t-no">3.5</span><span class="t-name">options (オプション)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c3-6"><span class="t-no">3.6</span><span class="t-name">members (会員) / coupons</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c3-7"><span class="t-no">3.7</span><span class="t-name">reservations (予約)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c3-8"><span class="t-no">3.8</span><span class="t-name">invoices (請求書)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c3-9"><span class="t-no">3.9</span><span class="t-name">settings / notifications</span><span class="t-dots"></span></a></li>
+      </ol>
+    </li>
+    <li class="lvl1"><a href="#c4"><span class="t-no">4.</span><span class="t-name">API仕様</span><span class="t-dots"></span></a>
+      <ol>
+        <li class="lvl2"><a href="#c4-1"><span class="t-no">4.1</span><span class="t-name">SkyRentStore (同期メソッド)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c4-2"><span class="t-no">4.2</span><span class="t-name">SkyRentAPI (Promise ラッパ)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c4-3"><span class="t-no">4.3</span><span class="t-name">SkyRentPricing.calculate 料金決定ロジック</span><span class="t-dots"></span></a></li>
+      </ol>
+    </li>
+    <li class="lvl1"><a href="#c5"><span class="t-no">5.</span><span class="t-name">拡張設計</span><span class="t-dots"></span></a>
+      <ol>
+        <li class="lvl2"><a href="#c5-1"><span class="t-no">5.1</span><span class="t-name">新カテゴリ追加手順 (エンジニア不要)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c5-2"><span class="t-no">5.2</span><span class="t-name">決済手段の追加 (payment.method)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c5-3"><span class="t-no">5.3</span><span class="t-name">メール送信の実装差替 (notify)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c5-4"><span class="t-no">5.4</span><span class="t-name">本番移行 (localStorage → REST API)</span><span class="t-dots"></span></a></li>
+      </ol>
+    </li>
+    <li class="lvl1"><a href="#c6"><span class="t-no">6.</span><span class="t-name">非機能設計</span><span class="t-dots"></span></a>
+      <ol>
+        <li class="lvl2"><a href="#c6-1"><span class="t-no">6.1</span><span class="t-name">レスポンシブ設計</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c6-2"><span class="t-no">6.2</span><span class="t-name">セキュリティ (XSS対策・認証)</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c6-3"><span class="t-no">6.3</span><span class="t-name">データバックアップ / 復元</span><span class="t-dots"></span></a></li>
+        <li class="lvl2"><a href="#c6-4"><span class="t-no">6.4</span><span class="t-name">多言語 (i18n) ・可用性・性能</span><span class="t-dots"></span></a></li>
+      </ol>
+    </li>
+  </ol>
+</section>
+
+<!-- =========================================================
+     1. システム構成
+========================================================== -->
+<section class="sheet chapter" id="c1">
+  <h2 class="h-chapter"><span class="cno">第1章</span>システム構成</h2>
+
+  <h3 class="h-sec" id="c1-1"><span class="sno">1.1</span>構成方針</h3>
+  <p class="lead">
+    本システムは <strong>ビルド工程を持たない素の HTML / CSS / JavaScript</strong> で実装し、
+    <strong>GitHub Pages</strong> でホスティングする静的サイト構成を採用する。サーバサイドを持たないため、
+    運用コストが極小で、少人数・非常駐の運営体制 (対応2〜3名) に適合する。
+  </p>
+  <ul class="bul">
+    <li>データ層はブラウザ内 <code>localStorage</code> をデモ用永続化ストアとし、すべて <code>SkyRentStore</code> / <code>SkyRentAPI</code> の抽象化層を経由してアクセスする。</li>
+    <li>本番運用時は、この抽象化層の実装のみを <strong>GAS / AWS 等の REST バックエンド</strong> に差し替えることで、画面側のコードを変更せず移行できる (5.4節)。</li>
+    <li>決済 (Stripe 等) ・メール実送信は <strong>拡張ポイントとしてインタフェースを確保</strong> しつつ、初期リリースでは現地決済・通知ログで代替する。</li>
+  </ul>
+
+  <h3 class="h-sec" id="c1-2"><span class="sno">1.2</span>システム構成図</h3>
+  <figure class="fig">
+    <div class="fig-frame">
+      <svg viewBox="0 0 760 590" role="img" aria-label="システム構成図" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif">
+        <defs>
+          <marker id="arw" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#1c4a7a"/>
+          </marker>
+          <marker id="arwd" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#8b98a6"/>
+          </marker>
+        </defs>
+
+        <!-- クライアント層 -->
+        <text x="20" y="34" font-size="12" font-weight="700" fill="#6a7683">クライアント (ブラウザ)</text>
+        <rect x="120" y="46" width="230" height="62" rx="9" fill="#eaf1f8" stroke="#1c4a7a" stroke-width="1.5"/>
+        <text x="235" y="72" font-size="14" text-anchor="middle" fill="#1c4a7a" font-weight="700">一般利用者</text>
+        <text x="235" y="93" font-size="11" text-anchor="middle" fill="#4a5560">個人・法人 / PC・スマホ</text>
+        <rect x="410" y="46" width="230" height="62" rx="9" fill="#eaf1f8" stroke="#1c4a7a" stroke-width="1.5"/>
+        <text x="525" y="72" font-size="14" text-anchor="middle" fill="#1c4a7a" font-weight="700">自社スタッフ</text>
+        <text x="525" y="93" font-size="11" text-anchor="middle" fill="#4a5560">2〜3名 / 非常駐・スマホ管理</text>
+
+        <line x1="235" y1="108" x2="235" y2="150" stroke="#1c4a7a" stroke-width="1.6" marker-end="url(#arw)"/>
+        <line x1="525" y1="108" x2="525" y2="150" stroke="#1c4a7a" stroke-width="1.6" marker-end="url(#arw)"/>
+        <text x="360" y="132" font-size="10.5" text-anchor="middle" fill="#8b98a6">HTTPS (GitHub Pages)</text>
+
+        <!-- プレゼンテーション層 -->
+        <rect x="40" y="152" width="680" height="176" rx="12" fill="#f7fafd" stroke="#1c4a7a" stroke-width="1.6"/>
+        <text x="60" y="176" font-size="12.5" font-weight="700" fill="#1c4a7a">プレゼンテーション層 — 静的サイト (ビルド不要 / .nojekyll)</text>
+
+        <rect x="66" y="190" width="290" height="70" rx="8" fill="#fff" stroke="#2d6ca8" stroke-width="1.3"/>
+        <text x="211" y="214" font-size="13" text-anchor="middle" fill="#1c4a7a" font-weight="700">予約サイト (公開)</text>
+        <text x="211" y="234" font-size="10.5" text-anchor="middle" fill="#4a5560">index / search / detail</text>
+        <text x="211" y="249" font-size="10.5" text-anchor="middle" fill="#4a5560">booking / mypage</text>
+
+        <rect x="404" y="190" width="290" height="70" rx="8" fill="#fff" stroke="#2d6ca8" stroke-width="1.3"/>
+        <text x="549" y="214" font-size="13" text-anchor="middle" fill="#1c4a7a" font-weight="700">管理画面 (manage/)</text>
+        <text x="549" y="234" font-size="10.5" text-anchor="middle" fill="#4a5560">dashboard 他 30+ 画面</text>
+        <text x="549" y="249" font-size="10.5" text-anchor="middle" fill="#4a5560">予約・マスタ・帳票・請求</text>
+
+        <rect x="66" y="272" width="628" height="42" rx="8" fill="#eaf1f8" stroke="#9cb6d1" stroke-width="1"/>
+        <text x="380" y="291" font-size="11.5" text-anchor="middle" fill="#1c4a7a" font-weight="700">共通 JS モジュール</text>
+        <text x="380" y="307" font-size="10.5" text-anchor="middle" fill="#33475b">config.js ・ store.js ・ pricing.js ・ i18n.js ・ api.js</text>
+
+        <line x1="380" y1="328" x2="380" y2="372" stroke="#1c4a7a" stroke-width="1.6" marker-end="url(#arw)"/>
+        <text x="470" y="354" font-size="10.5" text-anchor="middle" fill="#8b98a6">SkyRentAPI 経由</text>
+
+        <!-- データ層 -->
+        <rect x="40" y="374" width="420" height="96" rx="12" fill="#f7fafd" stroke="#1c4a7a" stroke-width="1.6"/>
+        <text x="60" y="398" font-size="12.5" font-weight="700" fill="#1c4a7a">データ層 — SkyRentStore (localStorage)</text>
+        <text x="60" y="420" font-size="10.5" fill="#4a5560">プレフィックス <tspan font-family="monospace" fill="#204066">sky-rent.</tspan></text>
+        <text x="60" y="440" font-size="10.5" fill="#4a5560">categories / locations / assets / options</text>
+        <text x="60" y="457" font-size="10.5" fill="#4a5560">members / reservations / invoices / settings / notifications</text>
+
+        <!-- 将来バックエンド (点線) -->
+        <rect x="480" y="374" width="240" height="96" rx="12" fill="#fbfbfb" stroke="#8b98a6" stroke-width="1.4" stroke-dasharray="6 4"/>
+        <text x="600" y="398" font-size="12" font-weight="700" fill="#6a7683" text-anchor="middle">将来 : バックエンド</text>
+        <text x="600" y="420" font-size="10.5" text-anchor="middle" fill="#7a8593">GAS / AWS REST API</text>
+        <text x="600" y="438" font-size="10.5" text-anchor="middle" fill="#7a8593">RDB (RDBMS / DynamoDB)</text>
+        <text x="600" y="456" font-size="10.5" text-anchor="middle" fill="#7a8593">サーバ側認証・権限</text>
+        <line x1="460" y1="422" x2="478" y2="422" stroke="#8b98a6" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#arwd)"/>
+
+        <!-- 外部連携 (点線) -->
+        <rect x="40" y="500" width="680" height="66" rx="12" fill="#fbfbfb" stroke="#8b98a6" stroke-width="1.4" stroke-dasharray="6 4"/>
+        <text x="60" y="524" font-size="12" font-weight="700" fill="#6a7683">外部サービス連携 (将来拡張・設計済インタフェース)</text>
+        <text x="60" y="547" font-size="10.5" fill="#7a8593">Stripe オンライン事前決済 (payment.method='online') ／ メール配信 (SendGrid・GAS MailApp) ／ Google Analytics</text>
+        <line x1="549" y1="260" x2="600" y2="368" stroke="#8b98a6" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arwd)"/>
+      </svg>
+    </div>
+    <figcaption>図1-1 システム構成図 — 実線 = 初期リリースのデータフロー / 点線 = 将来拡張ポイント</figcaption>
+  </figure>
+
+  <h3 class="h-sec" id="c1-3"><span class="sno">1.3</span>レイヤー構成とファイル</h3>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>層</th><th>主なファイル</th><th>役割</th></tr></thead>
+      <tbody>
+        <tr><td>設定</td><td class="c-key">js/config.js</td><td><code>SKY_RENT_CONFIG.GAS_URL</code> — バックエンド接続先。未設定時は localStorage 動作。</td></tr>
+        <tr><td>データ</td><td class="c-key">js/store.js</td><td>永続化・シード投入・全ドメインロジック (<code>SkyRentStore</code>)。データ層の中核。</td></tr>
+        <tr><td>料金</td><td class="c-key">js/pricing.js</td><td>時間/日/週/月・ハイシーズン・オプション・クーポンの料金計算 (<code>SkyRentPricing</code>)。</td></tr>
+        <tr><td>多言語</td><td class="c-key">js/i18n.js</td><td>日英辞書・言語切替 (<code>SkyRentI18n</code>)。公開サイトのみ読み込む。</td></tr>
+        <tr><td>API</td><td class="c-key">js/api.js</td><td>Promise ベースの入口 (<code>SkyRentAPI</code>)。旧フィールド互換・バックエンド切替の抽象化。</td></tr>
+        <tr><td>UI (公開)</td><td class="c-key">css/style.css, css/public.css</td><td>公開サイトの外観。スマホ最優先レスポンシブ。</td></tr>
+        <tr><td>UI (管理)</td><td class="c-key">manage/css/manage.css, manage/partials.js</td><td>管理画面の外観と共通トップバー (<code>data-include="topbar"</code>)。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note-box">
+    <b>スクリプト読み込み順 (必須)</b>：公開サイトは <code>config → store → pricing → i18n → api</code>、管理画面は <code>partials → config → store → pricing → api</code> の順で読み込む。この依存順は開発コントラクトで固定されている。
+  </div>
+  <a class="back-top" href="#top">▲ 目次へ戻る</a>
+</section>
+
+<!-- =========================================================
+     2. 画面遷移図
+========================================================== -->
+<section class="sheet chapter" id="c2">
+  <h2 class="h-chapter"><span class="cno">第2章</span>画面遷移図</h2>
+
+  <h3 class="h-sec" id="c2-1"><span class="sno">2.1</span>公開サイト (予約フロー)</h3>
+  <p class="lead">
+    トップページから検索・詳細を経て予約フローに入る。予約フローは <strong>1画面 (booking.html) 内で「情報入力 → 確認 → 完了」の3ステップを状態遷移</strong> させる構成。
+    車両カテゴリでは免許証情報入力欄と確認ステップを表示し、物品カテゴリでは動的に非表示化する。
+  </p>
+  <figure class="fig">
+    <div class="fig-frame">
+      <svg viewBox="0 0 770 340" role="img" aria-label="公開サイト画面遷移図" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif">
+        <defs>
+          <marker id="pa" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#1c4a7a"/></marker>
+        </defs>
+        <!-- row 1 -->
+        <g>
+          <rect x="20" y="40" width="120" height="56" rx="8" fill="#1c4a7a"/>
+          <text x="80" y="64" font-size="12.5" text-anchor="middle" fill="#fff" font-weight="700">index</text>
+          <text x="80" y="82" font-size="10" text-anchor="middle" fill="#cfe0f0">トップ</text>
+
+          <rect x="180" y="40" width="120" height="56" rx="8" fill="#eaf1f8" stroke="#1c4a7a" stroke-width="1.4"/>
+          <text x="240" y="64" font-size="12.5" text-anchor="middle" fill="#1c4a7a" font-weight="700">search</text>
+          <text x="240" y="82" font-size="10" text-anchor="middle" fill="#4a5560">検索・絞込</text>
+
+          <rect x="340" y="40" width="120" height="56" rx="8" fill="#eaf1f8" stroke="#1c4a7a" stroke-width="1.4"/>
+          <text x="400" y="64" font-size="12.5" text-anchor="middle" fill="#1c4a7a" font-weight="700">detail</text>
+          <text x="400" y="82" font-size="10" text-anchor="middle" fill="#4a5560">車両/物品詳細</text>
+
+          <line x1="140" y1="68" x2="178" y2="68" stroke="#1c4a7a" stroke-width="1.6" marker-end="url(#pa)"/>
+          <line x1="300" y1="68" x2="338" y2="68" stroke="#1c4a7a" stroke-width="1.6" marker-end="url(#pa)"/>
+          <line x1="460" y1="68" x2="498" y2="68" stroke="#1c4a7a" stroke-width="1.6" marker-end="url(#pa)"/>
+        </g>
+
+        <!-- booking group -->
+        <rect x="500" y="26" width="250" height="150" rx="10" fill="#f7fafd" stroke="#2d6ca8" stroke-width="1.5"/>
+        <text x="625" y="46" font-size="11.5" text-anchor="middle" fill="#1c4a7a" font-weight="700">booking.html (予約フロー)</text>
+        <rect x="516" y="56" width="218" height="30" rx="6" fill="#fff" stroke="#9cb6d1"/>
+        <text x="625" y="76" font-size="11" text-anchor="middle" fill="#1c4a7a">③ 情報入力 (車両=免許証)</text>
+        <rect x="516" y="92" width="218" height="30" rx="6" fill="#fff" stroke="#9cb6d1"/>
+        <text x="625" y="112" font-size="11" text-anchor="middle" fill="#1c4a7a">④ 内容確認 (免許確認ステップ)</text>
+        <rect x="516" y="128" width="218" height="30" rx="6" fill="#eaf1f8" stroke="#9cb6d1"/>
+        <text x="625" y="148" font-size="11" text-anchor="middle" fill="#1c4a7a">⑤ 予約完了 (確認メール送信)</text>
+        <line x1="625" y1="86" x2="625" y2="92" stroke="#2d6ca8" stroke-width="1.4" marker-end="url(#pa)"/>
+        <line x1="625" y1="122" x2="625" y2="128" stroke="#2d6ca8" stroke-width="1.4" marker-end="url(#pa)"/>
+
+        <!-- row 2: mypage -->
+        <rect x="180" y="230" width="140" height="60" rx="8" fill="#eaf1f8" stroke="#1c4a7a" stroke-width="1.4"/>
+        <text x="250" y="256" font-size="12.5" text-anchor="middle" fill="#1c4a7a" font-weight="700">mypage</text>
+        <text x="250" y="275" font-size="10" text-anchor="middle" fill="#4a5560">登録・ログイン・履歴</text>
+        <text x="250" y="288" font-size="9.5" text-anchor="middle" fill="#6a7683">ポイント・クーポン</text>
+
+        <!-- links to mypage -->
+        <line x1="80" y1="96" x2="80" y2="260" stroke="#1c4a7a" stroke-width="1.4" marker-end="url(#pa)"/>
+        <text x="118" y="180" font-size="9.5" fill="#6a7683">ヘッダ「会員」</text>
+        <path d="M625 176 C625 250 340 258 322 260" fill="none" stroke="#1c4a7a" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#pa)"/>
+        <text x="470" y="238" font-size="9.5" fill="#6a7683">予約完了後 履歴反映</text>
+        <line x1="178" y1="260" x2="140" y2="96" stroke="#7a8593" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#pa)"/>
+
+        <text x="20" y="316" font-size="10" fill="#8b98a6">※ 会員ログイン時は氏名・免許情報を自動補完。クーポン残高を予約フローで自動適用。物品予約では免許欄・確認ステップを非表示。</text>
+      </svg>
+    </div>
+    <figcaption>図2-1 公開サイト画面遷移図</figcaption>
+  </figure>
+
+  <h3 class="h-sec" id="c2-2"><span class="sno">2.2</span>管理画面 (ダッシュボード中心)</h3>
+  <p class="lead">
+    ログイン後は <strong>dashboard</strong> を起点に、共通トップバーのメニューから各管理画面へ遷移する (ハブ&amp;スポーク)。
+    全4拠点を一画面で横断把握できる構成。
+  </p>
+  <figure class="fig">
+    <div class="fig-frame">
+      <svg viewBox="0 0 770 430" role="img" aria-label="管理画面遷移図" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif">
+        <defs>
+          <marker id="ma" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L7,3 L0,6 Z" fill="#7a8593"/></marker>
+        </defs>
+        <!-- login -->
+        <rect x="20" y="188" width="110" height="52" rx="8" fill="#eaf1f8" stroke="#1c4a7a" stroke-width="1.4"/>
+        <text x="75" y="210" font-size="12" text-anchor="middle" fill="#1c4a7a" font-weight="700">login</text>
+        <text x="75" y="228" font-size="10" text-anchor="middle" fill="#4a5560">スタッフ認証</text>
+        <line x1="130" y1="214" x2="292" y2="214" stroke="#1c4a7a" stroke-width="1.6" marker-end="url(#ma)"/>
+
+        <!-- hub -->
+        <circle cx="385" cy="214" r="66" fill="#1c4a7a"/>
+        <text x="385" y="208" font-size="14" text-anchor="middle" fill="#fff" font-weight="700">dashboard</text>
+        <text x="385" y="228" font-size="10" text-anchor="middle" fill="#cfe0f0">4拠点サマリ / 未処理</text>
+        <text x="385" y="242" font-size="10" text-anchor="middle" fill="#cfe0f0">売上 / 通知ログ</text>
+
+        <!-- spokes -->
+        <g font-size="11" fill="#1c4a7a" font-weight="600">
+          <!-- top -->
+          <rect x="300" y="20" width="170" height="34" rx="7" fill="#fff" stroke="#2d6ca8"/>
+          <text x="385" y="42" text-anchor="middle">reservation-list (予約一覧)</text>
+          <line x1="385" y1="148" x2="385" y2="56" stroke="#7a8593" stroke-width="1.3" marker-end="url(#ma)"/>
+
+          <rect x="490" y="66" width="185" height="34" rx="7" fill="#fff" stroke="#2d6ca8"/>
+          <text x="582" y="88" text-anchor="middle">reservation-table (ガント)</text>
+          <line x1="440" y1="176" x2="512" y2="102" stroke="#7a8593" stroke-width="1.3" marker-end="url(#ma)"/>
+
+          <rect x="560" y="140" width="150" height="34" rx="7" fill="#fff" stroke="#2d6ca8"/>
+          <text x="635" y="162" text-anchor="middle">vehicles (マスタ)</text>
+          <line x1="451" y1="200" x2="558" y2="168" stroke="#7a8593" stroke-width="1.3" marker-end="url(#ma)"/>
+
+          <rect x="560" y="196" width="150" height="34" rx="7" fill="#fff" stroke="#2d6ca8"/>
+          <text x="635" y="218" text-anchor="middle">categories (EAV)</text>
+          <line x1="451" y1="214" x2="558" y2="214" stroke="#7a8593" stroke-width="1.3" marker-end="url(#ma)"/>
+
+          <rect x="560" y="252" width="150" height="34" rx="7" fill="#fff" stroke="#2d6ca8"/>
+          <text x="635" y="274" text-anchor="middle">options (オプション)</text>
+          <line x1="451" y1="228" x2="558" y2="266" stroke="#7a8593" stroke-width="1.3" marker-end="url(#ma)"/>
+
+          <rect x="490" y="322" width="185" height="34" rx="7" fill="#fff" stroke="#2d6ca8"/>
+          <text x="582" y="344" text-anchor="middle">members / points (会員)</text>
+          <line x1="440" y1="252" x2="512" y2="322" stroke="#7a8593" stroke-width="1.3" marker-end="url(#ma)"/>
+
+          <!-- bottom / left -->
+          <rect x="300" y="374" width="170" height="34" rx="7" fill="#fff" stroke="#2d6ca8"/>
+          <text x="385" y="396" text-anchor="middle">invoices (請求書払い)</text>
+          <line x1="385" y1="280" x2="385" y2="372" stroke="#7a8593" stroke-width="1.3" marker-end="url(#ma)"/>
+
+          <rect x="95" y="322" width="185" height="34" rx="7" fill="#fff" stroke="#2d6ca8"/>
+          <text x="187" y="344" text-anchor="middle">forms (帳票印刷)</text>
+          <line x1="330" y1="252" x2="258" y2="322" stroke="#7a8593" stroke-width="1.3" marker-end="url(#ma)"/>
+
+          <rect x="60" y="252" width="150" height="34" rx="7" fill="#fff" stroke="#2d6ca8"/>
+          <text x="135" y="274" text-anchor="middle">stores / employees</text>
+          <line x1="319" y1="228" x2="212" y2="266" stroke="#7a8593" stroke-width="1.3" marker-end="url(#ma)"/>
+
+          <rect x="60" y="140" width="150" height="34" rx="7" fill="#fff" stroke="#2d6ca8"/>
+          <text x="135" y="162" text-anchor="middle">high-season / profile</text>
+          <line x1="319" y1="200" x2="212" y2="168" stroke="#7a8593" stroke-width="1.3" marker-end="url(#ma)"/>
+
+          <rect x="95" y="66" width="185" height="34" rx="7" fill="#fff" stroke="#2d6ca8"/>
+          <text x="187" y="88" text-anchor="middle">customers (顧客履歴)</text>
+          <line x1="330" y1="176" x2="258" y2="102" stroke="#7a8593" stroke-width="1.3" marker-end="url(#ma)"/>
+        </g>
+        <text x="20" y="418" font-size="10" fill="#8b98a6">※ 共通トップバー (partials.js / topbar) から全画面へ遷移可能。スマホではハンバーガーメニューに集約。</text>
+      </svg>
+    </div>
+    <figcaption>図2-2 管理画面 画面遷移図 (主要遷移)</figcaption>
+  </figure>
+
+  <h3 class="h-sec" id="c2-3"><span class="sno">2.3</span>画面一覧</h3>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>区分</th><th>画面 (ファイル)</th><th>主な機能</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="5">公開<br>サイト</td><td class="c-key">index.html</td><td>トップ。カテゴリ・拠点導線、検索起点。</td></tr>
+        <tr><td class="c-key">search.html</td><td>日時・拠点・カテゴリ検索。カテゴリ別カスタム項目で絞込。</td></tr>
+        <tr><td class="c-key">detail.html</td><td>車両/物品詳細。固有スペック・オプション・要免許明示。</td></tr>
+        <tr><td class="c-key">booking.html</td><td>予約フロー (情報入力→確認→完了)。免許確認・クーポン適用・確認メール。</td></tr>
+        <tr><td class="c-key">mypage.html</td><td>会員登録/ログイン・予約履歴・ポイント残高・クーポン。</td></tr>
+        <tr><td rowspan="9">管理<br>画面</td><td class="c-key">dashboard.html</td><td>本日出発返却・未処理アラート・売上サマリ・週次グラフ・通知ログ (拠点別・スマホ対応)。</td></tr>
+        <tr><td class="c-key">reservation-list.html</td><td>予約一覧。状態遷移 (確定→貸出中→返却済) ・入金記録。</td></tr>
+        <tr><td class="c-key">reservation-table.html</td><td>ガントチャート式予約表。日/時間単位・拠点横断・物品段積み。</td></tr>
+        <tr><td class="c-key">vehicles.html</td><td>車両・物品マスタ。カテゴリ紐付け・料金プラン・在庫・車検/点検期限。</td></tr>
+        <tr><td class="c-key">categories.html</td><td>カテゴリCRUD・カスタム項目エディタ (EAV定義)。</td></tr>
+        <tr><td class="c-key">options.html</td><td>オプションCRUD (共通/カテゴリ専用の2階層)。</td></tr>
+        <tr><td class="c-key">members.html / points.html</td><td>会員管理・請求書払い許可・ポイント手動付与/減算・ポイント設定。</td></tr>
+        <tr><td class="c-key">invoices.html</td><td>請求書発行 (月次一括) ・入金状況・印刷。</td></tr>
+        <tr><td class="c-key">forms.html / stores.html / employees.html</td><td>帳票印刷 (貸渡証・チェックシート・領収書・物品貸出書) ・拠点/従業員管理。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <a class="back-top" href="#top">▲ 目次へ戻る</a>
+</section>
+
+<!-- =========================================================
+     3. DBスキーマ
+========================================================== -->
+<section class="sheet chapter" id="c3">
+  <h2 class="h-chapter"><span class="cno">第3章</span>DBスキーマ (データモデル)</h2>
+  <p class="lead">
+    全データは <code>localStorage</code> に <code>sky-rent.</code> プレフィックス付き JSON 配列として保持し、必ず <code>SkyRentStore</code> 経由で読み書きする。
+    本番 RDB 移行時は各エンティティを 1 テーブルへマッピングする (5.4節)。以下、開発コントラクト dev-contract.md のデータモデルを正とする。
+  </p>
+
+  <h3 class="h-sec" id="c3-1"><span class="sno">3.1</span>エンティティ一覧とER図</h3>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>エンティティ</th><th>キー</th><th>主キー</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td>categories</td><td class="c-key">categories</td><td class="c-key">categoryId</td><td>カテゴリ + カスタム項目(EAV)定義。車両/物品の区分。</td></tr>
+        <tr><td>locations</td><td class="c-key">locations</td><td class="c-key">locationId</td><td>4拠点。営業時間・定休日。</td></tr>
+        <tr><td>assets</td><td class="c-key">assets</td><td class="c-key">assetId</td><td>車両・物品の統合マスタ。料金・在庫・車検・カスタム値。</td></tr>
+        <tr><td>options</td><td class="c-key">options</td><td class="c-key">optionId</td><td>オプション。共通(全車両)/カテゴリ専用の2階層。</td></tr>
+        <tr><td>members</td><td class="c-key">members</td><td class="c-key">memberId</td><td>会員。ポイント・クーポン・請求書払い許可。</td></tr>
+        <tr><td>reservations</td><td class="c-key">reservations</td><td class="c-key">reservationId</td><td>予約。状態・支払・料金明細・オプション。</td></tr>
+        <tr><td>invoices</td><td class="c-key">invoices</td><td class="c-key">invoiceId</td><td>請求書 (法人・行政)。複数予約を集約・入金管理。</td></tr>
+        <tr><td>settings</td><td class="c-key">settings.*</td><td>—</td><td>ポイント設定・振込先・ハイシーズン等の単一オブジェクト。</td></tr>
+        <tr><td>notifications</td><td class="c-key">notifications</td><td>—</td><td>通知ログ (メール送信のデモ代替)。最大100件。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <figure class="fig">
+    <div class="fig-frame">
+      <svg viewBox="0 0 770 500" role="img" aria-label="ER図" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif">
+        <style>
+          .ent { fill:#fff; stroke:#1c4a7a; stroke-width:1.5; }
+          .ent-h { fill:#1c4a7a; }
+          .ent-t { fill:#fff; font-size:12px; font-weight:700; }
+          .ent-f { fill:#33475b; font-size:10px; font-family:monospace; }
+          .rel { stroke:#2d6ca8; stroke-width:1.4; fill:none; }
+          .card { fill:#1c4a7a; font-size:11px; font-weight:700; }
+        </style>
+        <!-- categories -->
+        <g><rect class="ent" x="30" y="30" width="150" height="66" rx="4"/><rect class="ent-h" x="30" y="30" width="150" height="22" rx="4"/><text class="ent-t" x="105" y="46" text-anchor="middle">categories</text><text class="ent-f" x="40" y="68">PK categoryId</text><text class="ent-f" x="40" y="84">type / customFieldDefs</text></g>
+        <!-- locations -->
+        <g><rect class="ent" x="590" y="30" width="150" height="66" rx="4"/><rect class="ent-h" x="590" y="30" width="150" height="22" rx="4"/><text class="ent-t" x="665" y="46" text-anchor="middle">locations</text><text class="ent-f" x="600" y="68">PK locationId</text><text class="ent-f" x="600" y="84">hours / holiday</text></g>
+        <!-- options -->
+        <g><rect class="ent" x="30" y="200" width="150" height="66" rx="4"/><rect class="ent-h" x="30" y="200" width="150" height="22" rx="4"/><text class="ent-t" x="105" y="216" text-anchor="middle">options</text><text class="ent-f" x="40" y="238">PK optionId</text><text class="ent-f" x="40" y="254">FK categoryIds[] / null</text></g>
+        <!-- assets -->
+        <g><rect class="ent" x="300" y="150" width="170" height="82" rx="4"/><rect class="ent-h" x="300" y="150" width="170" height="22" rx="4"/><text class="ent-t" x="385" y="166" text-anchor="middle">assets</text><text class="ent-f" x="310" y="188">PK assetId</text><text class="ent-f" x="310" y="204">FK categoryId</text><text class="ent-f" x="310" y="220">FK locationId / stock</text></g>
+        <!-- members -->
+        <g><rect class="ent" x="590" y="200" width="150" height="82" rx="4"/><rect class="ent-h" x="590" y="200" width="150" height="22" rx="4"/><text class="ent-t" x="665" y="216" text-anchor="middle">members</text><text class="ent-f" x="600" y="238">PK memberId</text><text class="ent-f" x="600" y="254">points / coupons[]</text><text class="ent-f" x="600" y="270">invoiceAllowed</text></g>
+        <!-- reservations -->
+        <g><rect class="ent" x="290" y="330" width="190" height="98" rx="4"/><rect class="ent-h" x="290" y="330" width="190" height="22" rx="4"/><text class="ent-t" x="385" y="346" text-anchor="middle">reservations</text><text class="ent-f" x="300" y="368">PK reservationId</text><text class="ent-f" x="300" y="384">FK assetId / memberId</text><text class="ent-f" x="300" y="400">FK invoiceId / status</text><text class="ent-f" x="300" y="416">price / options[] / payment</text></g>
+        <!-- invoices -->
+        <g><rect class="ent" x="590" y="360" width="150" height="82" rx="4"/><rect class="ent-h" x="590" y="360" width="150" height="22" rx="4"/><text class="ent-t" x="665" y="376" text-anchor="middle">invoices</text><text class="ent-f" x="600" y="398">PK invoiceId</text><text class="ent-f" x="600" y="414">FK memberId</text><text class="ent-f" x="600" y="430">reservationIds[]</text></g>
+        <!-- notifications -->
+        <g><rect class="ent" x="30" y="360" width="150" height="66" rx="4"/><rect class="ent-h" x="30" y="360" width="150" height="22" rx="4"/><text class="ent-t" x="105" y="376" text-anchor="middle">notifications</text><text class="ent-f" x="40" y="398">at / type / message</text><text class="ent-f" x="40" y="414">refId (疎結合)</text></g>
+
+        <!-- relations -->
+        <!-- categories 1-N assets -->
+        <path class="rel" d="M105 96 L105 130 L300 175"/>
+        <text class="card" x="112" y="120">1</text><text class="card" x="278" y="170">N</text>
+        <!-- locations 1-N assets -->
+        <path class="rel" d="M665 96 L665 130 L470 175"/>
+        <text class="card" x="650" y="120">1</text><text class="card" x="478" y="170">N</text>
+        <!-- categories N-M options -->
+        <path class="rel" d="M75 96 L75 200" stroke-dasharray="5 3"/>
+        <text class="card" x="60" y="150">N:M</text>
+        <!-- assets 1-N reservations -->
+        <path class="rel" d="M385 232 L385 330"/>
+        <text class="card" x="392" y="286">1</text><text class="card" x="392" y="322">N</text>
+        <!-- members 1-N reservations -->
+        <path class="rel" d="M590 250 L500 250 L480 355"/>
+        <text class="card" x="565" y="244">1</text><text class="card" x="486" y="350">N</text>
+        <!-- members 1-N invoices -->
+        <path class="rel" d="M665 282 L665 360"/>
+        <text class="card" x="672" y="326">1</text><text class="card" x="672" y="356">N</text>
+        <!-- invoices 1-N reservations -->
+        <path class="rel" d="M590 400 L480 390"/>
+        <text class="card" x="565" y="386">1</text><text class="card" x="486" y="384">N</text>
+        <!-- reservations - notifications (loose) -->
+        <path class="rel" d="M290 400 L180 396" stroke-dasharray="4 3"/>
+      </svg>
+    </div>
+    <figcaption>図3-1 ER図 (主要リレーション) — 実線 = 参照整合 / 破線 = 配列参照・疎結合</figcaption>
+  </figure>
+  <p class="legend">
+    ※ <b>coupons</b> と <b>pointHistory</b> は members 内の埋め込み配列 (別テーブルではない)。<b>customFieldDefs</b> は categories 内、<b>customFields</b> は assets 内に JSON で保持する EAV 構造。
+  </p>
+
+  <h3 class="h-sec" id="c3-2"><span class="sno">3.2</span>categories (カテゴリ / EAV定義)<span class="tag">マスタ</span></h3>
+  <div class="tbl-wrap">
+    <table class="tbl pk">
+      <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">categoryId</td><td class="c-type">string (PK)</td><td>例 <code>cat-kitchen</code>。カテゴリ識別子。</td></tr>
+        <tr><td class="c-key">name / nameEn</td><td class="c-type">string</td><td>表示名 (日 / 英)。</td></tr>
+        <tr><td class="c-key">type</td><td class="c-type">'vehicle'|'item'</td><td><b>vehicle</b>=車両 / <b>item</b>=物品単体レンタル (家電・工具)。オプション共通適用や免許欄の要否を分岐。</td></tr>
+        <tr><td class="c-key">icon</td><td class="c-type">string</td><td>絵文字アイコン。</td></tr>
+        <tr><td class="c-key">sort</td><td class="c-type">number</td><td>表示順。</td></tr>
+        <tr><td class="c-key">active</td><td class="c-type">boolean</td><td>公開フラグ。</td></tr>
+        <tr><td class="c-key">description</td><td class="c-type">string</td><td>説明文。</td></tr>
+        <tr><td class="c-key">customFieldDefs</td><td class="c-type">array</td><td><b>EAV定義</b>。要素 = <code>{key, label, type:'text'|'number'|'select', unit, options[], filterable}</code>。車両/物品登録時の入力欄・詳細スペック表示・検索フィルタを自動生成。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="legend">シード: cat-rental / cat-kitchen / cat-camping / cat-special (車両) ・ cat-appliance / cat-tool (物品)。</p>
+
+  <h3 class="h-sec" id="c3-3"><span class="sno">3.3</span>locations (拠点)<span class="tag">マスタ</span></h3>
+  <div class="tbl-wrap">
+    <table class="tbl pk">
+      <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">locationId</td><td class="c-type">string (PK)</td><td>例 <code>loc-sapporo</code>。</td></tr>
+        <tr><td class="c-key">name / nameEn</td><td class="c-type">string</td><td>拠点名 (日 / 英)。</td></tr>
+        <tr><td class="c-key">tel / address</td><td class="c-type">string</td><td>電話・住所。</td></tr>
+        <tr><td class="c-key">hours</td><td class="c-type">string</td><td>営業時間。例 <code>9:00-19:00</code>。</td></tr>
+        <tr><td class="c-key">holiday</td><td class="c-type">string</td><td>定休日。例「水曜定休」。</td></tr>
+        <tr><td class="c-key">sort</td><td class="c-type">number</td><td>表示順。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="legend">シード: loc-sapporo / loc-chitose / loc-asahikawa / loc-hakodate の4拠点。</p>
+
+  <h3 class="h-sec" id="c3-4"><span class="sno">3.4</span>assets (車両・物品 統合マスタ)<span class="tag">マスタ</span></h3>
+  <div class="tbl-wrap">
+    <table class="tbl pk">
+      <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">assetId</td><td class="c-type">string (PK)</td><td>例 <code>K001</code> / <code>I001</code>。</td></tr>
+        <tr><td class="c-key">categoryId</td><td class="c-type">FK → categories</td><td>所属カテゴリ。</td></tr>
+        <tr><td class="c-key">locationId</td><td class="c-type">FK → locations</td><td>配置拠点。</td></tr>
+        <tr><td class="c-key">name / nameEn</td><td class="c-type">string</td><td>名称 (日 / 英)。</td></tr>
+        <tr><td class="c-key">plate</td><td class="c-type">string</td><td>ナンバー (車両のみ)。物品は空。</td></tr>
+        <tr><td class="c-key">capacity</td><td class="c-type">number|null</td><td>乗車定員 (車両)。</td></tr>
+        <tr><td class="c-key">priceHour / priceDay<br>priceWeek / priceMonth</td><td class="c-type">number|null</td><td>時間/日/週/月の各料金。<b>priceDay は必須</b>、他は null 可。料金エンジンが最適プランを自動選択。</td></tr>
+        <tr><td class="c-key">stock</td><td class="c-type">number</td><td>在庫数。物品は 1 超可、車両は常に 1。空き判定の上限。</td></tr>
+        <tr><td class="c-key">requiredLicense</td><td class="c-type">string</td><td>必要免許・資格。例「準中型免許以上」。空なら不要。予約フローの確認ステップを分岐。</td></tr>
+        <tr><td class="c-key">image</td><td class="c-type">string</td><td>絵文字 or 画像URL。</td></tr>
+        <tr><td class="c-key">active</td><td class="c-type">boolean</td><td>公開フラグ。</td></tr>
+        <tr><td class="c-key">shakenDate / maintenanceDate</td><td class="c-type">ISO|null</td><td>車検・点検期限 (車両のみ)。ダッシュボードの90日以内アラート対象。</td></tr>
+        <tr><td class="c-key">customFields</td><td class="c-type">object</td><td><b>EAV値</b>。categories の customFieldDefs の key に対応。例 <code>{sinks:2, power:3000}</code>。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="h-sec" id="c3-5"><span class="sno">3.5</span>options (オプション)<span class="tag opt">オプション</span></h3>
+  <div class="tbl-wrap">
+    <table class="tbl pk">
+      <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">optionId</td><td class="c-type">string (PK)</td><td>例 <code>OP101</code>。</td></tr>
+        <tr><td class="c-key">name</td><td class="c-type">string</td><td>名称。例「発電機 (2.8kVA)」。</td></tr>
+        <tr><td class="c-key">price</td><td class="c-type">number</td><td>単価 (円)。</td></tr>
+        <tr><td class="c-key">priceType</td><td class="c-type">'per_day'|'per_rental'</td><td>課金単位。日数×単価 / 1回固定。</td></tr>
+        <tr><td class="c-key">categoryIds</td><td class="c-type">null | string[]</td><td><b>null = 共通オプション</b> (全車両カテゴリ) / 配列 = カテゴリ専用。物品カテゴリには共通を出さない。</td></tr>
+        <tr><td class="c-key">active</td><td class="c-type">boolean</td><td>有効フラグ。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="legend">共通: 免責補償・チャイルドシート・スタッドレス・ETC。専用例: キッチンカー約10品目 (発電機・追加プロパンガス 他)、キャンピングカー (寝具・BBQ 他)、特殊車両 (荷台シート 他)。</p>
+
+  <h3 class="h-sec" id="c3-6"><span class="sno">3.6</span>members (会員) / coupons<span class="tag">会員</span></h3>
+  <div class="tbl-wrap">
+    <table class="tbl pk">
+      <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">memberId</td><td class="c-type">string (PK)</td><td>例 <code>M001</code>。</td></tr>
+        <tr><td class="c-key">name / nameKana</td><td class="c-type">string</td><td>氏名・カナ。</td></tr>
+        <tr><td class="c-key">email / phone</td><td class="c-type">string</td><td>連絡先。email はログインID。</td></tr>
+        <tr><td class="c-key">password</td><td class="c-type">string</td><td>デモは平文。<b>本番はハッシュ化必須</b> (6.2節)。</td></tr>
+        <tr><td class="c-key">company / isCorporate</td><td class="c-type">string / boolean</td><td>法人名・法人フラグ。</td></tr>
+        <tr><td class="c-key">invoiceAllowed</td><td class="c-type">boolean</td><td><b>請求書払い許可</b>。管理者のみ付与。予約フローで該当会員のみ選択肢表示。</td></tr>
+        <tr><td class="c-key">points</td><td class="c-type">number</td><td>現在ポイント残高。</td></tr>
+        <tr><td class="c-key">coupons</td><td class="c-type">array (埋込)</td><td>要素 = <code>{couponId, amount, issuedAt, usedAt, usedFor, reason}</code>。usedAt=null が有効。</td></tr>
+        <tr><td class="c-key">pointHistory</td><td class="c-type">array (埋込)</td><td>要素 = <code>{at, delta, reason}</code>。付与・減算・失効の履歴。</td></tr>
+        <tr><td class="c-key">createdAt / lastUseAt</td><td class="c-type">ISO</td><td>登録日・最終利用日。lastUseAt はポイント有効期限の起点。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="h-sec" id="c3-7"><span class="sno">3.7</span>reservations (予約)<span class="tag">トランザクション</span></h3>
+  <div class="tbl-wrap">
+    <table class="tbl pk">
+      <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">reservationId</td><td class="c-type">string (PK)</td><td>例 <code>R0001</code>。</td></tr>
+        <tr><td class="c-key">assetId / vehicleId</td><td class="c-type">FK → assets</td><td>対象。vehicleId は旧画面互換エイリアス。</td></tr>
+        <tr><td class="c-key">assetName / vehicleName</td><td class="c-type">string</td><td>予約時点の名称スナップショット。</td></tr>
+        <tr><td class="c-key">categoryId / locationId</td><td class="c-type">FK</td><td>カテゴリ・拠点。</td></tr>
+        <tr><td class="c-key">quantity</td><td class="c-type">number</td><td>数量 (物品)。在庫照合に使用。</td></tr>
+        <tr><td class="c-key">customerName / Email / Phone</td><td class="c-type">string</td><td>利用者連絡先。</td></tr>
+        <tr><td class="c-key">company / licenseNo</td><td class="c-type">string</td><td>会社名 / 免許証番号 (車両)。</td></tr>
+        <tr><td class="c-key">memberId</td><td class="c-type">FK → members | null</td><td>会員予約なら紐付け。ゲスト予約は null。</td></tr>
+        <tr><td class="c-key">start / end</td><td class="c-type">ISO</td><td>貸出開始・返却予定。空き判定・料金計算の基準。</td></tr>
+        <tr><td class="c-key">optionIds / options</td><td class="c-type">array</td><td>選択オプション (IDと明細スナップショット)。</td></tr>
+        <tr><td class="c-key">payment</td><td class="c-type">object</td><td><code>{method:'onsite'|'invoice', status:'unpaid'|'paid'}</code>。</td></tr>
+        <tr><td class="c-key">price</td><td class="c-type">object</td><td><code>{total, breakdown|lines:[{label, amount}]}</code>。料金明細。</td></tr>
+        <tr><td class="c-key">couponId</td><td class="c-type">string|null</td><td>適用クーポン。作成時に会員側で使用済み化。</td></tr>
+        <tr><td class="c-key">status</td><td class="c-type">enum</td><td><code>confirmed</code> → <code>in_use</code> → <code>returned</code> / <code>cancelled</code>。returned で会員へポイント自動付与。</td></tr>
+        <tr><td class="c-key">pointGranted</td><td class="c-type">boolean</td><td>ポイント付与済フラグ (二重付与防止)。</td></tr>
+        <tr><td class="c-key">invoiceId</td><td class="c-type">FK → invoices | null</td><td>請求書に集約された場合の参照。</td></tr>
+        <tr><td class="c-key">licenseConfirmed</td><td class="c-type">boolean</td><td>免許確認ステップの完了フラグ。</td></tr>
+        <tr><td class="c-key">note / createdAt</td><td class="c-type">string / ISO</td><td>備考・受付日時。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note-box"><b>状態遷移と副作用</b>：<code>updateReservation(id,{status:'returned'})</code> で会員に <code>pointPerUse</code> を付与し、累計が <code>couponThreshold</code> (既定10pt) に達すると ¥1,000 クーポンを自動発行する (3.6・4.3参照)。</div>
+
+  <h3 class="h-sec" id="c3-8"><span class="sno">3.8</span>invoices (請求書)<span class="tag">トランザクション</span></h3>
+  <div class="tbl-wrap">
+    <table class="tbl pk">
+      <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">invoiceId</td><td class="c-type">string (PK)</td><td>例 <code>INV-0001</code>。</td></tr>
+        <tr><td class="c-key">memberId</td><td class="c-type">FK → members</td><td>請求先会員 (invoiceAllowed のみ発行可)。</td></tr>
+        <tr><td class="c-key">company / address / caseName</td><td class="c-type">string</td><td>会社名・住所・案件名 (印刷項目)。</td></tr>
+        <tr><td class="c-key">reservationIds</td><td class="c-type">FK[] → reservations</td><td>集約する予約群。<b>月次一括請求</b>で複数指定可。</td></tr>
+        <tr><td class="c-key">amount</td><td class="c-type">number</td><td>合計金額 (対象予約の total 合算)。</td></tr>
+        <tr><td class="c-key">status</td><td class="c-type">'unpaid'|'paid'</td><td>入金状況。paid 化で紐付く予約の payment.status も同期。</td></tr>
+        <tr><td class="c-key">issuedAt / dueDate / paidAt</td><td class="c-type">ISO|null</td><td>発行日・支払期限・入金日。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="h-sec" id="c3-9"><span class="sno">3.9</span>settings / notifications</h3>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>キー</th><th>形</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">settings.points</td><td class="c-type">object</td><td><code>{pointPerUse:1, couponThreshold:10, couponAmount:1000, expiryMonths:12}</code>。ポイント/クーポン制度の設定。</td></tr>
+        <tr><td class="c-key">settings.billing</td><td class="c-type">object</td><td><code>{bankName, accountType, accountNo, holder}</code>。請求書の振込先。</td></tr>
+        <tr><td class="c-key">high-season</td><td class="c-type">array</td><td><code>[{name, start, end, rate}]</code>。ハイシーズン加算 (%)。料金エンジンが自動参照。</td></tr>
+        <tr><td class="c-key">notifications</td><td class="c-type">array</td><td>要素 = <code>{at, type, message, refId}</code>。メール送信のデモ代替ログ。先頭挿入・最大100件。</td></tr>
+        <tr><td class="c-key">dataVersion</td><td class="c-type">number</td><td>シード/マイグレーション管理。現行 3。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <a class="back-top" href="#top">▲ 目次へ戻る</a>
+</section>
+
+<!-- =========================================================
+     4. API仕様
+========================================================== -->
+<section class="sheet chapter" id="c4">
+  <h2 class="h-chapter"><span class="cno">第4章</span>API仕様</h2>
+  <p class="lead">
+    データアクセスは 2 層で提供する。<strong>SkyRentStore</strong> は同期メソッド群 (localStorage を直接操作、主に管理画面が利用)、
+    <strong>SkyRentAPI</strong> はそれを Promise でラップした入口 (公開サイト・旧管理画面が利用、バックエンド差替の抽象化層)。
+  </p>
+
+  <h3 class="h-sec" id="c4-1"><span class="sno">4.1</span>SkyRentStore (同期メソッド)</h3>
+  <h4 class="h-sub">汎用 CRUD</h4>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>メソッド</th><th>引数</th><th>戻り値 / 説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">list(entity)</td><td>entity</td><td>array — エンティティ全件。</td></tr>
+        <tr><td class="c-key">saveList(entity, arr)</td><td>entity, array</td><td>void — 全件上書き保存。</td></tr>
+        <tr><td class="c-key">upsert(entity, idField, obj)</td><td>entity, idField, obj</td><td>obj — 主キー一致で更新、無ければ追加。</td></tr>
+        <tr><td class="c-key">removeById(entity, idField, id)</td><td>entity, idField, id</td><td>void — 該当削除。</td></tr>
+        <tr><td class="c-key">genId(prefix, entity, idField)</td><td>prefix, entity, idField</td><td>string — 連番ID (例 <code>R0007</code>) を採番。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h4 class="h-sub">マスタ参照</h4>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>メソッド</th><th>引数</th><th>戻り値 / 説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">categories(includeInactive?)</td><td>boolean?</td><td>array — sort順。既定は active のみ。</td></tr>
+        <tr><td class="c-key">getCategory(id)</td><td>categoryId</td><td>object|null</td></tr>
+        <tr><td class="c-key">locations()</td><td>—</td><td>array — sort順。</td></tr>
+        <tr><td class="c-key">getLocation(id)</td><td>locationId</td><td>object|null</td></tr>
+        <tr><td class="c-key">assets(filter?)</td><td>{categoryId?, locationId?, activeOnly?, type?}</td><td>array — 条件で絞込。</td></tr>
+        <tr><td class="c-key">getAsset(id)</td><td>assetId</td><td>object|null</td></tr>
+        <tr><td class="c-key">optionsForCategory(categoryId)</td><td>categoryId</td><td><code>{common:[], specific:[]}</code> — 物品は common=[]。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h4 class="h-sub">検索・空き状況・予約</h4>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>メソッド</th><th>引数</th><th>戻り値 / 説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">availability(assetId, start, end, qty, excludeResId?)</td><td>ISO×2, number</td><td><code>{ok, remaining, stock, reason}</code> — 車両=重複不可 / 物品=在庫数照合。</td></tr>
+        <tr><td class="c-key">searchAvailable(params)</td><td>{categoryId?, locationId?, start?, end?, quantity?, filters?}</td><td>array — 各要素に <code>.availability</code> 付与。filters は number型=「以上」、select/text=完全一致。</td></tr>
+        <tr><td class="c-key">createReservation(payload)</td><td>payload (下記)</td><td>reservation — 空き検証・クーポン消費・通知ログを内包。</td></tr>
+        <tr><td class="c-key">updateReservation(id, updates)</td><td>reservationId, object</td><td>reservation — status='returned' でポイント自動付与+クーポン自動発行。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="legend"><b>createReservation の payload</b>: <code>{assetId, quantity, customerName, customerEmail, customerPhone, company, licenseNo, memberId, start, end, optionIds, options, paymentMethod, price, couponId, licenseConfirmed, note}</code></p>
+
+  <h4 class="h-sub">会員・ポイント・クーポン</h4>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>メソッド</th><th>引数</th><th>戻り値 / 説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">registerMember(payload)</td><td>{name, nameKana, email, password, phone, company?}</td><td>member — 重複メール検証。</td></tr>
+        <tr><td class="c-key">loginMember(email, pw)</td><td>string×2</td><td>member|null — sessionStorage にセッション保存。</td></tr>
+        <tr><td class="c-key">logoutMember() / currentMember()</td><td>—</td><td>void / member|null — ログイン中会員 (ポイント失効判定込み)。</td></tr>
+        <tr><td class="c-key">adjustPoints(memberId, delta, reason)</td><td>string, number, string</td><td>member — 手動付与/減算。しきい値到達でクーポン発行。</td></tr>
+        <tr><td class="c-key">issueCouponManually(memberId, amount, reason)</td><td>string, number, string</td><td>member — 管理者クーポン発行。</td></tr>
+        <tr><td class="c-key">unusedCoupons(memberId)</td><td>string</td><td>array — 未使用クーポン。</td></tr>
+        <tr><td class="c-key">pointSettings()</td><td>—</td><td><code>{pointPerUse, couponThreshold, couponAmount, expiryMonths}</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h4 class="h-sub">請求書・通知</h4>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>メソッド</th><th>引数</th><th>戻り値 / 説明</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">invoices()</td><td>—</td><td>array</td></tr>
+        <tr><td class="c-key">createInvoice(payload)</td><td>{memberId, reservationIds, company, address, caseName, dueDate?}</td><td>invoice — invoiceAllowed 検証・予約へ invoiceId 紐付け・月次一括対応。</td></tr>
+        <tr><td class="c-key">setInvoiceStatus(id, 'paid'|'unpaid')</td><td>invoiceId, status</td><td>invoice — 紐付く予約の入金状態も同期。</td></tr>
+        <tr><td class="c-key">notify(type, message, refId)</td><td>string×3</td><td>void — 通知ログ追加 (メール送信の差替点)。</td></tr>
+        <tr><td class="c-key">notifications()</td><td>—</td><td>array — 通知ログ。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="legend">定数: <code>STATUS_LABELS = {confirmed:'確定', in_use:'貸出中', returned:'返却済', cancelled:'キャンセル'}</code> / <code>PAYMENT_LABELS = {onsite:'現地決済', invoice:'請求書払い', online:'オンライン決済'}</code></p>
+
+  <h3 class="h-sec" id="c4-2"><span class="sno">4.2</span>SkyRentAPI (Promise ラッパ)</h3>
+  <p class="lead">すべて Promise を返す。約120ms の擬似遅延を挟み、本番 REST 化時の非同期挙動に近づけている。旧画面互換のため <code>vehicleId / vehicleName / pricePerDay / class</code> のエイリアスを付与。</p>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>メソッド</th><th>引数</th><th>戻り値 (Promise)</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">listCategories() / listLocations()</td><td>—</td><td>array</td></tr>
+        <tr><td class="c-key">listVehicles(filter?) / listAssets(filter?)</td><td>filter?</td><td>array (旧互換形)</td></tr>
+        <tr><td class="c-key">getAsset(id)</td><td>assetId</td><td>object</td></tr>
+        <tr><td class="c-key">listOptions(categoryId)</td><td>categoryId</td><td><code>{common, specific}</code></td></tr>
+        <tr><td class="c-key">search(params)</td><td>検索条件</td><td>array (各要素に availability)</td></tr>
+        <tr><td class="c-key">checkAvailability(start, end)</td><td>ISO×2</td><td>array <code>{vehicleId, available, remaining, stock, conflictReason}</code></td></tr>
+        <tr><td class="c-key">createReservation(payload)</td><td>payload</td><td><code>{reservationId, assetName, start, end, total, calendarEventId}</code> — 失敗時 reject。</td></tr>
+        <tr><td class="c-key">listReservations(from?, to?)</td><td>ISO?×2</td><td>array (期間フィルタ・開始降順)</td></tr>
+        <tr><td class="c-key">updateReservation(id, updates)</td><td>id, object</td><td>reservation</td></tr>
+        <tr><td class="c-key">getDashboard(dateStr?, locationId?)</td><td>'YYYY-MM-DD'?, id?</td><td>下記集計オブジェクト</td></tr>
+        <tr><td class="c-key">listCustomers()</td><td>—</td><td>array (予約由来の顧客集約)</td></tr>
+        <tr><td class="c-key">getRevenue()</td><td>—</td><td>array (直近12ヶ月の月次売上)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="legend"><b>getDashboard の戻り</b>: <code>{date, bookings, departures, returns, weekly, byLocation:[{locationId, name, departures, returns, inUse}], unprocessed, salesMonth, shaken, notifications}</code></p>
+
+  <h3 class="h-sec" id="c4-3"><span class="sno">4.3</span>SkyRentPricing.calculate 料金決定ロジック</h3>
+  <p class="lead">
+    署名: <code>calculate({asset, start, end, quantity, options:[optionObj], coupon:{amount}|null, seasons?})</code> →
+    <code>{lines:[{label, amount}], days, hours, plan, subtotal, discount, total}</code>。
+    利用期間から最適な料金プランを自動選択し、加算・割引を順に積む。
+  </p>
+  <figure class="fig">
+    <div class="fig-frame">
+      <svg viewBox="0 0 760 470" role="img" aria-label="料金計算フロー" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif">
+        <defs>
+          <marker id="fa" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#1c4a7a"/></marker>
+        </defs>
+        <!-- start -->
+        <rect x="290" y="14" width="180" height="34" rx="17" fill="#1c4a7a"/>
+        <text x="380" y="36" font-size="12" text-anchor="middle" fill="#fff" font-weight="700">期間 (start, end) を算出</text>
+        <text x="486" y="40" font-size="10" fill="#6a7683">hours / days は切上・最低1</text>
+        <line x1="380" y1="48" x2="380" y2="66" stroke="#1c4a7a" stroke-width="1.5" marker-end="url(#fa)"/>
+
+        <!-- decision: monthly -->
+        <polygon points="380,68 500,102 380,136 260,102" fill="#eaf1f8" stroke="#1c4a7a" stroke-width="1.3"/>
+        <text x="380" y="99" font-size="11" text-anchor="middle" fill="#1c4a7a" font-weight="700">days ≥ 30</text>
+        <text x="380" y="114" font-size="10" text-anchor="middle" fill="#4a5560">かつ priceMonth 有</text>
+        <rect x="540" y="86" width="200" height="34" rx="6" fill="#fff" stroke="#2d6ca8"/>
+        <text x="640" y="108" font-size="11" text-anchor="middle" fill="#1c4a7a">月割 plan='monthly'</text>
+        <line x1="500" y1="102" x2="538" y2="102" stroke="#1c4a7a" stroke-width="1.4" marker-end="url(#fa)"/>
+        <text x="512" y="96" font-size="10" fill="#2d6ca8">Yes</text>
+        <line x1="380" y1="136" x2="380" y2="152" stroke="#1c4a7a" stroke-width="1.4" marker-end="url(#fa)"/>
+        <text x="388" y="148" font-size="10" fill="#6a7683">No</text>
+
+        <!-- decision: weekly -->
+        <polygon points="380,154 500,188 380,222 260,188" fill="#eaf1f8" stroke="#1c4a7a" stroke-width="1.3"/>
+        <text x="380" y="185" font-size="11" text-anchor="middle" fill="#1c4a7a" font-weight="700">days ≥ 7</text>
+        <text x="380" y="200" font-size="10" text-anchor="middle" fill="#4a5560">かつ priceWeek 有</text>
+        <rect x="540" y="172" width="200" height="34" rx="6" fill="#fff" stroke="#2d6ca8"/>
+        <text x="640" y="194" font-size="11" text-anchor="middle" fill="#1c4a7a">週割 plan='weekly'</text>
+        <line x1="500" y1="188" x2="538" y2="188" stroke="#1c4a7a" stroke-width="1.4" marker-end="url(#fa)"/>
+        <text x="512" y="182" font-size="10" fill="#2d6ca8">Yes</text>
+        <line x1="380" y1="222" x2="380" y2="238" stroke="#1c4a7a" stroke-width="1.4" marker-end="url(#fa)"/>
+        <text x="388" y="234" font-size="10" fill="#6a7683">No</text>
+
+        <!-- decision: hourly -->
+        <polygon points="380,240 500,274 380,308 260,274" fill="#eaf1f8" stroke="#1c4a7a" stroke-width="1.3"/>
+        <text x="380" y="271" font-size="11" text-anchor="middle" fill="#1c4a7a" font-weight="700">hours &lt; 24</text>
+        <text x="380" y="286" font-size="10" text-anchor="middle" fill="#4a5560">かつ 時間計 &lt; 日額</text>
+        <rect x="540" y="258" width="200" height="34" rx="6" fill="#fff" stroke="#2d6ca8"/>
+        <text x="640" y="280" font-size="11" text-anchor="middle" fill="#1c4a7a">時間貸 plan='hourly'</text>
+        <line x1="500" y1="274" x2="538" y2="274" stroke="#1c4a7a" stroke-width="1.4" marker-end="url(#fa)"/>
+        <text x="512" y="268" font-size="10" fill="#2d6ca8">Yes</text>
+        <line x1="380" y1="308" x2="380" y2="326" stroke="#1c4a7a" stroke-width="1.4" marker-end="url(#fa)"/>
+        <text x="388" y="322" font-size="10" fill="#6a7683">No</text>
+
+        <!-- daily -->
+        <rect x="280" y="328" width="200" height="34" rx="6" fill="#fff" stroke="#2d6ca8"/>
+        <text x="380" y="350" font-size="11" text-anchor="middle" fill="#1c4a7a">日貸 plan='daily' (既定)</text>
+
+        <!-- merge to accumulate -->
+        <line x1="380" y1="362" x2="380" y2="380" stroke="#1c4a7a" stroke-width="1.5" marker-end="url(#fa)"/>
+        <line x1="640" y1="120" x2="640" y2="374" stroke="#7a8593" stroke-width="1.2" stroke-dasharray="4 3"/>
+        <line x1="640" y1="206" x2="640" y2="374" stroke="#7a8593" stroke-width="1.2" stroke-dasharray="4 3"/>
+        <path d="M640 292 L640 374 L482 374" fill="none" stroke="#7a8593" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#fa)"/>
+
+        <rect x="150" y="382" width="460" height="76" rx="8" fill="#f7fafd" stroke="#1c4a7a" stroke-width="1.4"/>
+        <text x="380" y="404" font-size="11.5" text-anchor="middle" fill="#1c4a7a" font-weight="700">基本料金 × 数量  →  順に積算</text>
+        <text x="380" y="424" font-size="10.5" text-anchor="middle" fill="#33475b">+ ハイシーズン加算 (重複日数 × rate%)  + オプション (per_day×日数 / per_rental)</text>
+        <text x="380" y="442" font-size="10.5" text-anchor="middle" fill="#33475b">= subtotal  −  クーポン割引 min(額面, subtotal)  =  <tspan font-weight="700" fill="#1c4a7a">total</tspan></text>
+      </svg>
+    </div>
+    <figcaption>図4-1 料金決定フロー (baseCharge のプラン選択 → 加算 → 割引)</figcaption>
+  </figure>
+  <ul class="bul">
+    <li><b>プラン選択は上から順に評価</b>し、最初に条件を満たしたプランを採用 (月割 → 週割 → 時間貸 → 日貸)。週割・月割は端数を日割りしつつ、次の週/月料金を超えない上限で丸める。</li>
+    <li><b>ハイシーズン</b>は <code>sky-rent.high-season</code> を自動参照し、利用期間と重なる日数分だけ基本料金に rate% を加算。</li>
+    <li><b>拡張性</b>：長期割引・会員ランク別料金などは、加算ルールを 1 関数追加するだけで組み込める設計 (要件7章「料金計算モジュールの拡張性」準拠)。</li>
+  </ul>
+  <a class="back-top" href="#top">▲ 目次へ戻る</a>
+</section>
+
+<!-- =========================================================
+     5. 拡張設計
+========================================================== -->
+<section class="sheet chapter" id="c5">
+  <h2 class="h-chapter"><span class="cno">第5章</span>拡張設計</h2>
+
+  <h3 class="h-sec" id="c5-1"><span class="sno">5.1</span>新カテゴリ追加手順 (エンジニア不要)</h3>
+  <p class="lead">
+    要件定義書で<strong>最重要</strong>とされる「新カテゴリ追加はエンジニア不要で管理画面のみ」を、EAV (customFieldDefs) と統合 assets モデルで実現している。
+    コード変更・再デプロイは一切不要。
+  </p>
+  <ol class="num">
+    <li><b>カテゴリ作成</b> — <code>categories.html</code> で新カテゴリを追加 (name / type=vehicle|item / icon / sort)。</li>
+    <li><b>カスタム項目定義</b> — 同画面のカスタム項目エディタで <code>customFieldDefs</code> を設定 (key・ラベル・型・単位・選択肢・<code>filterable</code>)。これが登録フォーム・詳細スペック表示・検索フィルタに<strong>自動反映</strong>される。</li>
+    <li><b>アセット登録</b> — <code>vehicles.html</code> で車両/物品を登録。カスタム項目の入力欄が定義に応じて自動生成され、値は <code>customFields</code> に格納。料金プラン・在庫・(車両は)車検期限を設定。</li>
+    <li><b>オプション紐付け</b> — <code>options.html</code> で専用オプションを作成し <code>categoryIds</code> に新カテゴリを指定 (共通オプションは自動適用)。</li>
+    <li>公開サイトの検索・詳細・予約フローに即時反映。<strong>フロントの改修は発生しない。</strong></li>
+  </ol>
+  <div class="note-box"><b>設計の要</b>：画面側はカテゴリの <code>customFieldDefs</code> を読んで UI を動的生成するため、項目の増減がデータ変更だけで完結する。<code>filterable:true</code> の number 項目は「以上」、select/text は完全一致で検索に効く。</div>
+
+  <h3 class="h-sec" id="c5-2"><span class="sno">5.2</span>決済手段の追加 (payment.method)</h3>
+  <p class="lead">初期リリースは現地決済 + 請求書払い。オンライン事前決済 (Stripe 等) は対象外だが、拡張できる設計を確保済み。</p>
+  <ul class="bul">
+    <li><code>reservations.payment.method</code> は文字列 enum。既に <code>'online'</code> のラベルを <code>PAYMENT_LABELS</code> に定義済 (「オンライン決済」)。</li>
+    <li>追加手順: ① booking.html の決済選択に online を追加 → ② 予約作成前に Stripe Checkout / PaymentIntent を発火 → ③ 成功コールバックで <code>createReservation({paymentMethod:'online', ...})</code> を実行し <code>payment.status='paid'</code> を設定。</li>
+    <li>請求書払いと同様、<b>会員フラグや拠点で選択肢の出し分け</b>が可能な構造。金額は SkyRentPricing の total をそのまま Stripe 金額に用いる。</li>
+  </ul>
+
+  <h3 class="h-sec" id="c5-3"><span class="sno">5.3</span>メール送信の実装差替 (notify)</h3>
+  <p class="lead">
+    予約確認・状態変更・クーポン発行・請求書発行などの通知は、すべて <code>SkyRentStore.notify(type, message, refId)</code> の一点に集約されている (デモではログ化)。
+  </p>
+  <ul class="bul">
+    <li>本番はこの関数内から実送信を呼ぶだけでよい: GAS の <code>MailApp.sendEmail</code> / SendGrid・Amazon SES 等の REST API。</li>
+    <li>宛先は refId から予約・会員を引き当てて解決。<b>呼び出し側 (各画面) の変更は不要</b>で、送信基盤を一箇所で差し替えられる。</li>
+    <li>通知種別 (type): <code>reservation / status / member / coupon / invoice</code>。テンプレートを type ごとに用意すれば HTML メール化も容易。</li>
+  </ul>
+
+  <h3 class="h-sec" id="c5-4"><span class="sno">5.4</span>本番移行 (localStorage → REST API)</h3>
+  <p class="lead">
+    <code>js/config.js</code> の <code>GAS_URL</code> を実 URL に設定すると、<code>SkyRentAPI</code> が fetch ベース実装へ切り替わる (<code>isConfigured</code> 判定)。
+    画面側は SkyRentAPI しか呼ばないため、以下のエンドポイントを用意すれば移行が完了する。
+  </p>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>SkyRentStore 相当</th><th>HTTP メソッド / エンドポイント (例)</th><th>備考</th></tr></thead>
+      <tbody>
+        <tr><td class="c-key">list / assets / categories / locations</td><td><code>GET /assets</code>, <code>/categories</code>, <code>/locations</code></td><td>マスタ参照。クエリで絞込。</td></tr>
+        <tr><td class="c-key">searchAvailable</td><td><code>GET /search?categoryId&amp;start&amp;end&amp;filters</code></td><td>サーバ側で空き算出。</td></tr>
+        <tr><td class="c-key">availability</td><td><code>GET /availability/{assetId}?start&amp;end</code></td><td>在庫・重複判定。</td></tr>
+        <tr><td class="c-key">createReservation</td><td><code>POST /reservations</code></td><td>トランザクションで空き検証+採番。</td></tr>
+        <tr><td class="c-key">updateReservation</td><td><code>PATCH /reservations/{id}</code></td><td>状態遷移・ポイント副作用はサーバ側で。</td></tr>
+        <tr><td class="c-key">registerMember / loginMember</td><td><code>POST /members</code> / <code>POST /auth/login</code></td><td>パスワードハッシュ化・トークン発行。</td></tr>
+        <tr><td class="c-key">createInvoice / setInvoiceStatus</td><td><code>POST /invoices</code> / <code>PATCH /invoices/{id}</code></td><td>請求・入金管理。</td></tr>
+        <tr><td class="c-key">getDashboard / getRevenue</td><td><code>GET /dashboard</code> / <code>/revenue</code></td><td>集計はサーバ側で最適化可。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="legend">エンティティ = テーブル (categories / locations / assets / options / members / reservations / invoices) に 1:1 でマッピング。coupons・pointHistory・customFields は JSON カラム or 子テーブルのいずれでも可。</p>
+  <a class="back-top" href="#top">▲ 目次へ戻る</a>
+</section>
+
+<!-- =========================================================
+     6. 非機能設計
+========================================================== -->
+<section class="sheet chapter" id="c6">
+  <h2 class="h-chapter"><span class="cno">第6章</span>非機能設計</h2>
+
+  <h3 class="h-sec" id="c6-1"><span class="sno">6.1</span>レスポンシブ設計</h3>
+  <ul class="bul">
+    <li><b>スマホ最優先</b> (要件)。公開サイトは <code>style.css</code> + <code>public.css</code> で流動レイアウト。検索・詳細・予約フローをタッチ操作前提で設計。</li>
+    <li>管理画面は <code>manage.css</code> で共通トップバーをハンバーガーメニューに集約。少人数・非常駐運営が外出先スマホから全4拠点を管理できる。</li>
+    <li>幅の広いテーブル (予約一覧・ガント) は <code>.card</code> 内で横スクロールさせ、レイアウト崩れを防止。</li>
+  </ul>
+
+  <h3 class="h-sec" id="c6-2"><span class="sno">6.2</span>セキュリティ (XSS対策・認証)</h3>
+  <ul class="bul">
+    <li><b>XSS対策</b>：ユーザー入力・データ由来の文字列は必ず <code>esc()</code> で HTML エスケープしてから DOM 挿入する (開発コントラクト規約)。<code>&amp; &lt; &gt; " '</code> を実体参照へ変換。</li>
+    <li><b>認証 (デモ)</b>：会員は email + password (平文) で <code>sessionStorage</code> セッション管理。<b>本番はパスワードのハッシュ化 (bcrypt 等) とサーバ側セッション/JWT が必須</b> (5.4節で移行)。</li>
+    <li><b>権限</b>：請求書払いは <code>invoiceAllowed</code> フラグ、ポイント手動操作・帳票発行は管理画面 (従業員権限) に限定。従業員管理で拠点・権限を設定。</li>
+  </ul>
+
+  <h3 class="h-sec" id="c6-3"><span class="sno">6.3</span>データバックアップ / 復元</h3>
+  <ul class="bul">
+    <li><code>profile.html</code> から全 <code>sky-rent.*</code> データを JSON でエクスポート / インポート可能。localStorage 運用時の消失・端末移行に備える。</li>
+    <li>シード投入は <code>DATA_VERSION</code> で管理。バージョン不一致時のみ再投入し、<code>settings.*</code> (ポイント設定・振込先) は温存する非破壊マイグレーション。</li>
+    <li>本番移行後はバックエンド側の RDB バックアップに一本化する。</li>
+  </ul>
+
+  <h3 class="h-sec" id="c6-4"><span class="sno">6.4</span>多言語 (i18n) ・可用性・性能</h3>
+  <ul class="bul">
+    <li><b>多言語</b>：公開サイトは <code>SkyRentI18n</code> で日英対応 (<code>data-i18n</code> 属性 / <code>t()</code>)。将来の中韓は辞書追加で拡張。資産名は日本語を基本に <code>nameEn</code> を併用。</li>
+    <li><b>可用性</b>：静的サイト + GitHub Pages (CDN 配信) によりサーバ障害点が少なく、常時稼働に強い。</li>
+    <li><b>性能</b>：ビルド不要・依存 CDN なしの軽量構成。データは localStorage で即応。集計 (ダッシュボード・売上) はクライアント側で完結し、本番移行時はサーバ集計に置換して更にスケールさせる。</li>
+    <li><b>通知</b>：非常駐前提のため、予約・状態変更をメール自動通知 (notify) で担保する運用設計。</li>
+  </ul>
+
+  <div class="docfoot">
+    Sky Rent 基本設計書 v3.1 (実装反映版) ／ 準拠: 要件定義書 v3.0・dev-contract.md<br>
+    © 2026 Sky Rent — 本書は納品ドキュメント一式の一部です。
+  </div>
+  <a class="back-top" href="#top">▲ 目次へ戻る</a>
+</section>
+
+</body>
+</html>

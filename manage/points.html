@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポイント・クーポン設定 | Sky Rent 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">ポイント・クーポン設定</h1>
+    <p class="page-note">会員ポイント制度と、請求書に印字する振込先口座を設定します。</p>
+
+    <section class="card" style="padding:22px;margin-bottom:14px">
+      <strong class="card-section-title">ポイント制度</strong>
+      <div class="form-row"><label>1回の利用で付与するポイント</label><input type="number" class="form-input" id="p-per" style="max-width:160px"> pt</div>
+      <div class="form-row"><label>クーポン発行に必要なポイント</label><input type="number" class="form-input" id="p-thresh" style="max-width:160px"> pt</div>
+      <div class="form-row"><label>自動発行クーポンの額面</label>¥<input type="number" class="form-input" id="p-amount" style="max-width:160px"></div>
+      <div class="form-row"><label>ポイント有効期限 (最終利用日から)</label><input type="number" class="form-input" id="p-expiry" style="max-width:160px"> ヶ月</div>
+      <div class="form-actions"><button class="btn btn-primary" id="p-save">保存</button></div>
+    </section>
+
+    <section class="card" style="padding:22px;margin-bottom:14px">
+      <strong class="card-section-title">請求書 振込先口座</strong>
+      <p style="font-size:12px;color:#777;margin-bottom:10px">ここで設定した口座情報が「請求書管理」で発行する請求書に印字されます。</p>
+      <div class="form-row"><label>銀行・支店名</label><input type="text" class="form-input" id="b-bank"></div>
+      <div class="form-row"><label>口座種別</label><select class="form-input" id="b-type" style="max-width:160px"><option>普通</option><option>当座</option></select></div>
+      <div class="form-row"><label>口座番号</label><input type="text" class="form-input" id="b-no"></div>
+      <div class="form-row"><label>口座名義</label><input type="text" class="form-input" id="b-holder"></div>
+      <div class="form-actions"><button class="btn btn-primary" id="b-save">保存</button></div>
+    </section>
+
+    <section class="card" style="padding:22px;margin-bottom:14px;background:#f7fbff">
+      <strong class="card-section-title">現在の設定でのフロー</strong>
+      <p id="flow-desc" style="font-size:13px;line-height:1.9;color:#333"></p>
+    </section>
+
+    <section class="card" style="padding:22px">
+      <strong class="card-section-title">最近の自動処理ログ (ポイント・クーポン・会員)</strong>
+      <ul class="news-list" id="log-list" style="margin-top:8px"><li>-</li></ul>
+    </section>
+  </main>
+
+  <div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e8a4a;color:#fff;padding:10px 22px;border-radius:6px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.2);opacity:0;transition:opacity .3s;pointer-events:none;z-index:600"></div>
+
+  <script src="partials.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/pricing.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+  (function () {
+    const S = window.SkyRentStore;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    function fmtDT(iso){const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes());}
+    function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.opacity = '1'; setTimeout(() => t.style.opacity = '0', 2000); }
+
+    function loadPoints() {
+      const p = S.pointSettings();
+      $('#p-per').value = p.pointPerUse; $('#p-thresh').value = p.couponThreshold; $('#p-amount').value = p.couponAmount; $('#p-expiry').value = p.expiryMonths;
+    }
+    function loadBilling() {
+      const b = S.read('settings.billing', { bankName: '', accountType: '普通', accountNo: '', holder: '' });
+      $('#b-bank').value = b.bankName || ''; $('#b-type').value = b.accountType || '普通'; $('#b-no').value = b.accountNo || ''; $('#b-holder').value = b.holder || '';
+    }
+    function renderFlow() {
+      const p = S.pointSettings();
+      $('#flow-desc').innerHTML = '返却処理を行うと会員に <strong>+' + p.pointPerUse + 'pt</strong> が付与されます。' +
+        '累計 <strong>' + p.couponThreshold + 'pt</strong> に達すると <strong>¥' + Number(p.couponAmount).toLocaleString() + '</strong> のクーポンが自動発行され、' +
+        '次回予約時の料金から自動割引されます。ポイントは最終利用日から <strong>' + p.expiryMonths + 'ヶ月</strong> で失効します。';
+    }
+    function renderLog() {
+      const logs = S.notifications().filter(n => ['coupon', 'member', 'points'].indexOf(n.type) >= 0).slice(0, 10);
+      $('#log-list').innerHTML = logs.length ? logs.map(n => '<li><span class="news-date">' + fmtDT(n.at) + '</span> ' + esc(n.message) + '</li>').join('') : '<li>まだログはありません</li>';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPoints(); loadBilling(); renderFlow(); renderLog();
+      $('#p-save').addEventListener('click', () => {
+        S.write('settings.points', {
+          pointPerUse: parseInt($('#p-per').value, 10) || 1,
+          couponThreshold: parseInt($('#p-thresh').value, 10) || 10,
+          couponAmount: parseInt($('#p-amount').value, 10) || 1000,
+          expiryMonths: parseInt($('#p-expiry').value, 10) || 12
+        });
+        renderFlow(); toast('✓ ポイント設定を保存しました');
+      });
+      $('#b-save').addEventListener('click', () => {
+        S.write('settings.billing', { bankName: $('#b-bank').value.trim(), accountType: $('#b-type').value, accountNo: $('#b-no').value.trim(), holder: $('#b-holder').value.trim() });
+        toast('✓ 振込先を保存しました');
+      });
+    });
+  })();
+  </script>
+</body>
+</html>
