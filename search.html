@@ -8,20 +8,20 @@
   <link rel="stylesheet" href="css/public.css">
 </head>
 <body>
-  <header class="site-header">
+  <header class="site-header solid">
     <div class="container header-inner">
-      <a href="index.html" class="logo"><span class="logo-mark">✈</span><span class="logo-text">Sky Rent</span></a>
+      <a href="index.html" class="logo"><span class="logo-mark">空</span><span class="logo-text">Sky Rent</span></a>
       <nav class="site-nav">
-        <a href="index.html#categories" data-i18n="nav.categories">カテゴリ</a>
-        <a href="search.html" data-i18n="nav.search">予約する</a>
-        <a href="index.html#locations" data-i18n="nav.locations">店舗一覧</a>
+        <a href="index.html#categories" data-i18n="nav.categories" class="nav-hide-sp">カテゴリ</a>
+        <a href="index.html#locations" data-i18n="nav.locations" class="nav-hide-sp">店舗一覧</a>
         <a href="mypage.html" data-i18n="nav.mypage">マイページ</a>
+        <a href="search.html" class="nav-cta" data-i18n="nav.search">予約する</a>
         <button class="lang-btn" data-lang-toggle type="button">EN</button>
       </nav>
     </div>
   </header>
 
-  <main class="container" style="padding-top:24px;padding-bottom:60px">
+  <main class="container page-offset" style="padding-bottom:60px">
     <div class="steps">
       <span class="step active"><span class="n">1</span><span data-sk="s1">検索</span></span>
       <span class="sep">›</span>
@@ -58,13 +58,14 @@
     <div class="asset-grid" id="results"></div>
   </main>
 
-  <footer class="site-footer"><div class="container"><p data-i18n="footer.copyright">© 2026 Sky Rent</p></div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer-bottom" style="border-top:none"><span data-i18n="footer.copyright">© 2026 Sky Rent</span><a href="index.html">← トップへ戻る</a></div></div></footer>
 
   <script src="js/config.js"></script>
   <script src="js/store.js"></script>
   <script src="js/pricing.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/photos.js"></script>
   <script>
   (function () {
     const S = window.SkyRentStore, I = window.SkyRentI18n, P = window.SkyRentPricing;
@@ -185,7 +186,7 @@
           ? '<a class="btn btn-primary" href="detail.html?' + q + '">' + (isEn() ? 'Details & Book' : '詳細・予約') + '</a>'
           : '<button class="btn btn-secondary" disabled>' + I.t('search.unavailable') + '</button>';
         return '<div class="asset-card ' + (av.ok ? 'ok' : 'ng') + '">' +
-          '<div class="thumb">' + esc(a.image || '📦') + '</div>' +
+          '<div class="thumb">' + (window.SkyRentPhotos ? window.SkyRentPhotos.thumbHtml(a) : esc(a.image || '📦')) + '</div>' +
           '<div class="body">' +
           '<div class="cat">' + esc(catName(cat)) + ' ・ ' + esc(loc ? (isEn() && loc.nameEn ? loc.nameEn : loc.name) : '') + '</div>' +
           '<div class="name">' + esc(assetName(a)) + lic + '</div>' +

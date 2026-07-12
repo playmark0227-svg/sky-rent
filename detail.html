@@ -8,20 +8,20 @@
   <link rel="stylesheet" href="css/public.css">
 </head>
 <body>
-  <header class="site-header">
+  <header class="site-header solid">
     <div class="container header-inner">
-      <a href="index.html" class="logo"><span class="logo-mark">✈</span><span class="logo-text">Sky Rent</span></a>
+      <a href="index.html" class="logo"><span class="logo-mark">空</span><span class="logo-text">Sky Rent</span></a>
       <nav class="site-nav">
-        <a href="index.html#categories" data-i18n="nav.categories">カテゴリ</a>
-        <a href="search.html" data-i18n="nav.search">予約する</a>
-        <a href="index.html#locations" data-i18n="nav.locations">店舗一覧</a>
+        <a href="index.html#categories" data-i18n="nav.categories" class="nav-hide-sp">カテゴリ</a>
+        <a href="index.html#locations" data-i18n="nav.locations" class="nav-hide-sp">店舗一覧</a>
         <a href="mypage.html" data-i18n="nav.mypage">マイページ</a>
+        <a href="search.html" class="nav-cta" data-i18n="nav.search">予約する</a>
         <button class="lang-btn" data-lang-toggle type="button">EN</button>
       </nav>
     </div>
   </header>
 
-  <main class="container" style="padding-top:24px;padding-bottom:60px">
+  <main class="container page-offset" style="padding-bottom:60px">
     <div class="steps">
       <span class="step done"><span class="n">1</span><span data-sk="s1">検索</span></span>
       <span class="sep">›</span>
@@ -39,14 +39,15 @@
       <!-- 左: 詳細 -->
       <div>
         <div class="p-card">
-          <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
-            <div style="font-size:80px;line-height:1" id="d-image">📦</div>
-            <div>
-              <div class="muted" id="d-cat" style="font-size:12px;margin-bottom:4px"></div>
-              <h1 style="font-size:24px" id="d-name"></h1>
+          <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+            <div id="d-image" style="width:230px;max-width:100%;aspect-ratio:16/10;border-radius:8px;overflow:hidden;position:relative;background:linear-gradient(140deg,var(--ink),var(--ink-2));display:flex;align-items:center;justify-content:center;font-size:54px;flex-shrink:0">📦</div>
+            <div style="flex:1;min-width:220px">
+              <div class="muted" id="d-cat" style="font-family:var(--font-num);font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px"></div>
+              <h1 style="font-family:var(--font-serif);font-size:26px;line-height:1.5" id="d-name"></h1>
               <div class="muted mt8" id="d-loc" style="font-size:13px"></div>
             </div>
           </div>
+          <style>#d-image img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}</style>
           <div id="d-license"></div>
           <h3 class="mt24 mb8" data-i18n="detail.specs" style="font-size:15px">スペック・装備</h3>
           <table class="spec-table" id="d-specs"></table>
@@ -90,13 +91,14 @@
     </div>
   </main>
 
-  <footer class="site-footer"><div class="container"><p data-i18n="footer.copyright">© 2026 Sky Rent</p></div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer-bottom" style="border-top:none"><span data-i18n="footer.copyright">© 2026 Sky Rent</span><a href="index.html">← トップへ戻る</a></div></div></footer>
 
   <script src="js/config.js"></script>
   <script src="js/store.js"></script>
   <script src="js/pricing.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/photos.js"></script>
   <script>
   (function () {
     const S = window.SkyRentStore, I = window.SkyRentI18n, P = window.SkyRentPricing;
@@ -131,7 +133,7 @@
       document.querySelectorAll('[data-sk]').forEach(el => { el.textContent = tt(el.dataset.sk); });
       const loc = S.getLocation(asset.locationId);
       $('#crumb').innerHTML = '<a href="index.html" style="color:var(--color-primary)">' + I.t('nav.categories') + '</a> › <a href="search.html?category=' + asset.categoryId + '" style="color:var(--color-primary)">' + esc(catName(cat)) + '</a> › ' + esc(assetName(asset));
-      $('#d-image').textContent = asset.image || '📦';
+      $('#d-image').innerHTML = window.SkyRentPhotos ? window.SkyRentPhotos.thumbHtml(asset) : esc(asset.image || '📦');
       $('#d-cat').textContent = catName(cat) + ' ・ ' + (loc ? (isEn() && loc.nameEn ? loc.nameEn : loc.name) : '');
       $('#d-name').textContent = assetName(asset);
       $('#d-loc').textContent = loc ? (loc.address + ' / ' + loc.tel) : '';

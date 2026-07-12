@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sky Rent | レンタカー・キッチンカー・特殊車両・家電・工具の統合予約</title>
-  <meta name="description" content="レンタカーからキッチンカー・キャンピングカー・特殊車両、家電・工具の単品レンタルまで。4拠点の空き状況をリアルタイム検索し、その場でご予約いただけます。">
+  <title>Sky Rent | 空へ、自由を。— レンタカー・キッチンカー・特殊車両・工具の統合レンタル</title>
+  <meta name="description" content="北海道4拠点。レンタカーからキッチンカー・キャンピングカー・特殊車両、家電・工具の単品レンタルまで、空き状況をリアルタイム検索してWebで予約完了。">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/public.css">
+  <link rel="stylesheet" href="css/lp.css">
   <script>
     // ===== 管理画面で設定したコンテンツ・テーマカラーを反映 + favicon =====
     (function () {
       try {
-        // favicon (ブランドアイコン)
         (function () {
-          const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0a6ebd"/><text x="32" y="44" font-size="34" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="bold">✈</text></svg>';
+          const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#16181d"/><text x="32" y="46" font-size="38" text-anchor="middle" fill="#d94f22" font-family="serif" font-weight="bold">空</text></svg>';
           const href = 'data:image/svg+xml,' + encodeURIComponent(svg);
           const icon = document.createElement('link'); icon.rel = 'icon'; icon.href = href; document.head.appendChild(icon);
           const apple = document.createElement('link'); apple.rel = 'apple-touch-icon'; apple.href = href; document.head.appendChild(apple);
@@ -25,7 +25,7 @@
         if (seo.keywords) { const kw = document.createElement('meta'); kw.name = 'keywords'; kw.content = seo.keywords; document.head.appendChild(kw); }
         if (site.themeColor) {
           const s = document.createElement('style');
-          s.textContent = ':root { --color-primary: ' + site.themeColor + ' !important; --color-primary-dark: ' + shadeColor(site.themeColor, -15) + ' !important; }';
+          s.textContent = ':root { --color-primary: ' + site.themeColor + ' !important; --color-primary-dark: ' + shade(site.themeColor, -15) + ' !important; }';
           document.head.appendChild(s);
         }
         const ga = JSON.parse(localStorage.getItem('sky-rent.settings.ga') || '{}');
@@ -33,7 +33,7 @@
           const s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + ga.ga4Id; document.head.appendChild(s);
           window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', ga.ga4Id); window.gtag = gtag;
         }
-        function shadeColor(hex, percent) {
+        function shade(hex, percent) {
           const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i); if (!m) return hex;
           let r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
           r = Math.max(0, Math.min(255, r + Math.round(r * percent / 100)));
@@ -46,94 +46,264 @@
   </script>
 </head>
 <body>
-  <header class="site-header">
+  <!-- ===== オープニング ===== -->
+  <div id="intro" aria-hidden="true">
+    <div class="in-kanji">空</div>
+    <div class="in-word">Sky Rent</div>
+    <div class="in-line"></div>
+  </div>
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="site-header on-hero">
     <div class="container header-inner">
-      <a href="index.html" class="logo"><span class="logo-mark">✈</span><span class="logo-text">Sky Rent</span></a>
+      <a href="index.html" class="logo"><span class="logo-mark">空</span><span class="logo-text">Sky Rent</span></a>
       <nav class="site-nav">
-        <a href="index.html#categories" data-i18n="nav.categories">カテゴリ</a>
-        <a href="search.html" data-i18n="nav.search">予約する</a>
-        <a href="index.html#locations" data-i18n="nav.locations">店舗一覧</a>
-        <a href="mypage.html" data-i18n="nav.mypage">マイページ</a>
-        <a href="manage/dashboard.html" class="nav-admin">管理画面</a>
-        <button class="lang-btn" data-lang-toggle type="button">EN</button>
+        <a href="#categories" class="nav-hide-sp">カテゴリ</a>
+        <a href="#lineup" class="nav-hide-sp">ラインナップ</a>
+        <a href="#locations" class="nav-hide-sp">拠点</a>
+        <a href="mypage.html">マイページ</a>
+        <a href="search.html" class="nav-cta">予約する</a>
       </nav>
     </div>
   </header>
 
-  <section class="hero">
-    <div class="container hero-inner">
-      <h1 class="hero-title" data-i18n="hero.title">空(そら)へ、自由を。Sky Rent.</h1>
-      <p class="hero-lead" data-i18n="hero.lead">レンタカーからキッチンカー・特殊車両・家電・工具まで。ぜんぶ、Webで予約完了。</p>
-      <a href="#search" class="btn btn-primary btn-lg" data-i18n="hero.cta">空きを検索する</a>
-    </div>
-  </section>
-
-  <!-- 検索バー -->
-  <section id="search" class="section section-alt">
+  <!-- ===== 1. ヒーロー ===== -->
+  <section class="lp-hero" id="top">
+    <div class="bg" style="background-image:url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=2200&q=75')"></div>
+    <div class="veil"></div>
     <div class="container">
-      <h2 class="section-title" data-i18n="search.title">空き状況を検索</h2>
-      <form class="p-searchbar" id="searchbar">
-        <div class="fg">
-          <label data-i18n="search.category">カテゴリ</label>
-          <select id="s-category"></select>
-        </div>
-        <div class="fg">
-          <label data-i18n="search.location">利用拠点</label>
-          <select id="s-location"></select>
-        </div>
-        <div class="fg">
-          <label data-i18n="search.start">出発日時 (受取)</label>
-          <input type="datetime-local" id="s-start">
-        </div>
-        <div class="fg">
-          <label data-i18n="search.end">返却日時</label>
-          <input type="datetime-local" id="s-end">
-        </div>
-        <button type="submit" class="btn btn-primary" data-i18n="search.submit">検索する</button>
+      <p class="hero-eyebrow">Hokkaido · 4 Bases · Car / Kitchen / Camper / Tools</p>
+      <h1 class="hero-h">
+        <span class="hl"><span>空へ、</span></span>
+        <span class="hl"><span>自由を<span class="accent">。</span></span></span>
+      </h1>
+      <p class="hero-lead2">
+        レンタカーも、キッチンカーも、キャンピングカーも、ダンプも、工具も。<br>
+        「借りたい」を、ぜんぶひとつの場所で。北海道4拠点、24時間オンライン予約。
+      </p>
+      <div class="hero-ctas">
+        <a href="#search" class="btn btn-primary btn-lg">いますぐ空きを検索</a>
+        <a href="#categories" class="btn btn-ghost">カテゴリを見る</a>
+      </div>
+
+      <!-- 検索パネル -->
+      <form class="hero-search" id="hero-search" name="search">
+        <div class="fg"><label>Category</label><select id="hs-category"></select></div>
+        <div class="fg"><label>Location</label><select id="hs-location"></select></div>
+        <div class="fg"><label>Pick-up</label><input type="datetime-local" id="hs-start"></div>
+        <div class="fg"><label>Return</label><input type="datetime-local" id="hs-end"></div>
+        <button type="submit" class="btn btn-primary">検 索</button>
       </form>
     </div>
+    <div class="hero-vertical">北の道を、あなたのものに。</div>
+    <div class="hero-scroll"><span>Scroll</span><span class="line"></span></div>
+    <span id="search" style="position:absolute;bottom:120px"></span>
   </section>
 
-  <!-- カテゴリ -->
-  <section id="categories" class="section">
-    <div class="container">
-      <h2 class="section-title" data-i18n="nav.categories">カテゴリから探す</h2>
-      <div class="cat-grid" id="cat-grid"></div>
+  <!-- ===== 2. マーキー ===== -->
+  <div class="marquee" aria-hidden="true">
+    <div class="track">
+      <span>Rental Car</span><span class="fill">—</span><span>Kitchen Car</span><span class="fill">—</span>
+      <span>Camper</span><span class="fill">—</span><span>Dump Truck</span><span class="fill">—</span>
+      <span>Appliance</span><span class="fill">—</span><span>Tools</span><span class="fill">—</span>
+      <span>Rental Car</span><span class="fill">—</span><span>Kitchen Car</span><span class="fill">—</span>
+      <span>Camper</span><span class="fill">—</span><span>Dump Truck</span><span class="fill">—</span>
+      <span>Appliance</span><span class="fill">—</span><span>Tools</span><span class="fill">—</span>
     </div>
-  </section>
+  </div>
 
-  <!-- 特徴 -->
-  <section class="section section-alt">
+  <!-- ===== 3. 数字で見る ===== -->
+  <section class="lp-stats">
     <div class="container">
-      <h2 class="section-title" id="feature-title">Sky Rent の特徴</h2>
-      <div class="features">
-        <div class="feature-card"><div class="feature-icon">📅</div><h3 id="f1t">リアルタイム空車照合</h3><p id="f1p">4拠点の在庫と予約状況を自動照合。ダブルブッキングを防ぎ、24時間その場で予約完了。</p></div>
-        <div class="feature-card"><div class="feature-icon">🧾</div><h3 id="f2t">オプションもまとめて</h3><p id="f2p">保険・チャイルドシートから発電機・調理機材まで、車両に合ったオプションを予約時に選択。</p></div>
-        <div class="feature-card"><div class="feature-icon">🎁</div><h3 id="f3t">使うほどおトク</h3><p id="f3p">ご利用ごとにポイントが貯まり、10ポイントで¥1,000クーポンを自動発行。次回予約で割引。</p></div>
+      <div class="stats-head">
+        <div class="rv">
+          <p class="eyebrow">About Sky Rent</p>
+          <h2 class="section-title" style="margin-bottom:0">クルマも、キッチンも、工具も。<br>「借りる」を、ここひとつで。</h2>
+        </div>
+        <p class="rv d2">旅行のレンタカー、イベント出店のキッチンカー、週末のキャンピングカー、現場のダンプや工具まで。カテゴリを横断して空き状況を検索し、その場で予約が完了します。</p>
+      </div>
+      <div class="stats-row">
+        <div class="stat rv d1"><span class="num" id="st-cats" data-count="6">0</span><span class="unit">種</span><div class="lbl">レンタルカテゴリ</div></div>
+        <div class="stat rv d2"><span class="num" id="st-assets" data-count="23">0</span><span class="unit">台</span><div class="lbl">車両・機材ラインナップ</div></div>
+        <div class="stat rv d3"><span class="num" id="st-locs" data-count="4">0</span><span class="unit">拠点</span><div class="lbl">道内ネットワーク</div></div>
+        <div class="stat rv d4"><span class="num" data-count="24">0</span><span class="unit">時間</span><div class="lbl">オンライン予約受付</div></div>
       </div>
     </div>
   </section>
 
-  <!-- ご利用の流れ -->
-  <section class="section">
+  <!-- ===== 4. カテゴリショーケース ===== -->
+  <section class="lp-cats" id="categories">
     <div class="container">
-      <h2 class="section-title" id="flow-title">ご利用の流れ</h2>
-      <div class="cat-grid" id="flow-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))"></div>
+      <p class="eyebrow rv">Category</p>
+      <h2 class="section-title rv d1">今日の「借りたい」は、どれ？</h2>
+      <div class="cat-list" id="cat-list"></div>
     </div>
   </section>
 
-  <!-- 店舗一覧 -->
-  <section id="locations" class="section section-alt">
+  <!-- ===== 5. ラインナップ ===== -->
+  <section class="lp-lineup" id="lineup">
     <div class="container">
-      <h2 class="section-title" data-i18n="nav.locations">店舗一覧</h2>
-      <div class="cat-grid" id="loc-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"></div>
+      <div class="lineup-head">
+        <div class="rv">
+          <p class="eyebrow">Line-up</p>
+          <h2 class="section-title" style="margin-bottom:0">人気のラインナップ</h2>
+        </div>
+        <div class="lineup-nav rv d2">
+          <button id="lu-prev" aria-label="前へ">←</button>
+          <button id="lu-next" aria-label="次へ">→</button>
+        </div>
+      </div>
+      <div class="lineup-scroller" id="lineup-scroller"></div>
+      <div class="tc rv"><a href="search.html" class="btn btn-secondary">すべてのラインナップを見る</a></div>
     </div>
   </section>
 
+  <!-- ===== 6. 選ばれる理由 ===== -->
+  <section class="lp-reasons">
+    <div class="container">
+      <p class="eyebrow rv">Why Sky Rent</p>
+      <h2 class="section-title rv d1">選ばれるのには、理由がある。</h2>
+
+      <div class="reason">
+        <div class="r-img rv-l"><img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=70" alt="森を抜ける一本道" data-parallax="0.08" onerror="this.style.display='none'"><span class="r-num">01</span></div>
+        <div class="r-txt rv-r">
+          <p class="eyebrow">Realtime</p>
+          <h3>空き状況は、いつでも「いま」。</h3>
+          <p>4拠点すべての在庫と予約状況を自動照合。見ているその瞬間の空きだけを表示するから、電話確認もダブルブッキングもありません。深夜でも早朝でも、思い立ったときに予約完了。</p>
+          <a class="r-link" href="search.html">空き状況を見てみる <span>→</span></a>
+        </div>
+      </div>
+
+      <div class="reason">
+        <div class="r-img rv-r"><img src="https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1200&q=70" alt="キッチンの調理風景" data-parallax="0.08" onerror="this.style.display='none'"><span class="r-num">02</span></div>
+        <div class="r-txt rv-l">
+          <p class="eyebrow">All-in-one</p>
+          <h3>装備もオプションも、まとめて一式。</h3>
+          <p>キッチンカーには発電機や鉄板を。キャンピングカーには寝具とBBQセットを。ダンプにはロープと固定具を。車両に合ったオプションを予約と同時に選べるので、当日は手ぶらで受け取るだけ。</p>
+          <a class="r-link" href="search.html?category=cat-kitchen">キッチンカーを見てみる <span>→</span></a>
+        </div>
+      </div>
+
+      <div class="reason">
+        <div class="r-img rv-l"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=70" alt="山と空の風景" data-parallax="0.08" onerror="this.style.display='none'"><span class="r-num">03</span></div>
+        <div class="r-txt rv-r">
+          <p class="eyebrow">Rewards</p>
+          <h3>使うほど、次の旅が安くなる。</h3>
+          <p>ご利用のたびにポイントが貯まり、10ポイントで¥1,000クーポンを自動発行。次回の予約時にそのまま割引が効きます。会員登録は無料、予約履歴の管理もラクになります。</p>
+          <a class="r-link" href="mypage.html">無料で会員登録する <span>→</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 7. ご利用の流れ ===== -->
+  <section class="lp-flow">
+    <div class="container">
+      <p class="eyebrow rv">How to use</p>
+      <h2 class="section-title rv d1">かんたん、4ステップ。</h2>
+      <div class="flow-grid">
+        <div class="fl rv d1"><span class="ic">🔎</span><div class="no">01</div><h4>検索する</h4><p>日時・拠点・カテゴリを選んで空き状況をリアルタイム検索。</p></div>
+        <div class="fl rv d2"><span class="ic">📝</span><div class="no">02</div><h4>予約する</h4><p>オプションを選んで情報を入力。確認メールが自動で届きます。</p></div>
+        <div class="fl rv d3"><span class="ic">🔑</span><div class="no">03</div><h4>受け取る</h4><p>当日は拠点で受け取り、現地でお支払い。法人は請求書払いもOK。</p></div>
+        <div class="fl rv d4"><span class="ic">🎁</span><div class="no">04</div><h4>返却する</h4><p>返却完了でポイント付与。10ptで¥1,000クーポンを自動発行。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 8. ポイント ===== -->
+  <section class="lp-point">
+    <div class="container point-grid">
+      <div class="rv-l">
+        <p class="eyebrow">Membership</p>
+        <h2 class="section-title" style="margin-bottom:14px">貯めて、割引。<br>会員だけの特典。</h2>
+        <div class="point-steps">
+          <div class="pt-step"><b>+1pt</b><span>ご利用1回ごとにポイントが自動で貯まります。</span></div>
+          <div class="pt-step"><b>10pt →</b><span>貯まった瞬間、¥1,000クーポンを自動発行。</span></div>
+          <div class="pt-step"><b>AUTO</b><span>次回予約時、料金からそのまま自動割引。</span></div>
+        </div>
+        <a href="mypage.html" class="btn btn-primary mt24">無料で会員登録する</a>
+      </div>
+      <div class="rv-r d2">
+        <div class="ticket">
+          <div class="tk-lbl">Sky Rent Members Coupon</div>
+          <div class="tk-amt"><small>¥</small>1,000<small> OFF</small></div>
+          <div class="tk-note">10ポイント達成で自動発行 ／ 次回のご予約時に自動適用されます。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 9. 拠点 ===== -->
+  <section class="lp-loc" id="locations">
+    <div class="big-bg">北海道</div>
+    <div class="container">
+      <p class="eyebrow rv">Locations</p>
+      <h2 class="section-title rv d1">道内4拠点。旅の起点はすぐそこに。</h2>
+      <div class="loc-grid" id="loc-grid"></div>
+    </div>
+  </section>
+
+  <!-- ===== 10. FAQ ===== -->
+  <section class="lp-faq">
+    <div class="container">
+      <p class="eyebrow rv">FAQ</p>
+      <h2 class="section-title rv d1">よくあるご質問</h2>
+      <div class="faq-list rv d2">
+        <details class="faq"><summary><span class="q">Q</span>支払い方法は何が使えますか？<span class="tg"></span></summary><div class="a">当日、拠点での現地決済 (現金・クレジットカード) が基本です。法人・行政のお客様は、事前審査のうえ請求書払い (月次一括請求も可) をご利用いただけます。</div></details>
+        <details class="faq"><summary><span class="q">Q</span>キッチンカーの営業に必要な装備はありますか？<span class="tg"></span></summary><div class="a">2槽シンク・換気扇・給排水タンクなど営業許可に対応した標準装備を搭載しています。発電機・フライヤー・鉄板・のぼり旗などのオプションも予約時に追加できます。</div></details>
+        <details class="faq"><summary><span class="q">Q</span>特殊車両は誰でも運転できますか？<span class="tg"></span></summary><div class="a">車両によって必要な免許・資格が異なります (例: 2tダンプは準中型免許以上)。各車両の詳細ページに必要資格を明示しており、予約時に保有確認をお願いしています。</div></details>
+        <details class="faq"><summary><span class="q">Q</span>工具や家電だけ借りることはできますか？<span class="tg"></span></summary><div class="a">はい。ポータブル電源・フライヤー・インパクトドライバー・高圧洗浄機など、物品単体でのレンタルが可能です。在庫数の範囲内で複数点まとめて借りられます。</div></details>
+        <details class="faq"><summary><span class="q">Q</span>キャンセルはできますか？<span class="tg"></span></summary><div class="a">ご予約のキャンセルはお電話またはマイページからご連絡ください。直前のキャンセルにはキャンセル料をいただく場合があります。</div></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 11. CTA ===== -->
+  <section class="lp-cta">
+    <div class="bg" data-parallax="0.1" style="background-image:url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2200&q=70')"></div>
+    <div class="veil"></div>
+    <div class="container">
+      <h2 class="rv">さあ、どこへ行く？<br>何を、はじめる？</h2>
+      <p class="rv d1">空き状況の確認から予約完了まで、たった3分。</p>
+      <div class="rv d2"><a href="search.html" class="btn btn-primary btn-lg">空きを検索して予約する</a></div>
+    </div>
+  </section>
+
+  <!-- ===== フッター ===== -->
   <footer class="site-footer">
     <div class="container">
-      <p data-i18n="footer.copyright">© 2026 Sky Rent</p>
-      <p style="opacity:.6;font-size:12px;margin-top:6px">デモ環境 (データはお使いのブラウザ内に保存されます)</p>
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="fb-mark"><span class="fb-kanji">空</span>Sky Rent</div>
+          <p>レンタカー・キッチンカー・キャンピングカー・特殊車両・家電・工具。<br>「借りたい」をぜんぶ、北海道4拠点から。</p>
+        </div>
+        <div class="footer-col">
+          <h4>Category</h4>
+          <a href="search.html?category=cat-rental">一般レンタカー</a>
+          <a href="search.html?category=cat-kitchen">キッチンカー</a>
+          <a href="search.html?category=cat-camping">キャンピングカー</a>
+          <a href="search.html?category=cat-special">特殊車両</a>
+          <a href="search.html?category=cat-appliance">家電レンタル</a>
+          <a href="search.html?category=cat-tool">工具レンタル</a>
+        </div>
+        <div class="footer-col">
+          <h4>Menu</h4>
+          <a href="search.html">空き検索・予約</a>
+          <a href="mypage.html">マイページ</a>
+          <a href="#locations">拠点一覧</a>
+          <a href="index.html#top">トップへ戻る</a>
+        </div>
+        <div class="footer-col">
+          <h4>Support</h4>
+          <a href="tel:011-000-0001">TEL 011-000-0001</a>
+          <a href="manage/dashboard.html">運営管理画面</a>
+          <a href="docs/index.html">システムドキュメント</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Sky Rent — 空へ、自由を。</span>
+        <span>デモ環境 (データはお使いのブラウザ内に保存されます)</span>
+      </div>
     </div>
   </footer>
 
@@ -142,100 +312,7 @@
   <script src="js/pricing.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/api.js"></script>
-  <script>
-  (function () {
-    const S = window.SkyRentStore, I = window.SkyRentI18n;
-    const $ = s => document.querySelector(s);
-    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
-    const isEn = () => I.getLang() === 'en';
-    const catName = c => isEn() && c.nameEn ? c.nameEn : c.name;
-
-    // 局所辞書 (i18n 辞書外のトップページ固有テキスト)
-    const L = {
-      feature: { ja: 'Sky Rent の特徴', en: 'Why Sky Rent' },
-      f1t: { ja: 'リアルタイム空車照合', en: 'Real-time Availability' },
-      f1p: { ja: '4拠点の在庫と予約状況を自動照合。ダブルブッキングを防ぎ、24時間その場で予約完了。', en: 'Auto-matches stock & bookings across 4 locations. No double-booking, 24/7 instant reservation.' },
-      f2t: { ja: 'オプションもまとめて', en: 'Options Included' },
-      f2p: { ja: '保険・チャイルドシートから発電機・調理機材まで、車両に合ったオプションを予約時に選択。', en: 'From insurance & child seats to generators & cooking gear — pick options that fit your rental.' },
-      f3t: { ja: '使うほどおトク', en: 'Rewards as You Go' },
-      f3p: { ja: 'ご利用ごとにポイントが貯まり、10ポイントで¥1,000クーポンを自動発行。次回予約で割引。', en: 'Earn a point per use; 10 points auto-issues a ¥1,000 coupon for your next booking.' },
-      flow: { ja: 'ご利用の流れ', en: 'How It Works' },
-      steps: {
-        ja: [['🔎', '1. 検索', '日時・拠点・カテゴリで空きを検索'], ['📝', '2. 予約', 'オプションを選び情報を入力'], ['💴', '3. 現地決済', '当日、拠点で受取・お支払い'], ['🎁', '4. 返却', '返却完了でポイント付与']],
-        en: [['🔎', '1. Search', 'Find availability by date, location & category'], ['📝', '2. Book', 'Choose options & enter your details'], ['💴', '3. Pay on-site', 'Pick up & pay at the location'], ['🎁', '4. Return', 'Earn points on return']]
-      },
-      count: { ja: n => n + '台・点', en: n => n + ' items' }
-    };
-    const tt = (k) => L[k][isEn() ? 'en' : 'ja'];
-
-    function fmtLocal(d) {
-      const p = n => String(n).padStart(2, '0');
-      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
-    }
-
-    function initSearchbar() {
-      const cats = S.categories();
-      const locs = S.locations();
-      $('#s-category').innerHTML = '<option value="">' + I.t('search.all') + '</option>' +
-        cats.map(c => '<option value="' + c.categoryId + '">' + esc(catName(c)) + '</option>').join('');
-      $('#s-location').innerHTML = '<option value="">' + I.t('search.all') + '</option>' +
-        locs.map(l => '<option value="' + l.locationId + '">' + esc(isEn() && l.nameEn ? l.nameEn : l.name) + '</option>').join('');
-      const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(10, 0, 0, 0);
-      const t2 = new Date(t); t2.setDate(t2.getDate() + 1);
-      if (!$('#s-start').value) $('#s-start').value = fmtLocal(t);
-      if (!$('#s-end').value) $('#s-end').value = fmtLocal(t2);
-    }
-
-    $('#searchbar').addEventListener('submit', e => {
-      e.preventDefault();
-      const p = new URLSearchParams();
-      if ($('#s-category').value) p.set('category', $('#s-category').value);
-      if ($('#s-location').value) p.set('location', $('#s-location').value);
-      if ($('#s-start').value) p.set('start', new Date($('#s-start').value).toISOString());
-      if ($('#s-end').value) p.set('end', new Date($('#s-end').value).toISOString());
-      location.href = 'search.html?' + p.toString();
-    });
-
-    function renderCategories() {
-      const cats = S.categories();
-      $('#cat-grid').innerHTML = cats.map(c => {
-        const cnt = S.assets({ categoryId: c.categoryId, activeOnly: true }).length;
-        return '<a class="cat-card" href="search.html?category=' + c.categoryId + '">' +
-          '<div class="ci">' + esc(c.icon || '📦') + '</div>' +
-          '<h3>' + esc(catName(c)) + '</h3>' +
-          '<p>' + esc(isEn() ? '' : (c.description || '')) + '</p>' +
-          '<span class="cnt">' + tt('count')(cnt) + '</span></a>';
-      }).join('');
-    }
-
-    function renderFeatures() {
-      $('#feature-title').textContent = tt('feature');
-      ['f1t', 'f1p', 'f2t', 'f2p', 'f3t', 'f3p'].forEach(k => { const el = $('#' + k); if (el) el.textContent = tt(k); });
-      $('#flow-title').textContent = tt('flow');
-      $('#flow-grid').innerHTML = tt('steps').map(s =>
-        '<div class="cat-card" style="cursor:default"><div class="ci">' + s[0] + '</div><h3>' + esc(s[1]) + '</h3><p>' + esc(s[2]) + '</p></div>'
-      ).join('');
-    }
-
-    function renderLocations() {
-      $('#loc-grid').innerHTML = S.locations().map(l =>
-        '<div class="cat-card" style="cursor:default;text-align:left;padding:18px 20px">' +
-        '<h3 style="color:var(--color-primary);margin-bottom:8px">' + esc(isEn() && l.nameEn ? l.nameEn : l.name) + '</h3>' +
-        '<p style="line-height:1.8">' + esc(l.address) + '<br>' + I.t('loc.tel') + ': ' + esc(l.tel) + '<br>' +
-        I.t('loc.hours') + ': ' + esc(l.hours) + '<br>' + I.t('loc.holiday') + ': ' + esc(l.holiday) + '</p></div>'
-      ).join('');
-    }
-
-    function renderNotices() {
-      const notices = S.read('notices', []);
-      // お知らせ管理 (notices) があればトップに反映 — 無ければ何もしない
-    }
-
-    function renderAll() { initSearchbar(); renderCategories(); renderFeatures(); renderLocations(); }
-    document.addEventListener('DOMContentLoaded', renderAll);
-    document.addEventListener('sky-rent:langchange', renderAll);
-    if (document.readyState !== 'loading') renderAll();
-  })();
-  </script>
+  <script src="js/photos.js"></script>
+  <script src="js/lp.js"></script>
 </body>
 </html>
