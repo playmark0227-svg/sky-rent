@@ -1,5 +1,5 @@
 /**
- * Sky Rent - API クライアント
+ * グロースレンタカー - API クライアント
  *
  * データアクセスの唯一の入口。現在は js/store.js (localStorage) に委譲。
  * 本番バックエンド (GAS / AWS 等) 接続時は、GAS_URL を設定すると

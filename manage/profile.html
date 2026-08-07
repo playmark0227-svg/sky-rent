@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>プロフィール | Sky Rent 管理画面</title>
+  <title>プロフィール | グロースレンタカー 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
 </head>
 <body>
@@ -167,7 +167,7 @@
           const data = parsed && parsed.data ? parsed.data : parsed;
           if (!data || typeof data !== 'object') throw new Error('形式が正しくありません');
           const keys = Object.keys(data).filter(k => k.startsWith('sky-rent.'));
-          if (!keys.length) throw new Error('Sky Rent のデータが見つかりません');
+          if (!keys.length) throw new Error('グロースレンタカー のデータが見つかりません');
           if (!confirm(`バックアップから ${keys.length} 項目を復元します。\n現在のデータは上書きされます。続行しますか?`)) {
             e.target.value = '';
             return;

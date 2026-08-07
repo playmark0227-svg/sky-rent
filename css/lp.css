@@ -22,7 +22,7 @@
 }
 #intro .in-word {
   font-family: var(--font-num);
-  font-size: 20px; font-weight: 600; letter-spacing: .5em; text-indent: .5em;
+  font-size: 18px; font-weight: 600; letter-spacing: .28em; text-indent: .28em;
   color: #f6f2ea; text-transform: uppercase;
   opacity: 0; clip-path: inset(0 100% 0 0);
   animation: intro-wipe .8s cubic-bezier(.76,0,.24,1) .45s forwards;

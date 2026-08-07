@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>帳票出力 | Sky Rent 管理画面</title>
+  <title>帳票出力 | グロースレンタカー 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
   <style>
     #print-area { display: none; }
@@ -97,7 +97,7 @@
       $('#tbl').querySelectorAll('.btnf').forEach(b => b.addEventListener('click', () => openDoc(b.dataset.doc, b.dataset.id)));
     }
 
-    function store(r) { return S.getLocation(r.locationId) || { name: 'Sky Rent 本店', address: '', tel: '' }; }
+    function store(r) { return S.getLocation(r.locationId) || { name: 'グロースレンタカー 本店', address: '', tel: '' }; }
     function priceRows(r) {
       const lines = (r.price && (r.price.lines || r.price.breakdown)) || [];
       return lines.map(l => '<tr><td>' + esc(l.label) + '</td><td style="text-align:right">' + (l.amount < 0 ? '-¥' + Math.abs(l.amount).toLocaleString() : '¥' + l.amount.toLocaleString()) + '</td></tr>').join('') +

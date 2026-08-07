@@ -1,5 +1,5 @@
 /**
- * Sky Rent - メインアプリ (1ページ ステップ遷移)
+ * グロースレンタカー - メインアプリ (1ページ ステップ遷移)
  *
  * 状態を 1 つの object で持ち、各ステップを切り替える。
  *   step-search    -> 日時選択
@@ -30,7 +30,7 @@
 
     // GAS未設定の場合は警告
     if (!window.SkyRentAPI.isConfigured) {
-      console.warn('[Sky Rent] GAS_URL 未設定。モック動作中です。');
+      console.warn('[グロースレンタカー] GAS_URL 未設定。モック動作中です。');
       const banner = document.createElement('div');
       banner.style.cssText = 'background:#fff3cd;color:#856404;padding:8px;text-align:center;font-size:13px;border-bottom:1px solid #ffeaa7';
       banner.textContent = 'デモモード: js/config.js の GAS_URL を設定すると本番動作します';

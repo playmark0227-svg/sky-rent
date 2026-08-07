@@ -1,5 +1,5 @@
 /**
- * Sky Rent - フロントエンド設定
+ * グロースレンタカー - フロントエンド設定
  *
  * GAS_URL に Google Apps Script のウェブアプリ URL を設定してください。
  * (デプロイ後に発行される /exec で終わる URL)

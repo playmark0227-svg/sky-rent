@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>請求書管理 | Sky Rent 管理画面</title>
+  <title>請求書管理 | グロースレンタカー 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
   <style>
     /* 請求書 印刷レイアウト */
@@ -184,7 +184,7 @@
     function invoiceDocHtml(inv) {
       const bank = S.read('settings.billing', { bankName: '', accountType: '普通', accountNo: '', holder: '' });
       const content = S.read('settings.content', {});
-      const storeName = content.storeName || 'Sky Rent 札幌本店';
+      const storeName = content.storeName || 'グロースレンタカー 札幌本店';
       const rs = S.list('reservations').filter(r => (inv.reservationIds || []).indexOf(r.reservationId) >= 0);
       const rows = rs.map(r => '<tr><td>' + esc(r.reservationId) + '</td><td>' + esc(r.assetName || r.vehicleName) + (r.quantity > 1 ? ' × ' + r.quantity : '') + '</td><td>' + fmtD(r.start) + '〜' + fmtD(r.end) + '</td><td style="text-align:right">¥' + ((r.price && r.price.total) || 0).toLocaleString() + '</td></tr>').join('');
       const tax = Math.round(inv.amount - inv.amount / 1.1);

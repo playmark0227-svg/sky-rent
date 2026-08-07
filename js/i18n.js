@@ -1,5 +1,5 @@
 /**
- * Sky Rent - 多言語対応 (i18n)
+ * グロースレンタカー - 多言語対応 (i18n)
  *
  * 要件定義書 4.1「多言語対応」準拠: 日本語を基本とし、英語に対応。
  * 辞書にロケールを追加するだけで中国語・韓国語へ拡張可能な構造。
@@ -18,7 +18,7 @@
     ja: {
       'nav.features': '特徴', 'nav.search': '予約する', 'nav.categories': 'カテゴリ',
       'nav.locations': '店舗一覧', 'nav.mypage': 'マイページ', 'nav.admin': '管理画面',
-      'hero.title': '空(そら)へ、自由を。Sky Rent.',
+      'hero.title': '空へ、自由を。グロースレンタカー',
       'hero.lead': 'レンタカーからキッチンカー・特殊車両・家電・工具まで。ぜんぶ、Webで予約完了。',
       'hero.cta': '空きを検索する',
       'search.title': '空き状況を検索',
@@ -53,14 +53,14 @@
       'mypage.email': 'メールアドレス', 'mypage.password': 'パスワード',
       'common.yen': '円', 'common.day': '日', 'common.days': '日間', 'common.close': '閉じる',
       'common.required': '必須', 'common.login_as': 'ログイン中',
-      'footer.copyright': '© 2026 Sky Rent',
+      'footer.copyright': '© 2026 グロースレンタカー',
       'cat.vehicle': '車両レンタル', 'cat.item': '物品レンタル',
       'loc.hours': '営業時間', 'loc.holiday': '定休日', 'loc.tel': '電話'
     },
     en: {
       'nav.features': 'Features', 'nav.search': 'Book Now', 'nav.categories': 'Categories',
       'nav.locations': 'Locations', 'nav.mypage': 'My Page', 'nav.admin': 'Admin',
-      'hero.title': 'Freedom, to the sky. Sky Rent.',
+      'hero.title': 'Freedom, to the road. Growth Rent a Car.',
       'hero.lead': 'Rental cars, kitchen cars, special vehicles, appliances & tools — book everything online.',
       'hero.cta': 'Search Availability',
       'search.title': 'Search Availability',
@@ -95,7 +95,7 @@
       'mypage.email': 'Email', 'mypage.password': 'Password',
       'common.yen': 'JPY', 'common.day': 'day', 'common.days': 'days', 'common.close': 'Close',
       'common.required': 'Required', 'common.login_as': 'Logged in as',
-      'footer.copyright': '© 2026 Sky Rent',
+      'footer.copyright': '© 2026 Growth Rent a Car',
       'cat.vehicle': 'Vehicle Rental', 'cat.item': 'Item Rental',
       'loc.hours': 'Hours', 'loc.holiday': 'Closed', 'loc.tel': 'Tel'
     }
