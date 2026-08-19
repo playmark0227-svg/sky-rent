@@ -180,7 +180,7 @@
   <h1>基本設計書</h1>
   <div class="sub">
     グロースレンタカー 統合予約・管理システム<br>
-    レンタカー ／ キッチンカー ／ 特殊車両 ／ 家電 ／ 工具
+    一般レンタカー ／ キッチンカー
   </div>
   <div class="rule"></div>
   <table class="meta">
@@ -189,7 +189,7 @@
     <tr><th>版数</th><td>v3.1 (実装反映版)</td></tr>
     <tr><th>準拠仕様</th><td>要件定義書 v3.0 / 開発コントラクト dev-contract.md</td></tr>
     <tr><th>作成日</th><td>2026-07-10</td></tr>
-    <tr><th>データ版</th><td>DATA_VERSION = 3</td></tr>
+    <tr><th>データ版</th><td>DATA_VERSION = 4</td></tr>
   </table>
   <div class="foot">本書は発注書 (要件定義書 v3.0) および開発コントラクトを唯一の正として作成された納品ドキュメントです。</div>
 </section>
@@ -373,7 +373,7 @@
   <h3 class="h-sec" id="c2-1"><span class="sno">2.1</span>公開サイト (予約フロー)</h3>
   <p class="lead">
     トップページから検索・詳細を経て予約フローに入る。予約フローは <strong>1画面 (booking.html) 内で「情報入力 → 確認 → 完了」の3ステップを状態遷移</strong> させる構成。
-    車両カテゴリでは免許証情報入力欄と確認ステップを表示し、物品カテゴリでは動的に非表示化する。
+    現行の2カテゴリ (一般レンタカー・キッチンカー) はいずれも車両カテゴリのため、免許証情報入力欄と確認ステップを表示する (将来 物品カテゴリを追加した場合は動的に非表示化される)。
   </p>
   <figure class="fig">
     <div class="fig-frame">
@@ -393,7 +393,7 @@
 
           <rect x="340" y="40" width="120" height="56" rx="8" fill="#eaf1f8" stroke="#1c4a7a" stroke-width="1.4"/>
           <text x="400" y="64" font-size="12.5" text-anchor="middle" fill="#1c4a7a" font-weight="700">detail</text>
-          <text x="400" y="82" font-size="10" text-anchor="middle" fill="#4a5560">車両/物品詳細</text>
+          <text x="400" y="82" font-size="10" text-anchor="middle" fill="#4a5560">車両詳細</text>
 
           <line x1="140" y1="68" x2="178" y2="68" stroke="#1c4a7a" stroke-width="1.6" marker-end="url(#pa)"/>
           <line x1="300" y1="68" x2="338" y2="68" stroke="#1c4a7a" stroke-width="1.6" marker-end="url(#pa)"/>
@@ -425,7 +425,7 @@
         <text x="470" y="238" font-size="9.5" fill="#6a7683">予約完了後 履歴反映</text>
         <line x1="178" y1="260" x2="140" y2="96" stroke="#7a8593" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#pa)"/>
 
-        <text x="20" y="316" font-size="10" fill="#8b98a6">※ 会員ログイン時は氏名・免許情報を自動補完。クーポン残高を予約フローで自動適用。物品予約では免許欄・確認ステップを非表示。</text>
+        <text x="20" y="316" font-size="10" fill="#8b98a6">※ 会員ログイン時は氏名・免許情報を自動補完。クーポン残高を予約フローで自動適用。免許欄・確認ステップはカテゴリ種別に応じて出し分け。</text>
       </svg>
     </div>
     <figcaption>図2-1 公開サイト画面遷移図</figcaption>
@@ -434,7 +434,7 @@
   <h3 class="h-sec" id="c2-2"><span class="sno">2.2</span>管理画面 (ダッシュボード中心)</h3>
   <p class="lead">
     ログイン後は <strong>dashboard</strong> を起点に、共通トップバーのメニューから各管理画面へ遷移する (ハブ&amp;スポーク)。
-    全4拠点を一画面で横断把握できる構成。
+    全拠点 (北見・釧路) を一画面で横断把握できる構成。
   </p>
   <figure class="fig">
     <div class="fig-frame">
@@ -451,7 +451,7 @@
         <!-- hub -->
         <circle cx="385" cy="214" r="66" fill="#1c4a7a"/>
         <text x="385" y="208" font-size="14" text-anchor="middle" fill="#fff" font-weight="700">dashboard</text>
-        <text x="385" y="228" font-size="10" text-anchor="middle" fill="#cfe0f0">4拠点サマリ / 未処理</text>
+        <text x="385" y="228" font-size="10" text-anchor="middle" fill="#cfe0f0">拠点サマリ / 未処理</text>
         <text x="385" y="242" font-size="10" text-anchor="middle" fill="#cfe0f0">売上 / 通知ログ</text>
 
         <!-- spokes -->
@@ -515,12 +515,12 @@
       <tbody>
         <tr><td rowspan="5">公開<br>サイト</td><td class="c-key">index.html</td><td>トップ。カテゴリ・拠点導線、検索起点。</td></tr>
         <tr><td class="c-key">search.html</td><td>日時・拠点・カテゴリ検索。カテゴリ別カスタム項目で絞込。</td></tr>
-        <tr><td class="c-key">detail.html</td><td>車両/物品詳細。固有スペック・オプション・要免許明示。</td></tr>
+        <tr><td class="c-key">detail.html</td><td>車両詳細。固有スペック・オプション・要免許明示。</td></tr>
         <tr><td class="c-key">booking.html</td><td>予約フロー (情報入力→確認→完了)。免許確認・クーポン適用・確認メール。</td></tr>
         <tr><td class="c-key">mypage.html</td><td>会員登録/ログイン・予約履歴・ポイント残高・クーポン。</td></tr>
         <tr><td rowspan="9">管理<br>画面</td><td class="c-key">dashboard.html</td><td>本日出発返却・未処理アラート・売上サマリ・週次グラフ・通知ログ (拠点別・スマホ対応)。</td></tr>
         <tr><td class="c-key">reservation-list.html</td><td>予約一覧。状態遷移 (確定→貸出中→返却済) ・入金記録。</td></tr>
-        <tr><td class="c-key">reservation-table.html</td><td>ガントチャート式予約表。日/時間単位・拠点横断・物品段積み。</td></tr>
+        <tr><td class="c-key">reservation-table.html</td><td>ガントチャート式予約表。日/時間単位・拠点横断・在庫複数時の段積み。</td></tr>
         <tr><td class="c-key">vehicles.html</td><td>車両・物品マスタ。カテゴリ紐付け・料金プラン・在庫・車検/点検期限。</td></tr>
         <tr><td class="c-key">categories.html</td><td>カテゴリCRUD・カスタム項目エディタ (EAV定義)。</td></tr>
         <tr><td class="c-key">options.html</td><td>オプションCRUD (共通/カテゴリ専用の2階層)。</td></tr>
@@ -549,7 +549,7 @@
       <thead><tr><th>エンティティ</th><th>キー</th><th>主キー</th><th>説明</th></tr></thead>
       <tbody>
         <tr><td>categories</td><td class="c-key">categories</td><td class="c-key">categoryId</td><td>カテゴリ + カスタム項目(EAV)定義。車両/物品の区分。</td></tr>
-        <tr><td>locations</td><td class="c-key">locations</td><td class="c-key">locationId</td><td>4拠点。営業時間・定休日。</td></tr>
+        <tr><td>locations</td><td class="c-key">locations</td><td class="c-key">locationId</td><td>拠点 (北見本店・釧路店)。営業時間・定休日。</td></tr>
         <tr><td>assets</td><td class="c-key">assets</td><td class="c-key">assetId</td><td>車両・物品の統合マスタ。料金・在庫・車検・カスタム値。</td></tr>
         <tr><td>options</td><td class="c-key">options</td><td class="c-key">optionId</td><td>オプション。共通(全車両)/カテゴリ専用の2階層。</td></tr>
         <tr><td>members</td><td class="c-key">members</td><td class="c-key">memberId</td><td>会員。ポイント・クーポン・請求書払い許可。</td></tr>
@@ -628,23 +628,23 @@
       <tbody>
         <tr><td class="c-key">categoryId</td><td class="c-type">string (PK)</td><td>例 <code>cat-kitchen</code>。カテゴリ識別子。</td></tr>
         <tr><td class="c-key">name / nameEn</td><td class="c-type">string</td><td>表示名 (日 / 英)。</td></tr>
-        <tr><td class="c-key">type</td><td class="c-type">'vehicle'|'item'</td><td><b>vehicle</b>=車両 / <b>item</b>=物品単体レンタル (家電・工具)。オプション共通適用や免許欄の要否を分岐。</td></tr>
+        <tr><td class="c-key">type</td><td class="c-type">'vehicle'|'item'</td><td><b>vehicle</b>=車両 (現行の全カテゴリ) / <b>item</b>=物品 (台数管理型。将来カテゴリを追加する場合の受け口)。オプション共通適用や免許欄の要否を分岐。</td></tr>
         <tr><td class="c-key">icon</td><td class="c-type">string</td><td>絵文字アイコン。</td></tr>
         <tr><td class="c-key">sort</td><td class="c-type">number</td><td>表示順。</td></tr>
         <tr><td class="c-key">active</td><td class="c-type">boolean</td><td>公開フラグ。</td></tr>
         <tr><td class="c-key">description</td><td class="c-type">string</td><td>説明文。</td></tr>
-        <tr><td class="c-key">customFieldDefs</td><td class="c-type">array</td><td><b>EAV定義</b>。要素 = <code>{key, label, type:'text'|'number'|'select', unit, options[], filterable}</code>。車両/物品登録時の入力欄・詳細スペック表示・検索フィルタを自動生成。</td></tr>
+        <tr><td class="c-key">customFieldDefs</td><td class="c-type">array</td><td><b>EAV定義</b>。要素 = <code>{key, label, type:'text'|'number'|'select', unit, options[], filterable}</code>。アセット登録時の入力欄・詳細スペック表示・検索フィルタを自動生成。</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="legend">シード: cat-rental / cat-kitchen / cat-camping / cat-special (車両) ・ cat-appliance / cat-tool (物品)。</p>
+  <p class="legend">シード: cat-rental (一般レンタカー) / cat-kitchen (キッチンカー) の車両カテゴリ2件。いずれも管理画面から追加・変更できる。</p>
 
   <h3 class="h-sec" id="c3-3"><span class="sno">3.3</span>locations (拠点)<span class="tag">マスタ</span></h3>
   <div class="tbl-wrap">
     <table class="tbl pk">
       <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
       <tbody>
-        <tr><td class="c-key">locationId</td><td class="c-type">string (PK)</td><td>例 <code>loc-sapporo</code>。</td></tr>
+        <tr><td class="c-key">locationId</td><td class="c-type">string (PK)</td><td>例 <code>loc-kitami</code>。</td></tr>
         <tr><td class="c-key">name / nameEn</td><td class="c-type">string</td><td>拠点名 (日 / 英)。</td></tr>
         <tr><td class="c-key">tel / address</td><td class="c-type">string</td><td>電話・住所。</td></tr>
         <tr><td class="c-key">hours</td><td class="c-type">string</td><td>営業時間。例 <code>9:00-19:00</code>。</td></tr>
@@ -653,14 +653,14 @@
       </tbody>
     </table>
   </div>
-  <p class="legend">シード: loc-sapporo / loc-chitose / loc-asahikawa / loc-hakodate の4拠点。</p>
+  <p class="legend">シード: loc-kitami (北見本店) / loc-kushiro (釧路店) の2拠点。</p>
 
   <h3 class="h-sec" id="c3-4"><span class="sno">3.4</span>assets (車両・物品 統合マスタ)<span class="tag">マスタ</span></h3>
   <div class="tbl-wrap">
     <table class="tbl pk">
       <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
       <tbody>
-        <tr><td class="c-key">assetId</td><td class="c-type">string (PK)</td><td>例 <code>K001</code> / <code>I001</code>。</td></tr>
+        <tr><td class="c-key">assetId</td><td class="c-type">string (PK)</td><td>例 <code>V001</code> (レンタカー) / <code>K001</code> (キッチンカー)。</td></tr>
         <tr><td class="c-key">categoryId</td><td class="c-type">FK → categories</td><td>所属カテゴリ。</td></tr>
         <tr><td class="c-key">locationId</td><td class="c-type">FK → locations</td><td>配置拠点。</td></tr>
         <tr><td class="c-key">name / nameEn</td><td class="c-type">string</td><td>名称 (日 / 英)。</td></tr>
@@ -683,7 +683,7 @@
       <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
       <tbody>
         <tr><td class="c-key">optionId</td><td class="c-type">string (PK)</td><td>例 <code>OP101</code>。</td></tr>
-        <tr><td class="c-key">name</td><td class="c-type">string</td><td>名称。例「発電機 (2.8kVA)」。</td></tr>
+        <tr><td class="c-key">name</td><td class="c-type">string</td><td>名称。例「ポータブル電源」「免責補償制度 (CDW)」。</td></tr>
         <tr><td class="c-key">price</td><td class="c-type">number</td><td>単価 (円)。</td></tr>
         <tr><td class="c-key">priceType</td><td class="c-type">'per_day'|'per_rental'</td><td>課金単位。日数×単価 / 1回固定。</td></tr>
         <tr><td class="c-key">categoryIds</td><td class="c-type">null | string[]</td><td><b>null = 共通オプション</b> (全車両カテゴリ) / 配列 = カテゴリ専用。物品カテゴリには共通を出さない。</td></tr>
@@ -691,7 +691,7 @@
       </tbody>
     </table>
   </div>
-  <p class="legend">共通: 免責補償・チャイルドシート・スタッドレス・ETC。専用例: キッチンカー約10品目 (発電機・追加プロパンガス 他)、キャンピングカー (寝具・BBQ 他)、特殊車両 (荷台シート 他)。</p>
+  <p class="legend">シード — 共通 (装備オプション11品目): ポータブル冷蔵冷凍庫・電子レンジ・サーキュレーター・ポータブル電源・ドラムリール・カセットコンロ・カセットボンベ・炊飯器・電気ケトル・家電セット・集客セット。カテゴリ専用 (補償): 一般レンタカー CDW ¥1,650 / PAP ¥3,300、キッチンカー CDW ¥3,300 / PAP ¥6,600。</p>
 
   <h3 class="h-sec" id="c3-6"><span class="sno">3.6</span>members (会員) / coupons<span class="tag">会員</span></h3>
   <div class="tbl-wrap">
@@ -807,7 +807,7 @@
         <tr><td class="c-key">getLocation(id)</td><td>locationId</td><td>object|null</td></tr>
         <tr><td class="c-key">assets(filter?)</td><td>{categoryId?, locationId?, activeOnly?, type?}</td><td>array — 条件で絞込。</td></tr>
         <tr><td class="c-key">getAsset(id)</td><td>assetId</td><td>object|null</td></tr>
-        <tr><td class="c-key">optionsForCategory(categoryId)</td><td>categoryId</td><td><code>{common:[], specific:[]}</code> — 物品は common=[]。</td></tr>
+        <tr><td class="c-key">optionsForCategory(categoryId)</td><td>categoryId</td><td><code>{common:[], specific:[]}</code> — type='item' のカテゴリでは common=[]。</td></tr>
       </tbody>
     </table>
   </div>
@@ -964,12 +964,12 @@
   <h3 class="h-sec" id="c5-1"><span class="sno">5.1</span>新カテゴリ追加手順 (エンジニア不要)</h3>
   <p class="lead">
     要件定義書で<strong>最重要</strong>とされる「新カテゴリ追加はエンジニア不要で管理画面のみ」を、EAV (customFieldDefs) と統合 assets モデルで実現している。
-    コード変更・再デプロイは一切不要。
+    コード変更・再デプロイは一切不要。例えば将来「冷凍車」のようなカテゴリを増やす場合も、以下の手順のみで公開まで完結する。
   </p>
   <ol class="num">
     <li><b>カテゴリ作成</b> — <code>categories.html</code> で新カテゴリを追加 (name / type=vehicle|item / icon / sort)。</li>
     <li><b>カスタム項目定義</b> — 同画面のカスタム項目エディタで <code>customFieldDefs</code> を設定 (key・ラベル・型・単位・選択肢・<code>filterable</code>)。これが登録フォーム・詳細スペック表示・検索フィルタに<strong>自動反映</strong>される。</li>
-    <li><b>アセット登録</b> — <code>vehicles.html</code> で車両/物品を登録。カスタム項目の入力欄が定義に応じて自動生成され、値は <code>customFields</code> に格納。料金プラン・在庫・(車両は)車検期限を設定。</li>
+    <li><b>アセット登録</b> — <code>vehicles.html</code> で車両を登録。カスタム項目の入力欄が定義に応じて自動生成され、値は <code>customFields</code> に格納。料金プラン・在庫・(車両は)車検期限を設定。</li>
     <li><b>オプション紐付け</b> — <code>options.html</code> で専用オプションを作成し <code>categoryIds</code> に新カテゴリを指定 (共通オプションは自動適用)。</li>
     <li>公開サイトの検索・詳細・予約フローに即時反映。<strong>フロントの改修は発生しない。</strong></li>
   </ol>
@@ -1026,7 +1026,7 @@
   <h3 class="h-sec" id="c6-1"><span class="sno">6.1</span>レスポンシブ設計</h3>
   <ul class="bul">
     <li><b>スマホ最優先</b> (要件)。公開サイトは <code>style.css</code> + <code>public.css</code> で流動レイアウト。検索・詳細・予約フローをタッチ操作前提で設計。</li>
-    <li>管理画面は <code>manage.css</code> で共通トップバーをハンバーガーメニューに集約。少人数・非常駐運営が外出先スマホから全4拠点を管理できる。</li>
+    <li>管理画面は <code>manage.css</code> で共通トップバーをハンバーガーメニューに集約。少人数・非常駐運営が外出先スマホから全拠点 (北見・釧路) を管理できる。</li>
     <li>幅の広いテーブル (予約一覧・ガント) は <code>.card</code> 内で横スクロールさせ、レイアウト崩れを防止。</li>
   </ul>
 

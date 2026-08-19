@@ -185,7 +185,7 @@
     <h1>管理者向けマニュアル<br>操作手順書</h1>
     <div class="sysname">
       グロースレンタカー<br>
-      レンタカー・キッチンカー・特殊車両・家電・工具　統合予約／管理システム
+      一般レンタカー・キッチンカー　統合予約／管理システム
     </div>
     <div class="rule"></div>
     <div class="meta">
@@ -204,7 +204,7 @@
       <li><a href="#ch1"><span class="n">1</span><span class="t">はじめに<small>システムの概要・ログイン方法・スマートフォンでの使い方</small></span></a></li>
       <li><a href="#ch2"><span class="n">2</span><span class="t">毎日の運用フロー<small>ダッシュボード確認 → 出発・返却 → 貸出・返却処理 → 未処理アラート対応</small></span></a></li>
       <li><a href="#ch3"><span class="n">3</span><span class="t">予約の管理<small>絞り込み・詳細・状態の変更・キャンセル・入金記録・ガントチャートの見方</small></span></a></li>
-      <li><a href="#ch4"><span class="n">4</span><span class="t">帳票の出力<small>貸渡証・車輌チェックシート・領収書・物品貸出書の出し方と印刷</small></span></a></li>
+      <li><a href="#ch4"><span class="n">4</span><span class="t">帳票の出力<small>貸渡証・車輌チェックシート・領収書の出し方と印刷</small></span></a></li>
       <li><a href="#ch5"><span class="n">5</span><span class="t"><span class="star">★</span> 新しいカテゴリを追加する<small>例:「冷凍車」を追加する通し手順 (最重要)</small></span></a></li>
       <li><a href="#ch6"><span class="n">6</span><span class="t">車両・物品の登録と在庫・車検期限の管理</span></a></li>
       <li><a href="#ch7"><span class="n">7</span><span class="t">オプション管理<small>共通オプションとカテゴリ専用オプション</small></span></a></li>
@@ -224,14 +224,14 @@
   <h3 class="sec">1.1　このシステムについて</h3>
   <p class="lead">■ 目的：このマニュアルで何ができるようになるか</p>
   <p>
-    グロースレンタカー は、<strong>一般レンタカー</strong>・<strong>キッチンカー</strong>・<strong>キャンピングカー</strong>・<strong>特殊車両 (ダンプ等)</strong> の車両レンタルと、
-    <strong>家電・工具などの物品レンタル</strong> を、ひとつの予約サイト・ひとつの管理画面でまとめて扱えるシステムです。
+    グロースレンタカー は、<strong>一般レンタカー</strong>（コンパクト・SUV・ミニバン・軽トラック）と <strong>キッチンカー</strong> のレンタルを、
+    ひとつの予約サイト・ひとつの管理画面でまとめて扱えるシステムです。
     お客様が使う「予約サイト」と、スタッフが使う「管理画面」の 2 つで構成されています。
     本書では <strong>管理画面</strong> の使い方を、はじめての方でも迷わないように順を追って説明します。
   </p>
   <div class="intro-note">
-    本システムは <strong>4 拠点・常駐スタッフなし・2〜3 名で運営</strong> することを前提に作られています。
-    どの画面もスマートフォンで操作でき、全 4 拠点をこの 1 つの画面でまとめて管理できます。
+    本システムは <strong>2 拠点（北見本店・釧路店）・常駐スタッフなし・2〜3 名で運営</strong> することを前提に作られています。
+    どの画面もスマートフォンで操作でき、両拠点をこの 1 つの画面でまとめて管理できます。
   </div>
 
   <h3 class="sec">1.2　ログインする</h3>
@@ -284,7 +284,7 @@
     <li>画面上部の日付が <strong>本日</strong> になっているか確認します。ちがう場合は <strong>「本日を表示」</strong> を押します。</li>
     <li>特定の拠点だけ見たいときは <strong>拠点</strong> を選んで <strong>「検索」</strong> を押します（初期は全拠点）。</li>
     <li>上段の 4 枚のカード（<strong>本日の予約受付／本日の出発／本日の帰着／今月の売上</strong>）で、今日の全体像をつかみます。</li>
-    <li><strong>「拠点別サマリー」</strong>で、4 拠点それぞれの「出発・帰着・貸出中」の件数を確認します。</li>
+    <li><strong>「拠点別サマリー」</strong>で、北見本店・釧路店それぞれの「出発・帰着・貸出中」の件数を確認します。</li>
     <li>赤い枠の <strong>「未処理アラート」</strong>が出ていたら、内容を確認します（後述 2.4）。</li>
   </ol>
 
@@ -298,10 +298,10 @@
   </ol>
 
   <h3 class="sec">2.3　夕方：帰着（返却）の処理をする</h3>
-  <p>ダッシュボードの <strong>「本日の帰着予定」</strong>に、返却予定の予約が表示されます。車両・物品が戻ってきたら「返却済」にします。</p>
+  <p>ダッシュボードの <strong>「本日の帰着予定」</strong>に、返却予定の予約が表示されます。車両が戻ってきたら「返却済」にします。</p>
   <ol class="steps">
     <li>予約一覧で対象予約の <strong>「詳細」</strong> を開きます。</li>
-    <li>車両の傷や燃料、物品の数量・破損を確認します（車輌チェックシートを活用）。</li>
+    <li>車両の傷や燃料、貸し出した装備オプションの数量・破損を確認します（車輌チェックシートを活用）。</li>
     <li><strong>「✅ 返却処理」</strong> ボタンを押します。状態が <span class="badge">貸出中</span> → <span class="badge gray">返却済</span> に変わります。</li>
     <li>現地決済で未入金の場合は、同じ画面の <strong>「入金を記録」</strong> で入金済にします。</li>
   </ol>
@@ -360,19 +360,19 @@
 
   <h3 class="sec">3.4　ガントチャート（貸渡予約表）で全体を見る</h3>
   <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">貸渡予約表（ガント）</span></div>
-  <p>いつ・どの車両（物品）が・どれだけ埋まっているかを、横棒グラフのカレンダーで一目で確認できます。</p>
+  <p>いつ・どの車両が・どれだけ埋まっているかを、横棒グラフのカレンダーで一目で確認できます。</p>
   <ul>
     <li><strong>表示開始日</strong>と<strong>表示単位</strong>（7日／14日／30日／時間単位24時間）を選べます。</li>
     <li><strong>拠点・カテゴリ</strong>で絞り込めます。拠点を「全拠点」にすると、拠点ごとにグループ分けして表示されます。</li>
     <li>色の意味（凡例）：<span class="badge g">確定=緑</span> <span class="badge">貸出中=青</span> <span class="badge gray">返却済=グレー</span> <span class="badge red">キャンセル=赤</span></li>
     <li>横棒を<strong>クリック</strong>すると、その予約の詳細へ移動します。</li>
-    <li>在庫が複数ある物品は、同じ行の中に<strong>段（レーン）を分けて重ねて</strong>表示されます。</li>
+    <li>在庫数を 2 台以上で登録している場合は、同じ行の中に<strong>段（レーン）を分けて重ねて</strong>表示されます。</li>
   </ul>
   <a class="backtop" href="#toc">▲ 目次へ戻る</a>
 
   <!-- ================= 4. 帳票の出力 ================= -->
   <h2 class="chapter" id="ch4"><span class="no">4</span>帳票の出力</h2>
-  <p class="lead">■ 目的：貸渡証・車輌チェックシート・領収書・物品貸出書を印刷（またはPDF保存）する</p>
+  <p class="lead">■ 目的：貸渡証・車輌チェックシート・領収書を印刷（またはPDF保存）する</p>
 
   <h3 class="sec">4.1　帳票画面を開く</h3>
   <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">帳票出力</span></div>
@@ -381,11 +381,12 @@
   <table class="tbl">
     <thead><tr><th>レンタル種別</th><th>出力できる帳票</th></tr></thead>
     <tbody>
-      <tr><th>車両（レンタカー・キッチンカー・特殊車両 等）</th><td>貸渡証 ／ 車輌チェックシート ／ 領収書</td></tr>
-      <tr><th>物品（家電・工具 等）</th><td>物品貸出書 ／ 領収書</td></tr>
+      <tr><th>車両（一般レンタカー・キッチンカー）</th><td>貸渡証 ／ 車輌チェックシート ／ 領収書</td></tr>
+      <tr><th>物品（種別を「物品レンタル」で作成したカテゴリ）</th><td>物品貸出書 ／ 領収書</td></tr>
     </tbody>
   </table>
   </div>
+  <p style="font-size:13.5px;color:var(--sub)">※ 現在のカテゴリはどちらも車両のため、通常は上段の 3 帳票を使います。</p>
 
   <h3 class="sec">4.2　印刷の手順</h3>
   <ol class="steps">
@@ -424,7 +425,7 @@
   <ol class="steps">
     <li><strong>「＋ カテゴリ追加」</strong> を押します。</li>
     <li><strong>カテゴリ名</strong>に「冷凍車」と入力します。</li>
-    <li><strong>種別</strong>を選びます。車で運ぶものは <strong>「車両レンタル（免許入力・車検管理あり）」</strong>、家電・工具のような物単体は <strong>「物品レンタル（在庫数管理・免許入力なし）」</strong> を選びます。→ 冷凍車は「車両レンタル」。</li>
+    <li><strong>種別</strong>を選びます。ナンバーの付いた車を貸し出すカテゴリは <strong>「車両レンタル（免許入力・車検管理あり）」</strong>、車ではない品目を台数単位で貸し出すカテゴリは <strong>「物品レンタル（在庫数管理・免許入力なし）」</strong> を選びます。→ 冷凍車は「車両レンタル」。</li>
     <li><strong>アイコン（絵文字）</strong>・<strong>説明文</strong>・<strong>表示順</strong>を入力します。</li>
     <li><strong>カスタム項目</strong>（そのカテゴリだけのスペック欄・検索条件）を <strong>「＋ 項目を追加」</strong> で定義します。冷凍車の例：
       <div class="tbl-wrap">
@@ -443,7 +444,7 @@
     チェックを入れると、その項目が<strong>予約サイトの検索絞り込み</strong>に表示されます。検索では、<strong>数値の項目は「入力値以上」</strong>、<strong>選択式・テキストの項目は「完全一致」</strong>で絞り込まれます。
   </div>
 
-  <h3 class="sec">STEP 2　その車両（物品）を登録する</h3>
+  <h3 class="sec">STEP 2　その車両を登録する</h3>
   <div class="path"><span class="lbl">画面</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">車両・物品管理</span><span class="arw">▸</span><span class="crumb">＋ 追加</span></div>
   <ol class="steps">
     <li><strong>「＋ 追加」</strong> を押します。</li>
@@ -470,7 +471,7 @@
     <li>車両の詳細ページに、入力したスペックが表示される。</li>
   </ul>
   <div class="call imp"><span class="h">この 4 ステップで完結します</span>
-    カテゴリを作る → 車両（物品）を登録 → オプション紐付け → 予約サイトで確認。<strong>プログラム改修は一切不要</strong>です。物品カテゴリ（家電・工具など）の場合は、STEP 2 で「在庫数」を入力します（免許・車検欄は表示されません）。
+    カテゴリを作る → 車両を登録 → オプション紐付け → 予約サイトで確認。<strong>プログラム改修は一切不要</strong>です。種別を「物品レンタル」で作ったカテゴリの場合は、STEP 2 で「在庫数」を入力します（免許・車検欄は表示されません）。
   </div>
   <a class="backtop" href="#toc">▲ 目次へ戻る</a>
 
@@ -488,14 +489,14 @@
     <li><strong>カテゴリ</strong>を選ぶと、そのカテゴリのカスタム項目の入力欄に自動で切り替わります。</li>
     <li><strong>料金</strong>は「時間・日・週・月」を入力できます（<strong>日は必須</strong>）。空欄のプランは適用されず、システムが期間に応じて<strong>最適な料金プランを自動選択</strong>します。</li>
     <li><strong>車両</strong>の場合：必要免許（不要なら空欄）・車検満了日・次回点検日を入力。</li>
-    <li><strong>物品</strong>の場合：<strong>在庫数</strong>（2 以上も可）を入力。免許・車検欄は表示されません。</li>
+    <li>種別が<strong>物品</strong>のカテゴリの場合：<strong>在庫数</strong>（2 以上も可）を入力。免許・車検欄は表示されません。</li>
     <li><strong>状態</strong>を「稼働中／休止中」で設定して <strong>「保存」</strong>。</li>
   </ol>
 
   <h3 class="sec">6.3　在庫の考え方</h3>
   <ul>
     <li><strong>車両</strong>は 1 台ずつ登録します（在庫は常に 1）。同型が複数あるときは複数登録します。</li>
-    <li><strong>物品</strong>は 1 種類につき「在庫数」でまとめて管理できます（例：延長コード 5 本 → 在庫数 5）。</li>
+    <li>種別が<strong>物品</strong>のカテゴリでは、1 種類につき「在庫数」でまとめて管理できます（例：同じ品目が 5 点あれば在庫数 5）。</li>
     <li>一時的に貸出を止めたいときは、削除せず <strong>「休止中」</strong> にします。休止中は予約サイトに表示されません。</li>
   </ul>
 
@@ -511,7 +512,7 @@
 
   <!-- ================= 7. オプション管理 ================= -->
   <h2 class="chapter" id="ch7"><span class="no">7</span>オプション管理</h2>
-  <p class="lead">■ 目的：免責補償などの共通オプションと、カテゴリ専用オプション（発電機など）を管理する</p>
+  <p class="lead">■ 目的：全車共通の装備オプションと、カテゴリ専用オプション（補償など）を管理する</p>
 
   <h3 class="sec">7.1　2 種類のオプション</h3>
   <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">オプション管理</span></div>
@@ -519,12 +520,12 @@
   <table class="tbl">
     <thead><tr><th>種類</th><th>適用範囲</th><th>例</th></tr></thead>
     <tbody>
-      <tr><th>共通オプション</th><td>すべての<strong>車両</strong>カテゴリに自動で付きます</td><td>免責補償・チャイルドシート・スタッドレス・ETC</td></tr>
-      <tr><th>カテゴリ専用</th><td>指定したカテゴリにだけ表示されます</td><td>発電機・追加プロパンガス（キッチンカー）／寝具・BBQ（キャンピングカー）／荷台シート・ロープ（特殊車両）</td></tr>
+      <tr><th>共通オプション<br>（装備オプション）</th><td>すべての<strong>車両</strong>カテゴリに自動で付きます</td><td>ポータブル冷蔵冷凍庫・電子レンジ・サーキュレーター・ポータブル電源・ドラムリール・カセットコンロ・カセットボンベ・炊飯器・電気ケトル・家電セット・集客セット（全 11 品目）</td></tr>
+      <tr><th>カテゴリ専用<br>（補償）</th><td>指定したカテゴリにだけ表示されます</td><td>免責補償制度（CDW）／安心保証コース（PAP）。金額はカテゴリごとに設定（一般レンタカー ¥1,650・¥3,300／キッチンカー ¥3,300・¥6,600）</td></tr>
     </tbody>
   </table>
   </div>
-  <p style="font-size:13.5px;color:var(--sub)">※ 共通オプションは物品カテゴリ（家電・工具）には付きません。</p>
+  <p style="font-size:13.5px;color:var(--sub)">※ 装備オプションは単体では貸し出さず、車両に付ける形で提供します。種別が「物品レンタル」のカテゴリには共通オプションは付きません。</p>
 
   <h3 class="sec">7.2　追加・編集する</h3>
   <ol class="steps">
@@ -714,7 +715,7 @@
   <h3 class="sec">12.3　デモデータを再投入する</h3>
   <p>
     初期化して画面を再読み込みすると、<strong>初期のサンプルデータが自動で再投入</strong>されます。
-    これには、基本のカテゴリ（一般レンタカー・キッチンカー・キャンピングカー・特殊車両・家電・工具）、4 拠点、サンプルの車両・物品、オプション、デモ会員、サンプル予約が含まれます。
+    これには、基本のカテゴリ（一般レンタカー・キッチンカー）、2 拠点（北見本店・釧路店）、サンプルの車両 6 台、オプション、デモ会員、サンプル予約が含まれます。
     操作の練習や、動作確認をやり直したいときに便利です。
   </p>
   <div class="tbl-wrap">

@@ -153,7 +153,7 @@
     <div class="kicker">GROWTH RENT A CAR — SYSTEM REQUIREMENTS</div>
     <h1>要件定義書</h1>
     <div class="subtitle">
-      レンタカー・キッチンカー・特殊車両・家電・工具<br>
+      一般レンタカー・キッチンカー<br>
       統合予約サイト &amp; 管理システム
     </div>
     <div class="divider"></div>
@@ -200,27 +200,27 @@
 
     <h3>1.1 背景と目的</h3>
     <p class="lead">
-      グロースレンタカー は、<strong>一般レンタカー</strong>に加え、<strong>キッチンカー・キャンピングカー・ダンプ等の特殊車両</strong>、
-      さらに<strong>家電・工具といった物品単体レンタル</strong>までを、単一のプラットフォームで扱う
+      グロースレンタカー は、<strong>一般レンタカー</strong>と<strong>キッチンカー</strong>という
+      性格の異なる2つのレンタル事業を、単一のプラットフォームで扱う
       <strong>統合予約サイト兼管理システム</strong>です。
     </p>
     <p>
-      車両と物品では貸出単位・必要情報（免許の要否、在庫数の考え方）・表示すべきスペックが大きく異なります。
-      本システムはこれらの差異を吸収し、一般利用者にはカテゴリごとに最適化された検索・予約体験を、
+      一般レンタカーとキッチンカーでは、料金体系・必要な装備・補償内容・表示すべきスペックが大きく異なります。
+      本システムはこれらの差異をカテゴリ単位で吸収し、一般利用者にはカテゴリごとに最適化された検索・予約体験を、
       運営者には全カテゴリ・全拠点を横断した一元管理を提供します。
     </p>
 
     <h3>1.2 最重要要件 — カテゴリ拡張のノーコード化</h3>
     <div class="callout accent">
       <span class="lbl">本プロジェクトの最重要要件</span>
-      新しい取り扱いカテゴリ（例：新ジャンルの車両や物品）の追加を、
+      新しい取り扱いカテゴリ（例：将来「冷凍車」のような新ジャンルを扱う場合）の追加を、
       <strong>エンジニアの実装作業を一切必要とせず、管理画面の操作のみで完結</strong>できること。
       料金プラン・スペック項目・オプションを含め、運営者自身が自由に定義・変更できることを設計の中核に据えています。
     </div>
     <p>
       この要件は、<strong>EAV（Entity–Attribute–Value）／JSONカラム方式のカスタム項目定義</strong>によって実現しています。
       カテゴリごとに「どんなスペック項目を持つか」を管理画面から定義でき、その定義が
-      車両・物品の登録フォーム、予約サイトのスペック表示、検索の絞り込み条件へ<strong>自動的に反映</strong>されます。
+      車両マスタの登録フォーム、予約サイトのスペック表示、検索の絞り込み条件へ<strong>自動的に反映</strong>されます。
       （詳細は「4. システム全体構成」および「5. 機能要件」を参照）
     </p>
 
@@ -232,15 +232,16 @@
     </p>
 
     <h3>1.4 取り扱いカテゴリ（初期シード）</h3>
-    <p class="sec-intro">初期状態で以下6カテゴリを収録しています。いずれも管理画面から追加・変更・無効化が可能です。</p>
+    <p class="sec-intro">現在の取り扱いは以下2カテゴリです。いずれも管理画面から追加・変更・無効化が可能です。</p>
     <div class="cat-grid">
-      <div class="cat-card"><span class="ci">🚗</span><b>一般レンタカー</b><small>コンパクト〜ワゴン・SUV・軽</small><br><span class="tag">車両</span></div>
+      <div class="cat-card"><span class="ci">🚗</span><b>一般レンタカー</b><small>コンパクト・SUV・ミニバン・軽トラック</small><br><span class="tag">車両</span></div>
       <div class="cat-card"><span class="ci">🍳</span><b>キッチンカー</b><small>移動販売・イベント出店向け</small><br><span class="tag">車両</span></div>
-      <div class="cat-card"><span class="ci">🏕️</span><b>キャンピングカー</b><small>車中泊・アウトドア</small><br><span class="tag">車両</span></div>
-      <div class="cat-card"><span class="ci">🚚</span><b>特殊車両</b><small>ダンプ・軽トラ・高所作業車</small><br><span class="tag">車両</span></div>
-      <div class="cat-card"><span class="ci">🔌</span><b>家電レンタル</b><small>業務用家電の単品貸出</small><br><span class="tag item">物品</span></div>
-      <div class="cat-card"><span class="ci">🛠️</span><b>工具レンタル</b><small>DIY・現場用プロ工具</small><br><span class="tag item">物品</span></div>
     </div>
+    <p class="sec-intro">
+      初期シードには、一般レンタカー5台（日産ノート／日産ノート e-POWER／マツダCX-5／トヨタ シエンタ／軽トラック）と
+      キッチンカー1台の計6台を登録しています。
+      取り扱いを広げる際は、カテゴリ・車両ともに管理画面から追加できます（「1.2 最重要要件」参照）。
+    </p>
   </section>
 
   <!-- ============== 2. 運営体制 ============== -->
@@ -249,7 +250,7 @@
 
     <h3>2.1 運営前提</h3>
     <ul>
-      <li><strong>4拠点</strong>での営業。各拠点に常駐スタッフは置かない<strong>非常駐運営</strong>を前提とする。</li>
+      <li><strong>2拠点（北見本店・釧路店）</strong>での営業。各拠点に常駐スタッフは置かない<strong>非常駐運営</strong>を前提とする。</li>
       <li>全体の対応スタッフは<strong>2〜3名</strong>。少人数での運営を成立させるため、
         全拠点の状況を<strong>一画面で一元管理</strong>できること、および<strong>スマートフォン対応</strong>が必須。</li>
       <li>非常駐運営を補うため、予約受付・返却・入金状況の変化は<strong>メール自動通知／通知ログ</strong>で把握できる設計とする。</li>
@@ -267,16 +268,14 @@
         <tr><th class="num">#</th><th>拠点名</th><th>所在地</th><th>営業時間</th><th>定休日</th></tr>
       </thead>
       <tbody>
-        <tr><td class="num">1</td><td>札幌本店</td><td>北海道札幌市中央区北1条西1-1-1</td><td>9:00–19:00</td><td>年中無休</td></tr>
-        <tr><td class="num">2</td><td>千歳空港店</td><td>北海道千歳市美々987-22</td><td>8:00–20:00</td><td>年中無休</td></tr>
-        <tr><td class="num">3</td><td>旭川駅前店</td><td>北海道旭川市宮下通8-3-1</td><td>9:00–18:00</td><td>水曜定休</td></tr>
-        <tr><td class="num">4</td><td>函館店</td><td>北海道函館市若松町12-8</td><td>9:00–18:00</td><td>水曜定休</td></tr>
+        <tr><td class="num">1</td><td>北見本店</td><td>北海道北見市</td><td>9:00–19:00</td><td>年中無休</td></tr>
+        <tr><td class="num">2</td><td>釧路店</td><td>北海道釧路市</td><td>9:00–18:00</td><td>年中無休</td></tr>
       </tbody>
     </table>
     </div>
     <p class="sec-intro">
       拠点は管理画面「店舗・従業員管理」から追加・編集でき、営業時間・定休日・電話番号・住所を拠点単位で設定できます。
-      車両・物品は拠点に紐づき、検索・在庫・ガントチャートはすべて拠点を横断して扱います。
+      車両は拠点に紐づき、検索・在庫・ガントチャートはすべて拠点を横断して扱います。
     </p>
   </section>
 
@@ -292,12 +291,12 @@
         <tr>
           <td><strong>一般利用者（個人）</strong></td>
           <td>旅行・レジャー・日常利用の個人客</td>
-          <td>レンタカー／キャンピングカーの予約、家電・工具の短期レンタル</td>
+          <td>レンタカーでの旅行・帰省・日常利用、装備オプションを付けたアウトドア利用</td>
         </tr>
         <tr>
           <td><strong>一般利用者（法人）</strong></td>
-          <td>イベント事業者・工事業者・行政等</td>
-          <td>キッチンカー出店、特殊車両での工事・運搬、請求書払いでの継続利用</td>
+          <td>イベント・移動販売事業者、工事・運送業者、行政等</td>
+          <td>キッチンカーでのイベント出店・移動販売、軽トラックでの資材運搬、請求書払いでの継続利用</td>
         </tr>
         <tr>
           <td><strong>自社スタッフ</strong></td>
@@ -359,8 +358,8 @@
         <tr><th>この定義を編集すると…</th><th>自動的に連動する箇所</th></tr>
       </thead>
       <tbody>
-        <tr><td>カテゴリのカスタム項目を追加／変更</td><td>車両・物品マスタ登録フォームの<strong>入力欄が自動生成</strong>される</td></tr>
-        <tr><td>各車両・物品にカスタム値を入力</td><td>予約サイトの<strong>スペック表示</strong>に自動反映される</td></tr>
+        <tr><td>カテゴリのカスタム項目を追加／変更</td><td>マスタ登録フォームの<strong>入力欄が自動生成</strong>される</td></tr>
+        <tr><td>各車両にカスタム値を入力</td><td>予約サイトの<strong>スペック表示</strong>に自動反映される</td></tr>
         <tr><td>項目に「検索対象」フラグを立てる</td><td>予約サイトの<strong>絞り込みフィルタ</strong>に自動で追加される</td></tr>
       </tbody>
     </table>
@@ -377,9 +376,9 @@
         <tr><th style="width:22%">エンティティ</th><th>内容</th></tr>
       </thead>
       <tbody>
-        <tr><td><strong>categories</strong></td><td>カテゴリ定義。種別（車両／物品）・アイコン・カスタム項目定義（EAV）を保持。</td></tr>
-        <tr><td><strong>locations</strong></td><td>拠点（4拠点）。営業時間・定休日・連絡先。</td></tr>
-        <tr><td><strong>assets</strong></td><td>車両・物品の統合マスタ。料金プラン・在庫数・必要免許・車検/点検期限・カスタム値。</td></tr>
+        <tr><td><strong>categories</strong></td><td>カテゴリ定義。種別（車両／物品）・アイコン・カスタム項目定義（EAV）を保持。現在の登録は車両カテゴリ2件。</td></tr>
+        <tr><td><strong>locations</strong></td><td>拠点（北見本店・釧路店の2拠点）。営業時間・定休日・連絡先。</td></tr>
+        <tr><td><strong>assets</strong></td><td>貸出対象の統合マスタ。料金プラン・在庫数・必要免許・車検/点検期限・カスタム値。</td></tr>
         <tr><td><strong>options</strong></td><td>オプション。共通／カテゴリ専用の2階層、課金単位（1日あたり／1回あたり）。</td></tr>
         <tr><td><strong>members</strong></td><td>会員。ポイント残高・クーポン・請求書払い許可フラグ・利用履歴。</td></tr>
         <tr><td><strong>reservations</strong></td><td>予約。期間・オプション・料金内訳・決済方法・状態（確定/貸出中/返却済/取消）。</td></tr>
@@ -389,8 +388,9 @@
     </table>
     </div>
     <p class="sec-intro">
-      車両（<code>type: vehicle</code>）と物品（<code>type: item</code>）は同一の <code>assets</code> マスタで扱い、
-      物品は在庫数（<code>stock &gt; 1</code> 可）、車両は在庫数 1・車検/点検期限を持つ、という差分を属性で表現します。
+      カテゴリ種別は <code>type: vehicle</code>（車両）と <code>type: item</code>（物品）を同一の <code>assets</code> マスタで扱える設計です。
+      現在の取り扱いはいずれも車両カテゴリ（在庫数 1・車検/点検期限あり）ですが、
+      将来 台数管理型の物品カテゴリ（<code>stock &gt; 1</code> 可・免許不要）を追加する場合も、この差分は属性だけで表現できます。
       詳細なスキーマ・API仕様は別紙「基本設計書」および「開発規約（dev-contract）」を参照してください。
     </p>
   </section>
@@ -413,17 +413,17 @@
       <tbody>
         <tr>
           <td class="num">1</td><td><strong>検索</strong></td>
-          <td>日時・拠点・カテゴリでの検索。加えてカテゴリ別の絞り込み（家電＝品目種別／対応電圧、工具＝用途／サイズ 等）。</td>
+          <td>日時・拠点・カテゴリでの検索。加えてカテゴリ別の絞り込み（一般レンタカー＝ボディタイプ／駆動方式 等）。</td>
           <td><span class="badge impl">○ 実装済</span> <code>search.html</code>。カテゴリの検索対象カスタム項目が絞り込みUIに自動反映。数値項目は「以上」、選択・テキストは完全一致で <code>searchAvailable()</code> が判定。</td>
         </tr>
         <tr>
-          <td class="num">2</td><td><strong>車両・物品詳細</strong></td>
-          <td>カテゴリ固有スペックを表示（キッチンカー＝キッチン寸法／搭載機材、キャンピングカー＝就寝人数／ベッド数、特殊車両＝最大積載量／荷台寸法 等）。</td>
+          <td class="num">2</td><td><strong>車両詳細</strong></td>
+          <td>カテゴリ固有スペックを表示（一般レンタカー＝ボディタイプ／駆動方式／カーナビ・ETC、キッチンカー＝キッチン寸法／搭載機材／シンク数／電源容量 等）。</td>
           <td><span class="badge impl">○ 実装済</span> <code>detail.html</code>。カテゴリの <code>customFieldDefs</code> に沿ってスペック表を自動描画。単位付き表示に対応。</td>
         </tr>
         <tr>
           <td class="num">3</td><td><strong>オプション（2分類）</strong></td>
-          <td>共通オプション（免責補償等）とカテゴリ専用オプションの2分類で提示。</td>
+          <td>共通の装備オプションとカテゴリ専用オプション（補償）の2分類で提示。</td>
           <td><span class="badge impl">○ 実装済</span> <code>optionsForCategory()</code> が共通／専用を分けて返却し、詳細・予約フローで区分表示。</td>
         </tr>
         <tr>
@@ -433,8 +433,8 @@
         </tr>
         <tr>
           <td class="num">5</td><td><strong>予約フロー</strong></td>
-          <td>車両予約では免許証情報を入力。物品予約では免許欄を非表示にする動的な切り替え。</td>
-          <td><span class="badge impl">○ 実装済</span> <code>booking.html</code>。カテゴリ種別（車両／物品）に応じ免許証入力欄・確認ステップを動的に表示／非表示。</td>
+          <td>車両予約では免許証情報を入力。カテゴリ種別に応じて免許欄を出し分ける動的な切り替え。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>booking.html</code>。カテゴリ種別（車両／物品）に応じ免許証入力欄・確認ステップを動的に表示／非表示（現行の2カテゴリはいずれも車両のため常に表示）。</td>
         </tr>
         <tr>
           <td class="num">6</td><td><strong>確認メール自動送信</strong></td>
@@ -474,22 +474,22 @@
       <tbody>
         <tr>
           <td class="num">1</td><td><strong>ダッシュボード</strong></td>
-          <td>全4拠点の本日の出発・返却、未処理予約、売上サマリを一画面で。スマホ対応。</td>
+          <td>全拠点（北見・釧路）の本日の出発・返却、未処理予約、売上サマリを一画面で。スマホ対応。</td>
           <td><span class="badge impl">○ 実装済</span> <code>dashboard.html</code>。拠点別サマリ・未処理アラート・売上・週次グラフ・自動通知ログを集約表示。</td>
         </tr>
         <tr>
           <td class="num">2</td><td><strong>ガントチャート式予約表</strong></td>
           <td>時間単位・日単位で拠点を横断して予約状況を可視化。</td>
-          <td><span class="badge impl">○ 実装済</span> <code>reservation-table.html</code>。日／時間単位の切替、拠点グループ表示、物品の段積み表示に対応。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>reservation-table.html</code>。日／時間単位の切替、拠点グループ表示、在庫数が複数ある場合の段積み表示に対応。</td>
         </tr>
         <tr>
           <td class="num">3</td><td><strong>帳票出力</strong></td>
-          <td>車両＝貸渡証・車輌チェックシート・領収書、物品＝物品貸出書・領収書。物品貸出書は品目名・数量・貸出期間・料金を記載。</td>
-          <td><span class="badge impl">○ 実装済</span> <code>forms.html</code>。貸渡証／車輌チェックシート／領収書／物品貸出書をA4印刷対応で出力。</td>
+          <td>車両カテゴリ＝貸渡証・車輌チェックシート・領収書。物品カテゴリを追加した場合は物品貸出書・領収書に自動で切り替わること。</td>
+          <td><span class="badge impl">○ 実装済</span> <code>forms.html</code>。貸渡証／車輌チェックシート／領収書をA4印刷対応で出力（物品貸出書の様式も実装済み）。</td>
         </tr>
         <tr>
-          <td class="num">4</td><td><strong>車両・物品マスタ管理</strong></td>
-          <td>カテゴリの自由作成・紐付け、料金プラン（時間／日／ハイシーズン／会員ランク別）、オプションCRUD、車検・メンテ期限（車両のみ）、物品在庫数。</td>
+          <td class="num">4</td><td><strong>車両マスタ管理</strong></td>
+          <td>カテゴリの自由作成・紐付け、料金プラン（時間／日／ハイシーズン／会員ランク別）、オプションCRUD、車検・メンテ期限、在庫数。</td>
           <td><span class="badge impl">○ 実装済</span> <code>vehicles.html</code> / <code>categories.html</code> / <code>options.html</code>。カテゴリ自由作成、料金プラン（時間・日・週・月・ハイシーズン加算）、在庫数、車検/点検期限を管理。</td>
         </tr>
         <tr>
@@ -499,7 +499,7 @@
         </tr>
         <tr>
           <td class="num">6</td><td><strong>店舗・従業員管理</strong></td>
-          <td>4拠点の営業時間・定休日、従業員の権限管理。</td>
+          <td>各拠点の営業時間・定休日、従業員の権限管理。</td>
           <td><span class="badge impl">○ 実装済</span> <code>stores.html</code> / <code>employees.html</code>。拠点の営業時間・定休日、従業員アカウントと権限を管理。</td>
         </tr>
         <tr>
@@ -526,53 +526,51 @@
   <section class="section page-break">
     <h2 id="s6" class="anchor">6. オプション品目一覧</h2>
     <p class="sec-intro">
-      オプションは<strong>共通</strong>（全車両カテゴリに適用）と<strong>カテゴリ専用</strong>の2階層で管理します。
+      オプションは<strong>共通</strong>（全車両カテゴリに適用される装備オプション）と<strong>カテゴリ専用</strong>（補償）の2階層で管理します。
       すべて管理画面（<code>options.html</code>）から追加・変更・削除でき、
       新カテゴリを作成した際は当該カテゴリへの紐付けも設定できます。課金単位は「1日あたり」「1回あたり」を品目ごとに選択します。
     </p>
 
-    <h4>6.1 共通オプション（全車両カテゴリ）</h4>
-    <div class="chip-row">
-      <span class="chip">免責補償（保険免責）</span>
-      <span class="chip">チャイルドシート</span>
-      <span class="chip">スタッドレスタイヤ</span>
-      <span class="chip">ETC車載器</span>
-    </div>
-
-    <h4>6.2 キッチンカー専用オプション（約10品目）</h4>
+    <h4>6.1 装備オプション（全車共通・11品目）</h4>
+    <p class="sec-intro">
+      家電・調理器具・電源などの装備は、単体レンタルではなく<strong>車両に付帯する装備オプション</strong>として提供します。
+      すべてのカテゴリの車両に付けられ、料金は24時間あたりです。
+    </p>
     <div class="tbl-wrap">
     <table>
-      <thead><tr><th class="num">#</th><th>品目</th><th class="num">#</th><th>品目</th></tr></thead>
+      <thead><tr><th class="num">#</th><th>品目</th><th style="width:15%">料金</th><th class="num">#</th><th>品目</th><th style="width:15%">料金</th></tr></thead>
       <tbody>
-        <tr><td class="num">1</td><td>発電機（2.8kVA）</td><td class="num">6</td><td>のぼり旗セット（5本）</td></tr>
-        <tr><td class="num">2</td><td>追加プロパンガス（8kg）</td><td class="num">7</td><td>追加テント・タープ</td></tr>
-        <tr><td class="num">3</td><td>ポータブル電源</td><td class="num">8</td><td>ポップアップバナー</td></tr>
-        <tr><td class="num">4</td><td>フライヤー</td><td class="num">9</td><td>延長コード（20m）</td></tr>
-        <tr><td class="num">5</td><td>鉄板（600mm）</td><td class="num">10</td><td>追加冷蔵庫</td></tr>
+        <tr><td class="num">1</td><td>ポータブル冷蔵冷凍庫</td><td>¥3,300</td><td class="num">7</td><td>カセットボンベ</td><td>¥1,100</td></tr>
+        <tr><td class="num">2</td><td>電子レンジ</td><td>¥2,200</td><td class="num">8</td><td>炊飯器</td><td>¥2,200</td></tr>
+        <tr><td class="num">3</td><td>サーキュレーター</td><td>¥1,100</td><td class="num">9</td><td>電気ケトル</td><td>¥1,100</td></tr>
+        <tr><td class="num">4</td><td>ポータブル電源</td><td>¥3,300</td><td class="num">10</td><td>家電セット（上記9点まとめ）</td><td>¥11,000</td></tr>
+        <tr><td class="num">5</td><td>ドラムリール</td><td>¥1,100</td><td class="num">11</td><td>集客セット（ホワイトボード・マグネット・ペン）</td><td>¥1,100</td></tr>
+        <tr><td class="num">6</td><td>カセットコンロ</td><td>¥1,100</td><td class="num"></td><td></td><td></td></tr>
       </tbody>
     </table>
     </div>
 
-    <h4>6.3 キャンピングカー専用オプション</h4>
-    <div class="chip-row">
-      <span class="chip">寝具セット（1名分）</span>
-      <span class="chip">BBQセット</span>
-      <span class="chip">ポータブルトイレ</span>
-      <span class="chip">外部電源ケーブル</span>
-    </div>
-
-    <h4>6.4 特殊車両専用オプション</h4>
-    <div class="chip-row">
-      <span class="chip">荷台シート（カバー）</span>
-      <span class="chip">ロープ・固定具セット</span>
-      <span class="chip">台車・手押し車</span>
+    <h4>6.2 補償オプション（カテゴリ専用）</h4>
+    <p class="sec-intro">補償はカテゴリごとに金額が異なるため、カテゴリ専用オプションとして設定しています（料金は24時間あたり）。</p>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th style="width:34%">カテゴリ</th><th>免責補償制度（CDW）</th><th>安心保証コース（PAP）</th></tr></thead>
+      <tbody>
+        <tr><td><strong>一般レンタカー</strong></td><td>¥1,650</td><td>¥3,300</td></tr>
+        <tr><td><strong>キッチンカー</strong></td><td>¥3,300</td><td>¥6,600</td></tr>
+      </tbody>
+    </table>
     </div>
 
     <div class="callout">
       <span class="lbl">オプション設定の柔軟性</span>
       各オプションは対象カテゴリ（共通＝全車両カテゴリ／特定カテゴリ）・価格・課金単位を持ち、有効／無効を切り替えられます。
-      物品カテゴリ（家電・工具）は共通オプションの対象外とし、必要に応じて専用オプションを紐付けられます。
+      カテゴリを新設した場合、共通の装備オプションは自動的に適用され、そのカテゴリ固有のオプション（補償など）は管理画面から紐付けます。
     </div>
+    <p class="sec-intro">
+      ※ 学生・法人・二地域居住者の割引（24時間以上の利用で ¥1,100 引き）、および守成クラブ会員の割引（キッチンカーのみ ¥3,000 引き）は、
+      証明書の提示を前提とするため、現地精算時に適用する運用ルールとしています。
+    </p>
   </section>
 
   <!-- ============== 7. 会員・ポイント ============== -->

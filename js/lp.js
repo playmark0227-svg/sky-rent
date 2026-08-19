@@ -14,10 +14,7 @@
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const CAT_EN = {
-    'cat-rental': 'Rental Car', 'cat-kitchen': 'Kitchen Car', 'cat-camping': 'Camper',
-    'cat-special': 'Special Vehicle', 'cat-appliance': 'Appliance', 'cat-tool': 'Tools'
-  };
+  const CAT_EN = { 'cat-rental': 'Rental Car', 'cat-kitchen': 'Kitchen Car' };
 
   // ===== イントロスプラッシュ =====
   function intro() {
@@ -116,12 +113,10 @@
 
   // ===== 統計 =====
   function stats() {
-    const cats = S.categories().length;
     const assets = S.assets({ activeOnly: true }).length;
     const locs = S.locations().length;
-    const el1 = $('#st-cats'), el2 = $('#st-assets'), el3 = $('#st-locs');
-    if (el1) el1.dataset.count = cats;
-    if (el2) el2.dataset.count = assets;
+    const el1 = $('#st-assets2'), el3 = $('#st-locs');
+    if (el1) el1.dataset.count = assets;
     if (el3) el3.dataset.count = locs;
   }
 
@@ -148,7 +143,7 @@
     const sc = $('#lineup-scroller');
     if (!sc) return;
     // 目玉を選抜: 各カテゴリから1台ずつ + 人気車
-    const picks = ['K001', 'C001', 'V004', 'T001', 'V006', 'I001', 'K002', 'T003', 'I103'];
+    const picks = ['V003', 'V004', 'V001', 'V002', 'V005', 'K001'];
     const assets = picks.map(id => S.getAsset(id)).filter(a => a && a.active !== false);
     sc.innerHTML = assets.map((a, i) => {
       const c = S.getCategory(a.categoryId);
