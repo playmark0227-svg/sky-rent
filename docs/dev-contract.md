@@ -38,11 +38,12 @@
       unit: '槽', options: ['…'](selectのみ), filterable: true|false }
   ] }
 ```
-シード: cat-rental(一般レンタカー) / cat-kitchen / cat-camping / cat-special(特殊車両) / cat-appliance(家電, item) / cat-tool(工具, item)
+シード: cat-rental(一般レンタカー) / cat-kitchen(キッチンカー)
+※ type:'item' (物品カテゴリ) はデータモデル上サポート済み。現在の取扱いは車両2カテゴリのみ。
 
-### locations (4拠点)
+### locations (拠点)
 ```js
-{ locationId: 'loc-sapporo', name: '札幌本店', nameEn, tel, address, hours: '9:00-19:00', holiday: '水曜定休', sort }
+{ locationId: 'loc-kitami', name: '北見本店', nameEn, tel, address, hours: '9:00-19:00', holiday: 'なし (年中無休)', sort }
 ```
 シード: loc-sapporo / loc-chitose / loc-asahikawa / loc-hakodate
 
