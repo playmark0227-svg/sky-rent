@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>お問い合わせ | グロースレンタカー</title>
+<meta name="description" content="グロースレンタカーへのお問い合わせ。ご予約の変更・キャンセル、法人でのご利用、キッチンカーの出店相談などは公式LINEまたはお問い合わせフォームより承ります。">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/public.css">
+<style>
+  .ct-lead { max-width: 78ch; }
+  .ct-ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 30px 0 52px; }
+  .ct-way {
+    background: var(--ink-3); border: 1px solid var(--line); border-radius: 8px;
+    padding: 26px 24px; display: flex; flex-direction: column; gap: 10px;
+    transition: border-color .3s ease, transform .3s cubic-bezier(.22,1,.36,1);
+  }
+  .ct-way:hover { border-color: var(--color-primary); transform: translateY(-4px); }
+  .ct-way .ic { font-size: 28px; line-height: 1; }
+  .ct-way h3 { font-size: 16px; font-weight: 900; color: #fff; }
+  .ct-way p { font-size: 12.5px; color: var(--color-muted); line-height: 1.95; flex: 1; }
+  .ct-way .btn { align-self: flex-start; margin-top: 4px; }
+  .ct-way .line-btn { background: #06C755; border-color: #06C755; color: #fff; }
+  .ct-way .line-btn:hover { background: #05a948; border-color: #05a948; }
+
+  .ct-form { max-width: 720px; }
+  .ct-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .ct-form .fg { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .ct-form .fg.wide { grid-column: 1 / -1; }
+  .ct-form label {
+    font-size: 12.5px; font-weight: 700; color: #fff;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .ct-form .req {
+    font-family: var(--font-num); font-size: 10px; font-weight: 700; letter-spacing: .1em;
+    background: var(--color-primary); color: #fff; padding: 2px 6px; border-radius: 3px;
+  }
+  .ct-form .opt {
+    font-family: var(--font-num); font-size: 10px; font-weight: 600; letter-spacing: .1em;
+    border: 1px solid var(--line-2); color: var(--color-muted-2); padding: 1px 6px; border-radius: 3px;
+  }
+  .ct-form input, .ct-form select, .ct-form textarea {
+    padding: 12px 13px; border: 1.5px solid var(--line-2); border-radius: 4px;
+    background: var(--ink); color: #fff; font-family: inherit; font-size: 14px; min-width: 0;
+  }
+  .ct-form textarea { min-height: 160px; resize: vertical; line-height: 1.8; }
+  .ct-form input:focus, .ct-form select:focus, .ct-form textarea:focus { outline: none; border-color: var(--color-primary); }
+  .ct-form .hint { font-size: 11.5px; color: var(--color-muted-2); line-height: 1.8; }
+  .ct-agree { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--color-muted); line-height: 1.85; margin: 8px 0 22px; }
+  .ct-agree input { width: 17px; height: 17px; flex-shrink: 0; margin-top: 2px; accent-color: var(--color-primary); }
+  .ct-agree a { color: var(--color-primary); border-bottom: 1px solid rgba(255,106,0,.4); }
+  .ct-err { color: #ff8a5c; font-size: 12px; margin-top: 4px; display: none; }
+  .ct-err.on { display: block; }
+  .ct-done {
+    display: none; background: var(--color-primary-soft); border: 1px solid var(--color-primary);
+    border-radius: 8px; padding: 26px 24px; max-width: 720px;
+  }
+  .ct-done.on { display: block; }
+  .ct-done h3 { font-size: 17px; font-weight: 900; color: #fff; margin-bottom: 10px; }
+  .ct-done p { font-size: 13.5px; color: var(--color-muted); line-height: 2; }
+  .ct-done .ref { font-family: var(--font-num); font-size: 15px; color: var(--color-primary); letter-spacing: .08em; margin-top: 12px; }
+  @media (max-width: 620px) { .ct-form .row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <div data-inc="header"></div>
+
+  <main class="container page-offset" style="padding-bottom:90px">
+    <nav class="crumb"><a href="index.html">トップ</a><span>›</span><span>お問い合わせ</span></nav>
+
+    <div class="page-head">
+      <p class="eyebrow">CONTACT</p>
+      <h1>お問い合わせ</h1>
+      <p class="ct-lead">ご予約の変更・キャンセル、法人でのご利用、キッチンカーの出店相談など、お気軽にご連絡ください。お急ぎの場合は公式LINEが最短です。</p>
+    </div>
+
+    <div class="ct-ways">
+      <div class="ct-way">
+        <span class="ic" aria-hidden="true">💬</span>
+        <h3>公式LINE</h3>
+        <p>友だち追加いただくと、そのままトークでご相談いただけます。ご予約後のご連絡もLINEで行っています。受付 9:00〜19:00 (年中無休)。</p>
+        <a href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener" class="btn btn-primary line-btn">LINEで問い合わせる</a>
+      </div>
+      <div class="ct-way">
+        <span class="ic" aria-hidden="true">✉️</span>
+        <h3>メール</h3>
+        <p>お見積り依頼や請求書払いのご相談など、書面でのやり取りが必要な場合はメールをご利用ください。2営業日以内にご返信します。</p>
+        <a href="mailto:daichi.fujimoto@skyward-growth.com" class="btn btn-secondary">メールを送る</a>
+      </div>
+      <div class="ct-way">
+        <span class="ic" aria-hidden="true">🗓️</span>
+        <h3>予約の確認・変更</h3>
+        <p>ご予約の内容確認やキャンセルは、マイページからお手続きいただけます。キャンセル料の発生時期は特定商取引法に基づく表記をご確認ください。</p>
+        <a href="mypage.html" class="btn btn-secondary">マイページを開く</a>
+      </div>
+    </div>
+
+    <div class="doc-body">
+      <h2 id="form">お問い合わせフォーム</h2>
+      <p>下記フォームからもお問い合わせいただけます。<span style="color:var(--color-primary)">＊</span>は必須項目です。</p>
+    </div>
+
+    <form class="ct-form" id="ct-form" novalidate>
+      <div class="row">
+        <div class="fg">
+          <label for="cf-name">お名前 <span class="req">必須</span></label>
+          <input type="text" id="cf-name" name="name" autocomplete="name" required>
+        </div>
+        <div class="fg">
+          <label for="cf-company">会社名・団体名 <span class="opt">任意</span></label>
+          <input type="text" id="cf-company" name="company" autocomplete="organization">
+        </div>
+        <div class="fg">
+          <label for="cf-email">メールアドレス <span class="req">必須</span></label>
+          <input type="email" id="cf-email" name="email" autocomplete="email" required>
+        </div>
+        <div class="fg">
+          <label for="cf-tel">電話番号 <span class="opt">任意</span></label>
+          <input type="tel" id="cf-tel" name="tel" autocomplete="tel" placeholder="09012345678">
+        </div>
+        <div class="fg wide">
+          <label for="cf-topic">お問い合わせ種別 <span class="req">必須</span></label>
+          <select id="cf-topic" name="topic" required>
+            <option value="">選択してください</option>
+            <option>ご予約について</option>
+            <option>ご予約の変更・キャンセル</option>
+            <option>料金・お見積りについて</option>
+            <option>法人利用・請求書払いについて</option>
+            <option>キッチンカーのレンタルについて</option>
+            <option>装備オプションについて</option>
+            <option>忘れ物について</option>
+            <option>その他</option>
+          </select>
+        </div>
+        <div class="fg wide">
+          <label for="cf-body">お問い合わせ内容 <span class="req">必須</span></label>
+          <textarea id="cf-body" name="body" required placeholder="ご利用希望日・車種・人数などをご記入いただくと、スムーズにご案内できます。"></textarea>
+          <p class="hint">ご予約済みの内容についてのお問い合わせは、予約番号 (例: R-0001) をあわせてご記入ください。</p>
+        </div>
+      </div>
+
+      <label class="ct-agree">
+        <input type="checkbox" id="cf-agree" required>
+        <span><a href="privacy.html">プライバシーポリシー</a>に同意のうえ送信します。ご入力いただいた情報は、お問い合わせへの回答のためにのみ利用します。</span>
+      </label>
+
+      <p class="ct-err" id="cf-err"></p>
+      <button type="submit" class="btn btn-primary btn-lg">この内容で送信する</button>
+      <p class="hint" style="margin-top:14px">※ 本フォームは受付内容をお使いのブラウザ内に保存し、運営管理画面へ連携するデモ実装です。実運用時はメール送信サーバーへの接続が必要です。</p>
+    </form>
+
+    <div class="ct-done" id="ct-done">
+      <h3>お問い合わせを受け付けました</h3>
+      <p>内容を確認のうえ、2営業日以内にご入力のメールアドレスへご返信いたします。お急ぎの場合は<a href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener" style="color:var(--color-primary)">公式LINE</a>よりご連絡ください。</p>
+      <p class="ref" id="ct-ref"></p>
+    </div>
+  </main>
+
+  <div data-inc="footer"></div>
+  <div data-inc="cta"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/pricing.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/partials-public.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      const form = document.getElementById('ct-form');
+      const err = document.getElementById('cf-err');
+      const done = document.getElementById('ct-done');
+      if (!form) return;
+
+      // 種別をクエリで指定できる (例: contact.html?topic=法人利用・請求書払いについて)
+      const preset = new URLSearchParams(location.search).get('topic');
+      if (preset) {
+        const sel = document.getElementById('cf-topic');
+        [...sel.options].forEach(o => { if (o.value === preset) sel.value = preset; });
+      }
+
+      function fail(msg, id) {
+        err.textContent = msg; err.classList.add('on');
+        const el = id && document.getElementById(id);
+        if (el) { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+      }
+
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        err.classList.remove('on');
+        const v = id => (document.getElementById(id).value || '').trim();
+        if (!v('cf-name')) return fail('お名前をご入力ください。', 'cf-name');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('cf-email'))) return fail('メールアドレスの形式をご確認ください。', 'cf-email');
+        if (!v('cf-topic')) return fail('お問い合わせ種別をお選びください。', 'cf-topic');
+        if (v('cf-body').length < 5) return fail('お問い合わせ内容をご入力ください。', 'cf-body');
+        if (!document.getElementById('cf-agree').checked) return fail('プライバシーポリシーへの同意が必要です。', 'cf-agree');
+
+        const ref = 'C-' + String(Date.now()).slice(-6);
+        const rec = {
+          inquiryId: ref, name: v('cf-name'), company: v('cf-company'),
+          email: v('cf-email'), tel: v('cf-tel'), topic: v('cf-topic'),
+          body: v('cf-body'), status: 'new', createdAt: new Date().toISOString()
+        };
+        try {
+          const KEY = 'sky-rent.inquiries';
+          const list = JSON.parse(localStorage.getItem(KEY) || '[]');
+          list.unshift(rec);
+          localStorage.setItem(KEY, JSON.stringify(list));
+        } catch (e) { console.warn('inquiry save failed', e); }
+
+        form.style.display = 'none';
+        document.getElementById('ct-ref').textContent = '受付番号: ' + ref;
+        done.classList.add('on');
+        done.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
+    })();
+  </script>
+</body>
+</html>

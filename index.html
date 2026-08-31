@@ -58,9 +58,9 @@
     <div class="container header-inner">
       <a href="index.html" class="logo"><span class="logo-mark">G</span><span class="logo-text">グロースレンタカー</span></a>
       <nav class="site-nav">
-        <a href="#categories" class="nav-hide-sp">カテゴリ</a>
-        <a href="#lineup" class="nav-hide-sp">ラインナップ</a>
-        <a href="#locations" class="nav-hide-sp">拠点</a>
+        <a href="fleet.html" class="nav-hide-sp">車両と料金</a>
+        <a href="guide.html" class="nav-hide-sp">ご利用方法</a>
+        <a href="faq.html" class="nav-hide-sp">よくある質問</a>
         <a href="mypage.html">マイページ</a>
         <a href="search.html" class="nav-cta">予約する</a>
       </nav>
@@ -86,13 +86,25 @@
         <a href="#categories" class="btn btn-ghost">カテゴリを見る</a>
       </div>
 
-      <!-- 検索パネル -->
-      <form class="hero-search" id="hero-search" name="search">
-        <div class="fg"><label>Category</label><select id="hs-category"></select></div>
-        <div class="fg"><label>Location</label><select id="hs-location"></select></div>
-        <div class="fg"><label>Pick-up</label><input type="datetime-local" id="hs-start"></div>
-        <div class="fg"><label>Return</label><input type="datetime-local" id="hs-end"></div>
-        <button type="submit" class="btn btn-primary">検 索</button>
+      <!-- 検索パネル (出発 / 返却) -->
+      <form class="rsv-split hero-rsv" id="hero-search" name="search">
+        <div class="rsv-col">
+          <h4>出発</h4>
+          <div class="rsv-fields">
+            <div class="fg wide"><label>Category</label><select id="hs-category"></select></div>
+            <div class="fg wide"><label>Pick-up Store</label><select id="hs-location"></select></div>
+            <div class="fg wide"><label>Pick-up Date &amp; Time</label><input type="datetime-local" id="hs-start"></div>
+          </div>
+        </div>
+        <div class="rsv-col">
+          <h4>返却</h4>
+          <div class="rsv-fields">
+            <div class="fg wide"><label>Return Store</label><input type="text" id="hs-location-return" value="出発と同じ拠点" readonly tabindex="-1"></div>
+            <div class="fg wide"><label>Return Date &amp; Time</label><input type="datetime-local" id="hs-end"></div>
+            <div class="fg wide"><p class="rsv-hint">ご返却は貸出と同じ拠点でお願いします。1時間単位／24時間単位のどちらでもご利用いただけます。</p></div>
+          </div>
+        </div>
+        <div class="rsv-submit"><button type="submit" class="btn btn-primary btn-lg">空き状況を検索する</button></div>
       </form>
     </div>
     <div class="hero-vertical">北の道を、あなたのものに。</div>
@@ -137,6 +149,18 @@
       <p class="eyebrow rv">Category</p>
       <h2 class="section-title rv d1">今日の「借りたい」は、どれ？</h2>
       <div class="cat-list" id="cat-list"></div>
+
+      <div class="class-block rv">
+        <div class="class-head">
+          <div>
+            <p class="eyebrow">Class &amp; Price</p>
+            <h3>クラスから選ぶ</h3>
+          </div>
+          <a href="fleet.html" class="r-link">車両と料金をすべて見る <span>→</span></a>
+        </div>
+        <div class="class-grid" id="class-grid"></div>
+        <p class="class-note">表示は24時間あたりの基本料金 (税込) です。土日祝・夜間・繁忙期は割増があります。詳しくは<a href="fleet.html">料金のしくみ</a>をご覧ください。</p>
+      </div>
     </div>
   </section>
 
@@ -269,40 +293,9 @@
     </div>
   </section>
 
-  <!-- ===== フッター ===== -->
-  <footer class="site-footer">
-    <div class="container">
-      <div class="footer-top">
-        <div class="footer-brand">
-          <div class="fb-mark"><span class="fb-kanji">G</span>グロースレンタカー</div>
-          <div class="fb-en">Growth Rent a Car</div>
-          <p>コンパクトカー・SUV・ミニバン・軽トラック・キッチンカー。<br>北海道 北見・釧路からお貸しします。</p>
-        </div>
-        <div class="footer-col">
-          <h4>Category</h4>
-          <a href="search.html?category=cat-rental">一般レンタカー</a>
-          <a href="search.html?category=cat-kitchen">キッチンカー</a>
-        </div>
-        <div class="footer-col">
-          <h4>Menu</h4>
-          <a href="search.html">空き検索・予約</a>
-          <a href="mypage.html">マイページ</a>
-          <a href="#locations">拠点一覧</a>
-          <a href="index.html#top">トップへ戻る</a>
-        </div>
-        <div class="footer-col">
-          <h4>Support</h4>
-          <a href="tel:011-000-0001">TEL 011-000-0001</a>
-          <a href="manage/dashboard.html">運営管理画面</a>
-          <a href="docs/index.html">システムドキュメント</a>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>© 2026 グロースレンタカー — 空へ、自由を。</span>
-        <span>デモ環境 (データはお使いのブラウザ内に保存されます)</span>
-      </div>
-    </div>
-  </footer>
+  <!-- ===== フッター (js/partials-public.js が生成) ===== -->
+  <div data-inc="footer"></div>
+  <div data-inc="cta"></div>
 
   <script src="js/config.js"></script>
   <script src="js/store.js"></script>
@@ -310,6 +303,7 @@
   <script src="js/i18n.js"></script>
   <script src="js/api.js"></script>
   <script src="js/photos.js"></script>
+  <script src="js/partials-public.js"></script>
   <script src="js/lp.js"></script>
 </body>
 </html>

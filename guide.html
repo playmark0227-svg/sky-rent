@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ご利用方法 | グロースレンタカー</title>
+<meta name="description" content="グロースレンタカーのご利用方法。ご予約から受付・ご出発・ご返却までの流れを5つのステップでご案内します。ご利用条件、北見本店・釧路店のご案内、料金のしくみもこちらから。">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/public.css">
+<style>
+  /* ご利用方法ページ固有の微調整 */
+  .g-flow { margin: 6px 0 4px; }
+  .g-step { display: grid; grid-template-columns: 56px 1fr; gap: 20px; padding: 28px 0; border-bottom: 1px solid var(--line); }
+  .g-step:first-child { padding-top: 6px; }
+  .g-step:last-child { border-bottom: none; }
+  .g-step .no {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--ink-4); border: 1.5px solid var(--line-2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-num); font-size: 23px; font-weight: 700;
+    color: var(--color-primary); letter-spacing: .02em;
+  }
+  .g-step .lbl {
+    font-family: var(--font-num); font-size: 12px; font-weight: 600;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--color-muted-2);
+    display: block; margin-bottom: 3px;
+  }
+  .g-step h3 { font-size: 18px; font-weight: 900; color: #fff; margin: 0 0 10px; }
+  .g-step > div > *:last-child { margin-bottom: 0; }
+  .g-inline-link { display: inline-flex; align-items: center; gap: 6px; color: var(--color-primary); font-size: 13.5px; font-weight: 700; margin-top: 4px; }
+  .g-inline-link:hover { text-decoration: underline; }
+
+  .g-loc { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0 6px; }
+  .g-loc .p-card { padding: 24px; }
+  .g-loc .kv { display: flex; gap: 12px; font-size: 13.5px; line-height: 1.9; margin-bottom: 6px; color: #dcdcdc; }
+  .g-loc .kv:last-child { margin-bottom: 0; }
+  .g-loc .kv span {
+    flex-shrink: 0; min-width: 5.5em; color: var(--color-muted-2);
+    font-size: 12px; letter-spacing: .08em; line-height: 2.1;
+  }
+
+  .g-cta {
+    margin-top: 60px; background: var(--ink-3); border: 1px solid var(--line);
+    border-radius: 8px; padding: 52px 32px; text-align: center;
+  }
+  .g-cta h2 { font-size: clamp(21px, 3vw, 30px); font-weight: 900; color: #fff; line-height: 1.5; margin: 6px 0 14px; }
+  .g-cta p { font-size: 14px; color: var(--color-muted); margin-bottom: 30px; }
+
+  @media (max-width: 640px) {
+    .g-loc { grid-template-columns: 1fr; }
+    .g-step { grid-template-columns: 44px 1fr; gap: 14px; }
+    .g-step .no { width: 44px; height: 44px; font-size: 19px; }
+    .g-cta { padding: 40px 22px; }
+  }
+</style>
+</head>
+<body>
+  <div data-inc="header"></div>
+
+  <main class="container page-offset" style="padding-bottom:90px">
+    <nav class="crumb"><a href="index.html">トップ</a><span>›</span><span>ご利用方法</span></nav>
+
+    <div class="page-head">
+      <p class="eyebrow">HOW TO USE</p>
+      <h1>ご利用方法</h1>
+      <p>ご予約から受付、ご出発、ご返却まで。はじめての方にもわかりやすいよう、5つのステップでご案内します。ご利用条件・拠点・料金のしくみもあわせてご確認ください。</p>
+    </div>
+
+    <nav class="toc">
+      <h4>Contents</h4>
+      <ol>
+        <li><a href="#flow">ご予約からご返却までの流れ</a></li>
+        <li><a href="#terms">ご利用条件</a></li>
+        <li><a href="#locations">拠点のご案内</a></li>
+        <li><a href="#price">料金のしくみ</a></li>
+        <li><a href="#faq">よくあるご質問</a></li>
+      </ol>
+    </nav>
+
+    <div class="doc-body">
+
+      <h2 id="flow">ご予約からご返却までの流れ</h2>
+      <p class="lead">ご予約はインターネットから24時間受け付けています。ご予約後のご連絡は公式LINEで行いますので、あわせて友だち追加をお願いいたします。</p>
+
+      <div class="g-flow">
+
+        <div class="g-step">
+          <div class="no">01</div>
+          <div>
+            <span class="lbl">Step 1</span>
+            <h3>ご予約</h3>
+            <p>予約サイトで、ご利用日時・拠点・車両をお選びください。空き状況はその場で確認でき、そのままご予約いただけます。</p>
+            <ul>
+              <li>出発日時と返却日時、ご利用の拠点 (北見本店 / 釧路店) を選択します</li>
+              <li>コンパクトカー・SUV・ミニバン・軽トラック・キッチンカーからお選びいただけます</li>
+              <li>ポータブル電源や家電セットなどの装備オプションも、ご予約時に選択できます</li>
+              <li>ご利用は1時間単位の時間貸しと、24時間貸しの2種類からお選びいただけます (キッチンカーは24時間貸しのみ)</li>
+              <li>お支払いは現地決済です。オンラインでの事前決済は行っておりません</li>
+            </ul>
+            <a class="g-inline-link" href="search.html">空き状況を検索してご予約 →</a>
+            <p class="doc-note">会員登録 (無料) をしていただくと、ご利用1回につき1ポイントが貯まります。10ポイントで¥1,000クーポンを自動発行し、次回のご予約時にご利用いただけます (最終利用日から12ヶ月間有効)。ご予約履歴の確認は<a class="g-inline-link" href="mypage.html" style="margin-top:0">マイページ</a>から。</p>
+          </div>
+        </div>
+
+        <div class="g-step">
+          <div class="no">02</div>
+          <div>
+            <span class="lbl">Step 2</span>
+            <h3>公式LINEの友だち追加</h3>
+            <p>ご予約後のご連絡は、公式LINEにて承っております。受付のご案内、当日の待ち合わせ、ご予約内容の変更やキャンセルのご相談も、LINEからお気軽にご連絡ください。</p>
+            <ul>
+              <li>ご予約が完了しましたら、お早めに友だち追加をお願いいたします</li>
+              <li>ご返却時刻の延長をご希望の場合も、こちらからご連絡いただけます</li>
+            </ul>
+            <a class="g-inline-link" href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener">公式LINEを友だち追加する ↗</a>
+          </div>
+        </div>
+
+        <div class="g-step">
+          <div class="no">03</div>
+          <div>
+            <span class="lbl">Step 3</span>
+            <h3>ご来店・受付</h3>
+            <p>ご予約いただいた日時に、拠点までお越しください。受付では、次のものをご提示いただきます。</p>
+            <ul>
+              <li>運転免許証 (運転される方全員分)</li>
+              <li>ご予約時のお名前がわかるもの</li>
+              <li>法人としてご利用の場合は、社員証など所属が確認できるもの</li>
+              <li>学割をご利用の場合は、学生証</li>
+              <li>二地域居住者割引をご利用の場合は、二地域居住者チラシ</li>
+            </ul>
+            <p>お支払いは、拠点での現地決済 (現金・クレジットカード) となります。法人・行政のお客様は、事前審査のうえ請求書払い (月次一括請求も可能) をご利用いただけます。</p>
+          </div>
+        </div>
+
+        <div class="g-step">
+          <div class="no">04</div>
+          <div>
+            <span class="lbl">Step 4</span>
+            <h3>車両の確認とご出発</h3>
+            <p>スタッフが貸渡約款と注意事項をご説明します。ご不明な点は、この時にお気軽にお尋ねください。</p>
+            <ul>
+              <li>貸渡約款・ご利用上の注意事項のご説明</li>
+              <li>車両の外装・内装の状態 (キズやへこみ) をスタッフと一緒に確認</li>
+              <li>装備・オプション品の数量と使い方の確認</li>
+              <li>補償制度への加入受付 — 免責補償制度 (CDW) ¥1,650/日、安心保証コース (PAP) ¥3,300/日 (いずれも税込)。キッチンカーは CDW ¥3,300/日、PAP ¥6,600/日です</li>
+            </ul>
+            <p>確認が済みましたら、そのままご出発いただけます。</p>
+            <a class="g-inline-link" href="insurance.html">保険・補償プランの詳細を見る →</a>
+          </div>
+        </div>
+
+        <div class="g-step">
+          <div class="no">05</div>
+          <div>
+            <span class="lbl">Step 5</span>
+            <h3>ご返却</h3>
+            <p>お約束のご返却日時までに、貸渡を受けた拠点へお戻しください。</p>
+            <ul>
+              <li>燃料は満タンにしてご返却ください (満タン返し)</li>
+              <li>スタッフと一緒に車両と装備品を確認し、精算して終了です</li>
+              <li>ご返却時刻を延長されたい場合は、返却予定時刻より前に公式LINEへご連絡ください。次のご予約状況によっては、延長をお受けできない場合があります</li>
+            </ul>
+            <p>ご連絡なく返却が遅れた場合は、延滞料金を申し受けます。</p>
+            <table>
+              <thead><tr><th>返却の遅れ</th><th>延滞料金</th></tr></thead>
+              <tbody>
+                <tr><td>30分未満</td><td>無料</td></tr>
+                <tr><td>30分〜1時間</td><td>超過料金の50%</td></tr>
+                <tr><td>1時間を超える場合</td><td>超過料金 (1時間ごと)</td></tr>
+                <tr><td>ご連絡のない延滞</td><td>超過料金の2倍</td></tr>
+              </tbody>
+            </table>
+            <p class="doc-note">会員のお客様は、ご返却が完了した時点でポイントが1つ加算されます。</p>
+          </div>
+        </div>
+
+      </div>
+
+      <h2 id="terms">ご利用条件</h2>
+      <p>次の条件をすべて満たすお客様にご利用いただけます。</p>
+      <ul>
+        <li>有効な運転免許証をお持ちの方 (運転される方全員)</li>
+        <li>免許停止中・免許取消中でない方</li>
+        <li>当社の貸渡約款にご同意いただける方</li>
+        <li>受付時に、運転される方全員分の運転免許証をご提示いただける方</li>
+      </ul>
+      <p>ご予約の車両に必要な免許は、車両ごとのご案内に記載しています。ご予約前にあわせてご確認ください。</p>
+      <a class="g-inline-link" href="clause.html">貸渡約款を読む →</a>
+
+      <h2 id="locations">拠点のご案内</h2>
+      <p>北海道 北見市と釧路市の2拠点で営業しています。いずれも年中無休です。</p>
+
+      <div class="g-loc">
+        <div class="p-card">
+          <h3>北見本店</h3>
+          <div class="kv"><span>所在地</span>北海道北見市</div>
+          <div class="kv"><span>営業時間</span>9:00〜19:00</div>
+          <div class="kv"><span>定休日</span>年中無休</div>
+        </div>
+        <div class="p-card">
+          <h3>釧路店</h3>
+          <div class="kv"><span>所在地</span>北海道釧路市</div>
+          <div class="kv"><span>営業時間</span>9:00〜18:00</div>
+          <div class="kv"><span>定休日</span>年中無休</div>
+        </div>
+      </div>
+
+      <p class="doc-note">各拠点の詳しい所在地やアクセスについては、お問い合わせページまたは公式LINEよりお気軽にご連絡ください。運営会社の情報は会社概要ページに掲載しています。</p>
+      <a class="g-inline-link" href="contact.html">お問い合わせ →</a>
+
+      <h2 id="price">料金のしくみ</h2>
+      <p>料金は「1時間単位の時間貸し」と「24時間貸し」の2本立てです。ご利用時間に応じて、基本料金にオプション料金・割増・割引を加減してご請求します。表示金額はすべて税込です。</p>
+
+      <h3>基本料金</h3>
+      <table>
+        <thead><tr><th>車両</th><th>1時間</th><th>24時間</th></tr></thead>
+        <tbody>
+          <tr><td>日産 ノート / ノート e-POWER (コンパクトカー)</td><td>¥1,100</td><td>¥7,700</td></tr>
+          <tr><td>マツダ CX-5 (SUV)</td><td>¥2,200</td><td>¥17,000</td></tr>
+          <tr><td>トヨタ シエンタ (ミニバン)</td><td>¥2,200</td><td>¥17,000</td></tr>
+          <tr><td>軽トラック</td><td>¥1,100</td><td>¥7,700</td></tr>
+          <tr><td>キッチンカー</td><td>時間貸しのお取扱いはありません</td><td>¥22,000</td></tr>
+        </tbody>
+      </table>
+
+      <h3>超過料金</h3>
+      <ul>
+        <li>1時間を超えるごとに、1時間あたりの料金と同額を加算します</li>
+        <li>24時間を超えるごとに、24時間あたりの料金と同額を加算します</li>
+      </ul>
+
+      <h3>割増料金</h3>
+      <table>
+        <thead><tr><th>区分</th><th>金額</th><th>適用</th></tr></thead>
+        <tbody>
+          <tr><td>土日祝割増</td><td>¥330</td><td>1回のご利用につき</td></tr>
+          <tr><td>夜間料金</td><td>¥1,100</td><td>20:00〜翌8:00の貸出または返却。貸出・返却の両方が該当する場合は¥2,200</td></tr>
+          <tr><td>繁忙期割増</td><td>¥550</td><td>1回のご利用につき (4月26日〜5月5日、12月29日〜1月3日)</td></tr>
+        </tbody>
+      </table>
+      <p class="doc-note">繁忙期 (4月26日〜5月5日、12月29日〜1月3日) は、土日祝割増は加算されません。</p>
+
+      <h3>割引</h3>
+      <p>24時間以上のご利用に限り、次の割引をご用意しています。ご利用には、受付時の証明書提示が必要です。</p>
+      <ul>
+        <li>学生割引 — 基本料金から¥1,100引き (学生証のご提示)</li>
+        <li>法人割引 — 基本料金から¥1,100引き (社員証のご提示、または法人名でのご予約)</li>
+        <li>二地域居住者割引 — 基本料金から¥1,100引き (二地域居住者チラシのご提示)</li>
+        <li>守成クラブ会員割引 — キッチンカーのご利用のみ¥3,000引き</li>
+      </ul>
+      <p class="doc-note">割引は基本料金にのみ適用されます。オプション料金・超過料金・キャンセル料には適用できません。</p>
+
+      <h3>装備オプション</h3>
+      <p>ポータブル冷蔵冷凍庫、電子レンジ、ポータブル電源、カセットコンロ、炊飯器などを24時間あたり¥1,100からご用意しています。よく使う9点をまとめた家電セットは¥11,000です。ご予約時にお選びください。</p>
+
+      <h3>補償・キャンセル料</h3>
+      <p>免責補償制度 (CDW) は¥1,650/日、安心保証コース (PAP) は¥3,300/日です (キッチンカーは¥3,300/日・¥6,600/日)。万一の事故の際にお客様にご負担いただくノンオペレーションチャージ (NOC) や、キャンセル料の詳細は、下記のページに掲載しています。</p>
+      <a class="g-inline-link" href="fleet.html">車両ごとの料金を見る →</a><br>
+      <a class="g-inline-link" href="insurance.html">保険・補償プラン →</a><br>
+      <a class="g-inline-link" href="law.html">キャンセル料など、特定商取引法に基づく表記 →</a>
+
+      <h2 id="faq">よくあるご質問</h2>
+      <p>ご利用にあたって、よくいただくご質問を抜粋しました。</p>
+
+      <div class="faq-list">
+        <details class="faq">
+          <summary><span class="q">Q</span>支払い方法は何が使えますか？<span class="tg"></span></summary>
+          <div class="a">拠点での現地決済 (現金・クレジットカード) が基本です。法人・行政のお客様は、事前審査のうえ請求書払い (月次一括請求も可能) をご利用いただけます。オンラインでの事前決済は現在導入しておりません。</div>
+        </details>
+        <details class="faq">
+          <summary><span class="q">Q</span>受付には何を持っていけばよいですか？<span class="tg"></span></summary>
+          <div class="a">運転される方全員分の運転免許証と、ご予約時のお名前がわかるものをお持ちください。法人としてご利用の場合は社員証など、学割をご利用の場合は学生証もあわせてご提示ください。</div>
+        </details>
+        <details class="faq">
+          <summary><span class="q">Q</span>返却時刻を延長したいときは？<span class="tg"></span></summary>
+          <div class="a">返却予定時刻より前に、公式LINEへご連絡ください。次のご予約状況によっては延長をお受けできない場合があります。ご連絡のない延滞には、超過料金の2倍を申し受けます。</div>
+        </details>
+      </div>
+
+      <p class="mt24"><a class="btn btn-secondary" href="faq.html">よくあるご質問をすべて見る</a></p>
+
+    </div>
+
+    <div class="g-cta">
+      <p class="eyebrow">RESERVATION</p>
+      <h2>空き状況の確認から、<br>ご予約まで。</h2>
+      <p>ご希望の日時と拠点をお選びいただくだけで、空いている車両がその場でわかります。</p>
+      <a href="search.html" class="btn btn-primary btn-lg">空きを検索して予約する</a>
+    </div>
+
+  </main>
+
+  <div data-inc="footer"></div>
+  <div data-inc="cta"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/pricing.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/partials-public.js"></script>
+</body>
+</html>

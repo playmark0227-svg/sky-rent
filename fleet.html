@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>車両と料金 | グロースレンタカー</title>
+<meta name="description" content="グロースレンタカー (北海道 北見・釧路) の車両ラインアップと料金。コンパクトカー・SUV・ミニバン・軽トラック・キッチンカーの時間料金／24時間料金、割増・割引、装備オプション、補償オプションをご案内します。">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/public.css">
+<style>
+  /* ページ固有の微調整のみ */
+  .fleet-cat { scroll-margin-top: calc(var(--header-h) + 20px); }
+  .fleet-cat + .fleet-cat { margin-top: 64px; }
+  .fleet-cat > h2.section-title { margin-bottom: 8px; }
+  .fleet-cat .cat-desc { color: var(--color-muted); font-size: 13.5px; margin-bottom: 24px; max-width: 70ch; }
+  .fleet-cat .lu-wide .lw-body { gap: 10px; }
+  .fleet-cat .spec-table { margin-top: 6px; }
+  .lw-photo .lw-emoji {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 74px; line-height: 1;
+  }
+  .fleet-doc { scroll-margin-top: calc(var(--header-h) + 20px); }
+  .fleet-doc h2 { scroll-margin-top: calc(var(--header-h) + 20px); }
+  .doc-body a:not(.btn) { color: var(--color-primary); text-decoration: underline; text-underline-offset: 3px; }
+  .fleet-cta { text-align: center; padding: 46px 0 0; }
+  .fleet-cta p { color: var(--color-muted); font-size: 13.5px; margin-bottom: 18px; }
+  /* 狭い画面では見出しセルの折り返しを許可して横スクロールを防ぐ */
+  @media (max-width: 700px) {
+    .fleet-doc table th { white-space: normal; }
+  }
+  @media (max-width: 560px) {
+    .fleet-cat .spec-table { font-size: 12.5px; }
+    .fleet-cat .spec-table th, .fleet-cat .spec-table td { padding: 9px 10px; }
+    .fleet-cat .spec-table th { width: 43%; }
+  }
+</style>
+</head>
+<body>
+  <div data-inc="header"></div>
+
+  <main class="container page-offset" style="padding-bottom:90px">
+    <nav class="crumb"><a href="index.html">トップ</a><span>›</span><span>車両と料金</span></nav>
+
+    <div class="page-head">
+      <p class="eyebrow">FLEET &amp; PRICE</p>
+      <h1>車両と料金</h1>
+      <p>北見本店・釧路店でお貸しする車両と、その料金をまとめています。表示金額はすべて税込です。ご希望の日時に空きがあるかは、空き検索からご確認いただけます。</p>
+    </div>
+
+    <div class="toc">
+      <h4>Contents</h4>
+      <ol id="toc-list">
+        <li><a href="#price-rule">料金のしくみ</a></li>
+        <li><a href="#price-extra">割増料金</a></li>
+        <li><a href="#price-discount">割引制度</a></li>
+        <li><a href="#opt-equip">装備オプション</a></li>
+        <li><a href="#opt-cover">補償オプション</a></li>
+      </ol>
+    </div>
+
+    <!-- 車両ラインアップ (js/store.js の実データから描画) -->
+    <div id="fleet-list"></div>
+
+    <div class="doc-body fleet-doc mt40">
+      <h2 id="price-rule">料金のしくみ</h2>
+      <p>ご利用時間に応じて「時間貸し」と「24時間貸し」からお選びいただけます。車種ごとの1時間料金・24時間料金は、上の各車両のスペック表に記載しています。</p>
+      <table>
+        <tr><th>時間貸し</th><td>1時間単位でのご利用です。キッチンカーは時間貸しの取扱いがありません。</td></tr>
+        <tr><th>24時間貸し</th><td>24時間を1単位としてのご利用です。割引制度は24時間以上のご利用が対象となります。</td></tr>
+        <tr><th>超過料金</th><td>1時間の超過ごとに1時間料金と同額／24時間の超過ごとに24時間料金と同額を申し受けます。</td></tr>
+      </table>
+
+      <h3>返却が遅れた場合 (延滞料金)</h3>
+      <table>
+        <tr><th>30分未満</th><td>無料</td></tr>
+        <tr><th>30分以上〜1時間</th><td>超過料金の50%</td></tr>
+        <tr><th>1時間を超える場合</th><td>超過料金 (1時間ごと)</td></tr>
+        <tr><th>ご連絡のない延滞</th><td>超過料金の2倍</td></tr>
+      </table>
+      <p class="doc-note">ご返却が遅れそうな場合は、分かった時点で店舗までご連絡ください。ご連絡をいただいている場合と無断の場合とで、申し受ける料金が異なります。</p>
+
+      <h2 id="price-extra">割増料金</h2>
+      <p>基本料金に加えて、ご利用の曜日・時間帯・時期に応じて次の割増料金を申し受けます。</p>
+      <table>
+        <tr><th>区分</th><th>料金 (税込)</th><th>適用</th></tr>
+        <tr><td>土日祝割増</td><td>¥330</td><td>1回のご利用につき</td></tr>
+        <tr><td>夜間料金</td><td>¥1,100</td><td>20:00〜翌8:00の貸出または返却。貸出・返却の両方が該当する場合は¥2,200</td></tr>
+        <tr><td>繁忙期割増</td><td>¥550</td><td>4月26日〜5月5日、12月29日〜1月3日の1回のご利用につき</td></tr>
+      </table>
+      <p class="doc-note">繁忙期 (4月26日〜5月5日、12月29日〜1月3日) は繁忙期割増のみの適用となり、土日祝割増はかかりません。</p>
+
+      <h2 id="price-discount">割引制度</h2>
+      <p>24時間以上のご利用に限り、次の割引をご利用いただけます。割引は基本料金からの値引きです。</p>
+      <table>
+        <tr><th>割引</th><th>割引額 (税込)</th><th>ご提示いただくもの</th></tr>
+        <tr><td>学生割引</td><td>¥1,100引き</td><td>学生証</td></tr>
+        <tr><td>法人割引</td><td>¥1,100引き</td><td>社員証のご提示、または法人名でのご予約</td></tr>
+        <tr><td>二地域居住者割引</td><td>¥1,100引き</td><td>二地域居住者チラシ</td></tr>
+        <tr><td>守成クラブ会員割引</td><td>¥3,000引き</td><td>キッチンカーのご利用のみが対象です</td></tr>
+      </table>
+      <p class="doc-note">割引は基本料金にのみ適用されます。オプション料金・超過料金・キャンセル料には適用できません。適用をご希望の場合は、ご出発の受付時に証明できるものをご提示ください。</p>
+
+      <h2 id="opt-equip">装備オプション</h2>
+      <p>全車共通でお貸出しできる装備です。料金は24時間あたり・税込です。ご予約時にお選びいただけます。</p>
+      <table>
+        <tr><th>装備</th><th>料金 (24時間あたり・税込)</th></tr>
+        <tr><td>ポータブル冷蔵冷凍庫</td><td>¥3,300</td></tr>
+        <tr><td>電子レンジ</td><td>¥2,200</td></tr>
+        <tr><td>サーキュレーター</td><td>¥1,100</td></tr>
+        <tr><td>ポータブル電源</td><td>¥3,300</td></tr>
+        <tr><td>ドラムリール</td><td>¥1,100</td></tr>
+        <tr><td>カセットコンロ</td><td>¥1,100</td></tr>
+        <tr><td>カセットボンベ</td><td>¥1,100</td></tr>
+        <tr><td>炊飯器</td><td>¥2,200</td></tr>
+        <tr><td>電気ケトル</td><td>¥1,100</td></tr>
+        <tr><td>家電セット (上記9点まとめて)</td><td>¥11,000</td></tr>
+        <tr><td>集客セット</td><td>¥1,100</td></tr>
+      </table>
+
+      <h2 id="opt-cover">補償オプション</h2>
+      <p>万一に備えて、免責補償制度 (CDW) と安心保証コース (PAP) をご用意しています。料金は24時間あたり・税込です。</p>
+      <table>
+        <tr><th>ご利用車両</th><th>免責補償制度 (CDW)</th><th>安心保証コース (PAP)</th></tr>
+        <tr><td>レンタカー</td><td>¥1,650</td><td>¥3,300</td></tr>
+        <tr><td>キッチンカー</td><td>¥3,300</td><td>¥6,600</td></tr>
+      </table>
+      <p>免責補償制度 (CDW) にご加入いただくと、事故の際にお客様にご負担いただく車両免責額が免除されます。なお、事故・故障により車両を営業に使用できなくなった場合は、修理費とは別にノンオペレーションチャージ (NOC) を申し受けます。補償の範囲やNOCの金額など、詳しくは<a href="insurance.html">保険・補償プラン</a>をご覧ください。</p>
+
+      <h2 id="price-note">ご確認ください</h2>
+      <ul>
+        <li>このページに掲載している金額はすべて税込です。</li>
+        <li>お支払いは現地決済 (現金・クレジットカード) です。オンラインでの事前決済は導入していません。</li>
+        <li>法人・行政のお客様は、事前審査のうえ請求書払い (月次一括も可) をご利用いただけます。</li>
+        <li>キャンセル料は、ご利用車両とお申し出の時期によって異なります。詳しくは<a href="clause.html">貸渡約款</a>をご覧ください。</li>
+        <li>ご不明な点は<a href="faq.html">よくあるご質問</a>、または<a href="contact.html">お問い合わせ</a>からご連絡ください。</li>
+      </ul>
+    </div>
+
+    <div class="fleet-cta">
+      <p>ご希望の日時に空きがあるか、その場でご確認いただけます。</p>
+      <a class="btn btn-primary btn-lg" href="search.html">空き状況を検索する</a>
+    </div>
+  </main>
+
+  <div data-inc="footer"></div>
+  <div data-inc="cta"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/pricing.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/photos.js"></script>
+  <script src="js/partials-public.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function yen(n) { return '¥' + (Number(n) || 0).toLocaleString(); }
+
+    /* customFields から車両の要約文を組み立てる (データに無い説明は作らない) */
+    function summaryOf(asset, defs) {
+      const cf = asset.customFields || {};
+      const parts = [];
+      defs.forEach(function (d) {
+        const v = cf[d.key];
+        if (v === undefined || v === null || v === '') return;
+        if (d.type === 'select') {
+          if (String(v) === '有') { parts.push(String(d.label)); return; }
+          if (String(v) === '無') return;
+          parts.push(String(v));
+        } else if (d.type === 'number') {
+          parts.push(String(d.label) + ' ' + String(v) + (d.unit || ''));
+        } else {
+          parts.push(String(d.label) + ' ' + String(v));
+        }
+      });
+      return parts.join(' ／ ');
+    }
+
+    /* スペック表: カテゴリのカスタム項目 + 定員・料金・拠点 */
+    function specTable(asset, defs, loc) {
+      const cf = asset.customFields || {};
+      let rows = '';
+      defs.forEach(function (d) {
+        const v = cf[d.key];
+        if (v === undefined || v === null || v === '') return;
+        const val = d.type === 'number' ? String(v) + (d.unit || '') : String(v);
+        rows += '<tr><th>' + esc(d.label) + '</th><td>' + esc(val) + '</td></tr>';
+      });
+      rows += '<tr><th>乗車人数</th><td>' + esc(String(asset.capacity || '')) + '名</td></tr>';
+      rows += '<tr><th>1時間料金</th><td>' +
+        (asset.priceHour ? esc(yen(asset.priceHour)) + ' (税込)' : '時間貸しの取扱いはありません') + '</td></tr>';
+      rows += '<tr><th>24時間料金</th><td>' +
+        (asset.priceDay ? esc(yen(asset.priceDay)) + ' (税込)' : '—') + '</td></tr>';
+      if (loc) {
+        rows += '<tr><th>取扱拠点</th><td>' + esc(loc.name) +
+          (loc.hours ? '（営業時間 ' + esc(loc.hours) + '）' : '') + '</td></tr>';
+      }
+      if (asset.requiredLicense) {
+        rows += '<tr><th>必要な免許・資格</th><td>' + esc(asset.requiredLicense) + '</td></tr>';
+      }
+      return '<table class="spec-table">' + rows + '</table>';
+    }
+
+    function photoBlock(asset) {
+      const emoji = '<span class="lw-emoji" aria-hidden="true">' + esc(asset.image || '🚗') + '</span>';
+      const P = window.SkyRentPhotos;
+      let url = null;
+      try { url = (P && typeof P.photoFor === 'function') ? P.photoFor(asset) : null; } catch (e) { url = null; }
+      if (!url) return '<div class="lw-photo">' + emoji + '</div>';
+      return '<div class="lw-photo">' + emoji +
+        '<img src="' + esc(url) + '" alt="' + esc(asset.name || '') + '" loading="lazy" onerror="this.remove()">' +
+        '</div>';
+    }
+
+    function cardHtml(asset, defs, loc) {
+      const price = asset.priceDay ? yen(asset.priceDay) : (asset.priceHour ? yen(asset.priceHour) : '');
+      const unit = asset.priceDay ? ' / 24時間' : (asset.priceHour ? ' / 1時間' : '');
+      const desc = summaryOf(asset, defs);
+      return '<article class="lu-wide">' +
+        '<div class="lw-body">' +
+          '<div class="lw-meta">' +
+            (price ? '<b>' + esc(price) + '</b>' + esc(unit) + '　' : '') +
+            '乗車人数：' + esc(String(asset.capacity || '')) + '名' +
+          '</div>' +
+          '<h3 class="lw-name">' + esc(asset.name || '') + '</h3>' +
+          (desc ? '<p class="lw-desc">' + esc(desc) + '</p>' : '') +
+          specTable(asset, defs, loc) +
+          '<a class="btn btn-primary" href="detail.html?id=' + encodeURIComponent(asset.assetId) + '">空き状況を見る</a>' +
+        '</div>' +
+        photoBlock(asset) +
+      '</article>';
+    }
+
+    function render() {
+      const host = document.getElementById('fleet-list');
+      if (!host) return;
+      const S = window.SkyRentStore;
+      if (!S || typeof S.categories !== 'function' || typeof S.assets !== 'function') {
+        host.innerHTML = '<p class="doc-note">車両情報を読み込めませんでした。お手数ですが、' +
+          '<a href="search.html">空き検索</a>から最新の車両と料金をご確認ください。</p>';
+        return;
+      }
+
+      const cats = S.categories() || [];
+      let html = '';
+      const tocItems = [];
+
+      cats.forEach(function (cat) {
+        const list = (S.assets({ categoryId: cat.categoryId, activeOnly: true }) || [])
+          .slice()
+          .sort(function (a, b) { return String(a.assetId).localeCompare(String(b.assetId)); });
+        if (!list.length) return;
+
+        const defs = Array.isArray(cat.customFieldDefs) ? cat.customFieldDefs : [];
+        const anchor = 'fleet-' + String(cat.categoryId).replace(/[^a-zA-Z0-9_-]/g, '');
+
+        html += '<section class="fleet-cat" id="' + esc(anchor) + '">' +
+          (cat.nameEn ? '<p class="eyebrow">' + esc(cat.nameEn) + '</p>' : '') +
+          '<h2 class="section-title">' + esc(cat.name) + '</h2>' +
+          (cat.description ? '<p class="cat-desc">' + esc(cat.description) + '</p>' : '');
+
+        list.forEach(function (asset) {
+          let loc = null;
+          try { loc = S.getLocation ? S.getLocation(asset.locationId) : null; } catch (e) { loc = null; }
+          html += cardHtml(asset, defs, loc);
+        });
+
+        html += '</section>';
+        tocItems.push('<li><a href="#' + esc(anchor) + '">' + esc(cat.name) + '</a></li>');
+      });
+
+      if (!html) {
+        host.innerHTML = '<p class="doc-note">ただいま掲載できる車両がございません。' +
+          '<a href="contact.html">お問い合わせ</a>よりご相談ください。</p>';
+        return;
+      }
+
+      host.innerHTML = html;
+
+      const toc = document.getElementById('toc-list');
+      if (toc && tocItems.length) toc.insertAdjacentHTML('afterbegin', tocItems.join(''));
+    }
+
+    function boot() {
+      try { render(); } catch (e) {
+        const host = document.getElementById('fleet-list');
+        if (host && !host.innerHTML) {
+          host.innerHTML = '<p class="doc-note">車両情報を読み込めませんでした。お手数ですが、' +
+            '<a href="search.html">空き検索</a>から最新の車両と料金をご確認ください。</p>';
+        }
+      }
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
+  })();
+  </script>
+</body>
+</html>

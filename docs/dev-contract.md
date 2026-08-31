@@ -155,3 +155,52 @@ SkyRentPricing.calculate({ asset, start, end, quantity, options: [optionObj], co
 - ステータスバッジ: `.status.status-confirmed / .status-in_use / .status-returned / .status-cancelled`
 - 印刷対象ページは `@media print` で不要要素 (`.topbar`, `.no-print`) を隠す
 - モバイル: manage.css のレスポンシブ規約に従う (テーブルは `.card` 内横スクロール)
+
+---
+
+## v3 デザイン (2026-08 / 黒 × オレンジ)
+
+参考: BUDDICA TOURISM (tourism.buddica.jp) の配色・表示方法に寄せた。
+
+- 配色トークン (css/style.css `:root`)
+  - 地: `--ink #0a0a0a` / 節: `--ink-2 #111` / カード: `--ink-3 #161616` / 面: `--ink-4 #1e1e1e`
+  - 罫: `--line #2a2a2a` / `--line-2 #383838`
+  - 文字: `--color-text #fff` / `--color-muted #9a9a9a` / `--color-muted-2 #6d6d6d`
+  - アクセント: `--color-primary #ff6a00` / `--color-primary-dark #e05c00`
+- 書体: `--font-sans` = Noto Sans JP (見出し **900**)、`--font-num` = Barlow Condensed (英字ラベル・数値)
+  ※ `--font-serif` は `--font-sans` のエイリアス。明朝は使わない。
+- 見出しパターン: `<p class="eyebrow">ENGLISH</p><p class="eyebrow-jp">日本語</p><h2 class="section-title">…</h2>`
+
+### 下層ページの雛形 (公開側)
+
+```html
+<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ページ名 | グロースレンタカー</title>
+<link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/public.css">
+</head><body>
+  <header class="site-header">…共通ヘッダー…</header>
+  <main class="container page-offset" style="padding-bottom:80px">
+    <nav class="crumb"><a href="index.html">トップ</a><span>›</span><span>ページ名</span></nav>
+    <div class="page-head"><p class="eyebrow">ENGLISH</p><h1>ページ名</h1><p>要約</p></div>
+    <div class="doc-body">…本文…</div>
+  </main>
+  <footer class="site-footer">…共通フッター…</footer>
+  <script src="js/config.js"></script><script src="js/store.js"></script>
+  <script src="js/pricing.js"></script><script src="js/i18n.js"></script><script src="js/api.js"></script>
+</body></html>
+```
+
+- 本文は `.doc-body` (h2 は左オレンジ罫、table・ul・ol・`.doc-note` を用意済み)
+- 目次は `.toc`、FAQは `<details class="faq">`
+- 追従CTAは `<a class="float-cta" href="search.html">` (js/lp.js 相当のトグルは各ページ任意)
+
+### 会社・拠点の確定情報 (2026-08)
+
+- 運営会社: **株式会社Skyward Growth**
+- 所在地: 〒090-0042 北海道北見市北二条西2丁目8 KITAMI BASE内
+- 代表取締役: 藤本 大地
+- メール: daichi.fujimoto@skyward-growth.com
+- 公式LINE: https://lin.ee/PuLt0Ig
+- 拠点: 北見本店 / 釧路店 (※正式名称・TEL は確認中)
+- 料金・キャンセル規定は「レンタカー 総合料金表 (2026年6月改定版)」に準拠

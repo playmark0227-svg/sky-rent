@@ -122,13 +122,16 @@
       btn.textContent = getLang() === 'ja' ? 'EN' : '日本語';
     });
   }
+  // 共通ヘッダーが後から注入されるため、何度呼んでも安全にしておく
   function setupToggles() {
     document.querySelectorAll('[data-lang-toggle]').forEach(btn => {
+      if (btn.dataset.langBound) return;
+      btn.dataset.langBound = '1';
       btn.addEventListener('click', () => setLang(getLang() === 'ja' ? 'en' : 'ja'));
     });
   }
 
   document.addEventListener('DOMContentLoaded', () => { setupToggles(); apply(); });
 
-  window.SkyRentI18n = { t: t, getLang: getLang, setLang: setLang, apply: apply, DICT: DICT };
+  window.SkyRentI18n = { t: t, getLang: getLang, setLang: setLang, apply: apply, bindToggles: setupToggles, DICT: DICT };
 })();

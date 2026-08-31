@@ -138,6 +138,40 @@
     }).join('');
   }
 
+  // ===== クラス別タイル (ボディタイプごとの最安値) =====
+  // 一般レンタカーは bodyType 単位、キッチンカーはカテゴリ自体を1クラスとして扱う。
+  function classGrid() {
+    const wrap = $('#class-grid');
+    if (!wrap) return;
+    const groups = new Map(); // ラベル -> { min, href, seats }
+    S.categories().forEach(c => {
+      const useBody = (c.customFieldDefs || []).some(d => d.key === 'bodyType');
+      S.assets({ categoryId: c.categoryId, activeOnly: true }).forEach(a => {
+        const label = (useBody && (a.customFields || {}).bodyType) || c.name;
+        const price = Number(a.priceDay) || 0;
+        if (!price) return;
+        const href = 'search.html?category=' + encodeURIComponent(c.categoryId) +
+          (useBody && (a.customFields || {}).bodyType ? '&f_bodyType=' + encodeURIComponent(label) : '');
+        const cur = groups.get(label);
+        if (!cur) groups.set(label, { min: price, href: href, seats: a.capacity || 0 });
+        else {
+          if (price < cur.min) { cur.min = price; cur.href = href; }
+          if ((a.capacity || 0) > cur.seats) cur.seats = a.capacity;
+        }
+      });
+    });
+    const block = wrap.closest('.class-block');
+    if (!groups.size) { if (block) block.remove(); return; }
+    const rows = [...groups.entries()].sort((a, b) => a[1].min - b[1].min);
+    wrap.innerHTML = rows.map(([label, g]) =>
+      '<a class="class-tile" href="' + esc(g.href) + '">' +
+        '<span class="ct-txt"><span class="ct-name">' + esc(label) + '</span>' +
+        '<span class="ct-price">¥' + g.min.toLocaleString() + '〜<small>/ 24時間' +
+        (g.seats ? '・' + g.seats + '名' : '') + '</small></span></span>' +
+        '<span class="ct-go" aria-hidden="true">→</span>' +
+      '</a>').join('');
+  }
+
   // ===== 車両ラインナップ (横スクロール) =====
   function lineup() {
     const sc = $('#lineup-scroller');
@@ -173,7 +207,7 @@
       '<div class="loc-card rv d' + (i + 1) + '">' +
       '<div class="no">BASE ' + String(i + 1).padStart(2, '0') + '</div>' +
       '<h3>' + esc(l.name) + '</h3>' +
-      '<p>' + esc(l.address) + '<br>TEL ' + esc(l.tel) + '<br>' + esc(l.hours) + ' ／ ' + esc(l.holiday) + '</p>' +
+      '<p>' + esc(l.address) + (l.tel ? '<br>TEL ' + esc(l.tel) : '') + '<br>' + esc(l.hours) + ' ／ ' + esc(l.holiday) + '</p>' +
       '</div>'
     ).join('');
   }
@@ -198,7 +232,7 @@
   }
 
   function boot() {
-    stats(); searchPanel(); catList(); lineup(); locations(); faq();
+    stats(); searchPanel(); catList(); classGrid(); lineup(); locations(); faq();
     header(); reveals(); counters(); parallax(); pauseOffscreen(); intro();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

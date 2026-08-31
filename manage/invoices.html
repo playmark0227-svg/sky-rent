@@ -201,7 +201,7 @@
           '<tr><td colspan="3" style="text-align:right;font-weight:700">合計</td><td style="text-align:right;font-weight:700">¥' + inv.amount.toLocaleString() + '</td></tr>' +
           '</tbody></table>' +
         '<div class="inv-bank"><strong>お振込先:</strong> ' + esc(bank.bankName || '') + ' ' + esc(bank.accountType || '') + ' ' + esc(bank.accountNo || '') + ' ' + esc(bank.holder || '') + '<div style="font-size:11px;color:#666;margin-top:4px">※振込手数料は貴社にてご負担願います。</div></div>' +
-        '<div style="text-align:right;margin-top:20px;font-size:13px">' + esc(storeName) + '<br>' + esc(content.address || '北海道札幌市中央区北1条西1-1-1') + '<br>TEL: ' + esc(content.phone || '011-000-0001') + '</div>' +
+        '<div style="text-align:right;margin-top:20px;font-size:13px">' + esc(storeName) + '<br>' + esc(content.address || '〒090-0042 北海道北見市北二条西2丁目8 KITAMI BASE内') + (content.phone ? '<br>TEL: ' + esc(content.phone) : '') + '</div>' +
         '</div>';
     }
 

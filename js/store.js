@@ -14,7 +14,7 @@
 (function () {
   'use strict';
   const PREFIX = 'sky-rent.';
-  const DATA_VERSION = 4;
+  const DATA_VERSION = 5;
   const DAY = 86400000;
 
   // ===== 低レベル入出力 =====
@@ -59,8 +59,8 @@
   ];
 
   const SEED_LOCATIONS = [
-    { locationId: 'loc-kitami',  name: '北見本店', nameEn: 'Kitami',  tel: '0157-00-0001', address: '北海道北見市', hours: '9:00-19:00', holiday: 'なし (年中無休)', sort: 1 },
-    { locationId: 'loc-kushiro', name: '釧路店',   nameEn: 'Kushiro', tel: '0154-00-0002', address: '北海道釧路市', hours: '9:00-18:00', holiday: 'なし (年中無休)', sort: 2 }
+    { locationId: 'loc-kitami',  name: '北見本店', nameEn: 'Kitami',  tel: '', address: '北海道北見市', hours: '9:00-19:00', holiday: 'なし (年中無休)', sort: 1 },
+    { locationId: 'loc-kushiro', name: '釧路店',   nameEn: 'Kushiro', tel: '', address: '北海道釧路市', hours: '9:00-18:00', holiday: 'なし (年中無休)', sort: 2 }
   ];
 
   const SEED_ASSETS = [
@@ -204,7 +204,7 @@
     if (r2) {
       inv.push({
         invoiceId: 'INV-0001', memberId: 'M002', company: '株式会社北海道イベント企画',
-        address: '北海道札幌市中央区大通西5-8', caseName: '夏祭りイベント キッチンカーレンタル',
+        address: '北海道北見市大通西2-1', caseName: '夏祭りイベント キッチンカーレンタル',
         reservationIds: ['R0002'], amount: r2.price.total,
         status: 'paid', issuedAt: at(-18, 10), dueDate: at(12, 0), paidAt: at(-10, 10)
       });
@@ -214,7 +214,7 @@
     if (r6) {
       inv.push({
         invoiceId: 'INV-0002', memberId: 'M002', company: '株式会社北海道イベント企画',
-        address: '北海道札幌市中央区大通西5-8', caseName: '資材運搬 ダンプレンタル',
+        address: '北海道北見市大通西2-1', caseName: '資材運搬 軽トラックレンタル',
         reservationIds: ['R0006'], amount: r6.price.total,
         status: 'unpaid', issuedAt: at(-4, 10), dueDate: at(26, 0), paidAt: null
       });
@@ -250,7 +250,7 @@
       write('settings.points', { pointPerUse: 1, couponThreshold: 10, couponAmount: 1000, expiryMonths: 12 });
     }
     if (read('settings.billing', null) == null) {
-      write('settings.billing', { bankName: '北洋銀行 札幌支店', accountType: '普通', accountNo: '1234567', holder: 'カ) スカイレント' });
+      write('settings.billing', { bankName: '北洋銀行 北見支店', accountType: '普通', accountNo: '1234567', holder: 'カ) スカイワードグロース' });
     }
     write('dataVersion', DATA_VERSION);
   }

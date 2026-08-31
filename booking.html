@@ -78,6 +78,10 @@
     <!-- STEP 確認 -->
     <div id="pane-confirm" hidden>
       <div class="p-card" id="confirm-body"></div>
+      <label class="agree-box">
+        <input type="checkbox" id="bk-agree">
+        <span><a href="clause.html" target="_blank" rel="noopener">貸渡約款</a>・<a href="law.html" target="_blank" rel="noopener">キャンセル規定</a>・<a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a>の内容を確認し、同意します。</span>
+      </label>
       <p id="confirm-error" class="error-text" hidden></p>
       <div class="flex-sb mt16">
         <button class="btn btn-secondary" id="btn-fix" data-i18n="booking.fix">← 入力内容を修正する</button>
@@ -267,6 +271,13 @@
     $('#btn-submit').addEventListener('click', () => {
       const d = collect(); const c = calc();
       const err = $('#confirm-error'); err.hidden = true;
+      const agree = $('#bk-agree');
+      if (agree && !agree.checked) {
+        err.hidden = false;
+        err.textContent = '貸渡約款・キャンセル規定・プライバシーポリシーへの同意が必要です。';
+        agree.focus();
+        return;
+      }
       try {
         const r = S.createReservation({
           assetId: asset.assetId, quantity: pending.quantity,

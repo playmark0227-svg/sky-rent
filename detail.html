@@ -136,7 +136,7 @@
       $('#d-image').innerHTML = window.SkyRentPhotos ? window.SkyRentPhotos.thumbHtml(asset) : esc(asset.image || '📦');
       $('#d-cat').textContent = catName(cat) + ' ・ ' + (loc ? (isEn() && loc.nameEn ? loc.nameEn : loc.name) : '');
       $('#d-name').textContent = assetName(asset);
-      $('#d-loc').textContent = loc ? (loc.address + ' / ' + loc.tel) : '';
+      $('#d-loc').textContent = loc ? (loc.address + (loc.tel ? ' / ' + loc.tel : '') + (loc.hours ? ' / ' + loc.hours : '')) : '';
 
       // 免許警告
       if (asset.requiredLicense) {
