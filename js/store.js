@@ -2,9 +2,9 @@
  * グロースレンタカー - 統合データストア
  *
  * 要件定義書 v3.0 (2026-06-26) 準拠のデータ層。
- *   - 車両カテゴリ + 物品カテゴリ (家電・工具) を統合した「アセット」モデル
+ *   - 車両を対象とした「アセット」モデル (物品単体のレンタルは取り扱わない)
  *   - カテゴリごとのカスタム項目 (EAV/JSON方式) — 管理画面から自由に定義可能
- *   - 拠点 (北見・釧路) / オプション2階層 (共通・カテゴリ専用) / 在庫数管理 (物品)
+ *   - 拠点 (北見・釧路) / オプション2階層 (共通・カテゴリ専用。現在は補償のみ) / 在庫数管理
  *   - 会員・ポイント・クーポン制度 / 請求書払い (法人・行政のみ)
  *   - 通知ログ (メール送信のデモ代替)
  *
@@ -14,7 +14,7 @@
 (function () {
   'use strict';
   const PREFIX = 'sky-rent.';
-  const DATA_VERSION = 5;
+  const DATA_VERSION = 6;
   const DAY = 86400000;
 
   // ===== 低レベル入出力 =====
@@ -98,18 +98,6 @@
 
   // オプション: categoryIds = null → 共通 (全車両カテゴリ)。priceType: per_day | per_rental
   const SEED_OPTIONS = [
-    // 装備オプション (全車共通・24時間あたり)
-    { optionId: 'OP001', name: 'ポータブル冷蔵冷凍庫', price: 3300, priceType: 'per_day', categoryIds: null, active: true },
-    { optionId: 'OP002', name: '電子レンジ',           price: 2200, priceType: 'per_day', categoryIds: null, active: true },
-    { optionId: 'OP003', name: 'サーキュレーター',     price: 1100, priceType: 'per_day', categoryIds: null, active: true },
-    { optionId: 'OP004', name: 'ポータブル電源',       price: 3300, priceType: 'per_day', categoryIds: null, active: true },
-    { optionId: 'OP005', name: 'ドラムリール',         price: 1100, priceType: 'per_day', categoryIds: null, active: true },
-    { optionId: 'OP006', name: 'カセットコンロ',       price: 1100, priceType: 'per_day', categoryIds: null, active: true },
-    { optionId: 'OP007', name: 'カセットボンベ',       price: 1100, priceType: 'per_day', categoryIds: null, active: true },
-    { optionId: 'OP008', name: '炊飯器',               price: 2200, priceType: 'per_day', categoryIds: null, active: true },
-    { optionId: 'OP009', name: '電気ケトル',           price: 1100, priceType: 'per_day', categoryIds: null, active: true },
-    { optionId: 'OP010', name: '家電セット (上記9点まとめ)', price: 11000, priceType: 'per_day', categoryIds: null, active: true },
-    { optionId: 'OP011', name: '集客セット (ホワイトボード・マグネット・ペン)', price: 1100, priceType: 'per_day', categoryIds: null, active: true },
     // 補償 (レンタカー)
     { optionId: 'OP101', name: '免責補償制度 (CDW)',   price: 1650, priceType: 'per_day', categoryIds: ['cat-rental'], active: true },
     { optionId: 'OP102', name: '安心保証コース (PAP)', price: 3300, priceType: 'per_day', categoryIds: ['cat-rental'], active: true },
@@ -179,7 +167,7 @@
         quantity: qty,
         customerName: name, customerEmail: email, customerPhone: phone,
         company: memberId === 'M002' ? '株式会社北海道イベント企画' : '',
-        licenseNo: (a.categoryId === 'cat-appliance' || a.categoryId === 'cat-tool') ? '' : '012345678900',
+        licenseNo: '012345678900',
         memberId: memberId,
         start: at(off, 10), end: at(off + dur, 10),
         optionIds: [], options: [],
@@ -242,8 +230,8 @@
     write('reservations', reservations);
     write('invoices', invoices);
     write('notifications', [
-      { at: at(-1, 9), type: 'reservation', message: '新規予約 R0009 (高級セダン / 小林 誠 様) を受け付けました', refId: 'R0009' },
-      { at: at(0, 8),  type: 'reservation', message: '新規予約 R0011 (ポータブル電源 / 吉田 直樹 様) を受け付けました', refId: 'R0011' }
+      { at: at(-1, 9), type: 'reservation', message: '新規予約 R0009 (マツダ CX-5 / 小林 誠 様) を受け付けました', refId: 'R0009' },
+      { at: at(0, 8),  type: 'reservation', message: '新規予約 R0011 (軽トラック / 吉田 直樹 様) を受け付けました', refId: 'R0011' }
     ]);
     // ポイント設定・振込先の既定値 (未設定時のみ)
     if (read('settings.points', null) == null) {
@@ -379,7 +367,7 @@
   // ===== 予約 =====
   function createReservation(payload) {
     const a = getAsset(payload.assetId);
-    if (!a) throw new Error('車両・物品が見つかりません');
+    if (!a) throw new Error('車両が見つかりません');
     const qty = Number(payload.quantity) || 1;
     const av = availability(a.assetId, payload.start, payload.end, qty);
     if (!av.ok) throw new Error('申し訳ありません。' + av.reason);

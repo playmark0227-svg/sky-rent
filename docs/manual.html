@@ -207,7 +207,7 @@
       <li><a href="#ch4"><span class="n">4</span><span class="t">帳票の出力<small>貸渡証・車輌チェックシート・領収書の出し方と印刷</small></span></a></li>
       <li><a href="#ch5"><span class="n">5</span><span class="t"><span class="star">★</span> 新しいカテゴリを追加する<small>例:「冷凍車」を追加する通し手順 (最重要)</small></span></a></li>
       <li><a href="#ch6"><span class="n">6</span><span class="t">車両・物品の登録と在庫・車検期限の管理</span></a></li>
-      <li><a href="#ch7"><span class="n">7</span><span class="t">オプション管理<small>共通オプションとカテゴリ専用オプション</small></span></a></li>
+      <li><a href="#ch7"><span class="n">7</span><span class="t">オプション管理<small>カテゴリ専用オプション（補償）と共通オプション</small></span></a></li>
       <li><a href="#ch8"><span class="n">8</span><span class="t">会員・ポイント・クーポン<small>請求書払い許可の付与・ポイント手動調整・自動発行のしくみ</small></span></a></li>
       <li><a href="#ch9"><span class="n">9</span><span class="t">請求書の発行と入金管理<small>月次一括請求の手順</small></span></a></li>
       <li><a href="#ch10"><span class="n">10</span><span class="t">拠点・スタッフ 各種設定<small>営業時間・定休日・ポイント設定・振込先</small></span></a></li>
@@ -301,7 +301,7 @@
   <p>ダッシュボードの <strong>「本日の帰着予定」</strong>に、返却予定の予約が表示されます。車両が戻ってきたら「返却済」にします。</p>
   <ol class="steps">
     <li>予約一覧で対象予約の <strong>「詳細」</strong> を開きます。</li>
-    <li>車両の傷や燃料、貸し出した装備オプションの数量・破損を確認します（車輌チェックシートを活用）。</li>
+    <li>車両の傷や燃料を確認します（車輌チェックシートを活用）。</li>
     <li><strong>「✅ 返却処理」</strong> ボタンを押します。状態が <span class="badge">貸出中</span> → <span class="badge gray">返却済</span> に変わります。</li>
     <li>現地決済で未入金の場合は、同じ画面の <strong>「入金を記録」</strong> で入金済にします。</li>
   </ol>
@@ -461,7 +461,7 @@
     <li>そのカテゴリだけのオプションが必要なら <strong>「＋ オプション追加」</strong> を押します。</li>
     <li>名称・料金・課金単位を入力し、<strong>適用範囲</strong>で <strong>「カテゴリを指定」→「冷凍車」</strong> にチェックして保存します。</li>
   </ol>
-  <p>免責補償などの <strong>共通オプション</strong>は、新しく作った車両カテゴリにも <strong>自動で付く</strong>ので、個別の設定は不要です。</p>
+  <p>免責補償などの補償オプションは<strong>カテゴリごとに金額が異なる</strong>ため、新しいカテゴリにもこの画面で紐付けます。適用範囲を <strong>「共通（全車両カテゴリ）」</strong> にしたオプションは、新しく作った車両カテゴリにも自動で付きます。</p>
 
   <h3 class="sec">STEP 4　予約サイトで確認する</h3>
   <div class="path"><span class="lbl">画面</span><span class="crumb">右上のお名前</span><span class="arw">▸</span><span class="crumb">予約サイトを表示</span></div>
@@ -512,7 +512,7 @@
 
   <!-- ================= 7. オプション管理 ================= -->
   <h2 class="chapter" id="ch7"><span class="no">7</span>オプション管理</h2>
-  <p class="lead">■ 目的：全車共通の装備オプションと、カテゴリ専用オプション（補償など）を管理する</p>
+  <p class="lead">■ 目的：免責補償などのカテゴリ専用オプションと、全車共通のオプションを管理する</p>
 
   <h3 class="sec">7.1　2 種類のオプション</h3>
   <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">オプション管理</span></div>
@@ -520,12 +520,12 @@
   <table class="tbl">
     <thead><tr><th>種類</th><th>適用範囲</th><th>例</th></tr></thead>
     <tbody>
-      <tr><th>共通オプション<br>（装備オプション）</th><td>すべての<strong>車両</strong>カテゴリに自動で付きます</td><td>ポータブル冷蔵冷凍庫・電子レンジ・サーキュレーター・ポータブル電源・ドラムリール・カセットコンロ・カセットボンベ・炊飯器・電気ケトル・家電セット・集客セット（全 11 品目）</td></tr>
       <tr><th>カテゴリ専用<br>（補償）</th><td>指定したカテゴリにだけ表示されます</td><td>免責補償制度（CDW）／安心保証コース（PAP）。金額はカテゴリごとに設定（一般レンタカー ¥1,650・¥3,300／キッチンカー ¥3,300・¥6,600）</td></tr>
+      <tr><th>共通オプション</th><td>すべての<strong>車両</strong>カテゴリに自動で付きます</td><td>現在は登録されていません。全カテゴリに一律で付けたいオプションができたときに、この画面から追加できます</td></tr>
     </tbody>
   </table>
   </div>
-  <p style="font-size:13.5px;color:var(--sub)">※ 装備オプションは単体では貸し出さず、車両に付ける形で提供します。種別が「物品レンタル」のカテゴリには共通オプションは付きません。</p>
+  <p style="font-size:13.5px;color:var(--sub)">※ 現在お客様に提示しているオプションは補償オプション（CDW／PAP）のみです。種別が「物品レンタル」のカテゴリには共通オプションは付きません。</p>
 
   <h3 class="sec">7.2　追加・編集する</h3>
   <ol class="steps">

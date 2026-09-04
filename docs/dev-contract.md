@@ -31,7 +31,7 @@
 ### categories (カテゴリ / EAV定義)
 ```js
 { categoryId: 'cat-kitchen', name: 'キッチンカー', nameEn: 'Kitchen Car',
-  type: 'vehicle'|'item',      // item = 物品単体レンタル (家電・工具)
+  type: 'vehicle'|'item',      // 現在は vehicle のみ運用 (物品単体レンタルは提供していない)
   icon: '🍳', sort: 2, active: true, description: '…',
   customFieldDefs: [           // カテゴリ固有のカスタム項目定義 (管理画面から編集可能)
     { key: 'sinks', label: 'シンク数', type: 'text'|'number'|'select',
@@ -39,7 +39,7 @@
   ] }
 ```
 シード: cat-rental(一般レンタカー) / cat-kitchen(キッチンカー)
-※ type:'item' (物品カテゴリ) はデータモデル上サポート済み。現在の取扱いは車両2カテゴリのみ。
+※ type:'item' (物品カテゴリ) はデータモデル上の枠のみ。物品単体のレンタルは提供しておらず、取扱いは車両2カテゴリのみ。
 
 ### locations (拠点)
 ```js
@@ -47,11 +47,11 @@
 ```
 シード: loc-sapporo / loc-chitose / loc-asahikawa / loc-hakodate
 
-### assets (車両・物品 統合マスタ)
+### assets (車両マスタ)
 ```js
 { assetId: 'K001', categoryId, locationId, name, nameEn, plate, capacity,
   priceHour, priceDay, priceWeek, priceMonth,   // null 可。priceDay は必須
-  stock: 1,                    // 物品は在庫数 (>1可)。車両は常に 1
+  stock: 1,                    // 在庫数。車両は常に 1
   requiredLicense: '',         // 例 '準中型免許以上'。空なら不要
   image: '🚗',                 // 絵文字 or 画像URL
   active: true,
@@ -61,11 +61,13 @@
 
 ### options (オプション2階層)
 ```js
-{ optionId: 'OP101', name: '発電機 (2.8kVA)', price: 4400,
+{ optionId: 'OP101', name: '免責補償制度 (CDW)', price: 1650,
   priceType: 'per_day'|'per_rental',
-  categoryIds: null | ['cat-kitchen'],   // null = 共通オプション (全車両カテゴリ)
+  categoryIds: null | ['cat-rental'],   // null = 共通オプション (全車両カテゴリ)
   active: true }
 ```
+シードは補償オプションのみ: OP101/OP102 (cat-rental) / OP201/OP202 (cat-kitchen)。
+装備品の貸し出しは行わないため、共通オプション (`categoryIds: null`) は現在 0 件。
 
 ### members (会員)
 ```js
@@ -204,3 +206,19 @@ SkyRentPricing.calculate({ asset, start, end, quantity, options: [optionObj], co
 - 公式LINE: https://lin.ee/PuLt0Ig
 - 拠点: 北見本店 / 釧路店 (※正式名称・TEL は確認中)
 - 料金・キャンセル規定は「レンタカー 総合料金表 (2026年6月改定版)」に準拠
+
+---
+
+## 取り扱わないもの
+
+以下はサービスとして提供していない。ページ・データ・オプションのいずれにも追加しないこと。
+
+- **家電・装備品のレンタル**は行わない (オプションとしても提供しない)。
+  例: ポータブル冷蔵冷凍庫 / 電子レンジ / サーキュレーター / ポータブル電源 / ドラムリール /
+  カセットコンロ / カセットボンベ / 炊飯器 / 電気ケトル / 家電セット / 集客セット
+- **特殊車両・工具・キャンピングカー**も取り扱わない。
+
+提供するオプションは補償 (免責補償制度 CDW / 安心保証コース PAP) のみ。
+季節・時間帯の割増 (土日祝割増・夜間料金・繁忙期割増) は料金体系であってオプションではない。
+車両に標準装備されている設備 (カーナビ・ETC車載器、キッチンカーの営業設備等) は
+「貸し出す装備品」ではなく車両の仕様なので、スペックとして表示してよい。

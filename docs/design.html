@@ -683,7 +683,7 @@
       <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
       <tbody>
         <tr><td class="c-key">optionId</td><td class="c-type">string (PK)</td><td>例 <code>OP101</code>。</td></tr>
-        <tr><td class="c-key">name</td><td class="c-type">string</td><td>名称。例「ポータブル電源」「免責補償制度 (CDW)」。</td></tr>
+        <tr><td class="c-key">name</td><td class="c-type">string</td><td>名称。例「免責補償制度 (CDW)」「安心保証コース (PAP)」。</td></tr>
         <tr><td class="c-key">price</td><td class="c-type">number</td><td>単価 (円)。</td></tr>
         <tr><td class="c-key">priceType</td><td class="c-type">'per_day'|'per_rental'</td><td>課金単位。日数×単価 / 1回固定。</td></tr>
         <tr><td class="c-key">categoryIds</td><td class="c-type">null | string[]</td><td><b>null = 共通オプション</b> (全車両カテゴリ) / 配列 = カテゴリ専用。物品カテゴリには共通を出さない。</td></tr>
@@ -691,7 +691,7 @@
       </tbody>
     </table>
   </div>
-  <p class="legend">シード — 共通 (装備オプション11品目): ポータブル冷蔵冷凍庫・電子レンジ・サーキュレーター・ポータブル電源・ドラムリール・カセットコンロ・カセットボンベ・炊飯器・電気ケトル・家電セット・集客セット。カテゴリ専用 (補償): 一般レンタカー CDW ¥1,650 / PAP ¥3,300、キッチンカー CDW ¥3,300 / PAP ¥6,600。</p>
+  <p class="legend">シード — カテゴリ専用 (補償) 4件のみ: 一般レンタカー CDW ¥1,650 / PAP ¥3,300、キッチンカー CDW ¥3,300 / PAP ¥6,600。共通オプション (categoryIds = null) の登録は無し。</p>
 
   <h3 class="h-sec" id="c3-6"><span class="sno">3.6</span>members (会員) / coupons<span class="tag">会員</span></h3>
   <div class="tbl-wrap">

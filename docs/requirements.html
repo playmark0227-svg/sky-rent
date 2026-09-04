@@ -179,7 +179,7 @@
       <li><a href="#s3"><span class="tt">ターゲットユーザー</span><span class="dots"></span></a></li>
       <li><a href="#s4"><span class="tt">システム全体構成</span><span class="dots"></span></a></li>
       <li><a href="#s5"><span class="tt">機能要件</span><span class="dots"></span></a></li>
-      <li><a href="#s6"><span class="tt">オプション品目一覧</span><span class="dots"></span></a></li>
+      <li><a href="#s6"><span class="tt">オプション一覧</span><span class="dots"></span></a></li>
       <li><a href="#s7"><span class="tt">会員・ポイント制度</span><span class="dots"></span></a></li>
       <li><a href="#s8"><span class="tt">決済方法</span><span class="dots"></span></a></li>
       <li><a href="#s9"><span class="tt">非機能要件</span><span class="dots"></span></a></li>
@@ -205,7 +205,7 @@
       <strong>統合予約サイト兼管理システム</strong>です。
     </p>
     <p>
-      一般レンタカーとキッチンカーでは、料金体系・必要な装備・補償内容・表示すべきスペックが大きく異なります。
+      一般レンタカーとキッチンカーでは、料金体系・補償内容・表示すべきスペックが大きく異なります。
       本システムはこれらの差異をカテゴリ単位で吸収し、一般利用者にはカテゴリごとに最適化された検索・予約体験を、
       運営者には全カテゴリ・全拠点を横断した一元管理を提供します。
     </p>
@@ -291,7 +291,7 @@
         <tr>
           <td><strong>一般利用者（個人）</strong></td>
           <td>旅行・レジャー・日常利用の個人客</td>
-          <td>レンタカーでの旅行・帰省・日常利用、装備オプションを付けたアウトドア利用</td>
+          <td>レンタカーでの旅行・帰省・日常利用、アウトドア・レジャーでの利用</td>
         </tr>
         <tr>
           <td><strong>一般利用者（法人）</strong></td>
@@ -423,7 +423,7 @@
         </tr>
         <tr>
           <td class="num">3</td><td><strong>オプション（2分類）</strong></td>
-          <td>共通の装備オプションとカテゴリ専用オプション（補償）の2分類で提示。</td>
+          <td>カテゴリ専用オプション（補償）と共通オプションの2分類で提示。</td>
           <td><span class="badge impl">○ 実装済</span> <code>optionsForCategory()</code> が共通／専用を分けて返却し、詳細・予約フローで区分表示。</td>
         </tr>
         <tr>
@@ -524,33 +524,15 @@
 
   <!-- ============== 6. オプション ============== -->
   <section class="section page-break">
-    <h2 id="s6" class="anchor">6. オプション品目一覧</h2>
+    <h2 id="s6" class="anchor">6. オプション一覧</h2>
     <p class="sec-intro">
-      オプションは<strong>共通</strong>（全車両カテゴリに適用される装備オプション）と<strong>カテゴリ専用</strong>（補償）の2階層で管理します。
+      オプションは<strong>カテゴリ専用</strong>（補償）と<strong>共通</strong>（全車両カテゴリに適用）の2階層で管理します。
+      現在お客様に提示しているオプションは補償オプションのみです。
       すべて管理画面（<code>options.html</code>）から追加・変更・削除でき、
       新カテゴリを作成した際は当該カテゴリへの紐付けも設定できます。課金単位は「1日あたり」「1回あたり」を品目ごとに選択します。
     </p>
 
-    <h4>6.1 装備オプション（全車共通・11品目）</h4>
-    <p class="sec-intro">
-      家電・調理器具・電源などの装備は、単体レンタルではなく<strong>車両に付帯する装備オプション</strong>として提供します。
-      すべてのカテゴリの車両に付けられ、料金は24時間あたりです。
-    </p>
-    <div class="tbl-wrap">
-    <table>
-      <thead><tr><th class="num">#</th><th>品目</th><th style="width:15%">料金</th><th class="num">#</th><th>品目</th><th style="width:15%">料金</th></tr></thead>
-      <tbody>
-        <tr><td class="num">1</td><td>ポータブル冷蔵冷凍庫</td><td>¥3,300</td><td class="num">7</td><td>カセットボンベ</td><td>¥1,100</td></tr>
-        <tr><td class="num">2</td><td>電子レンジ</td><td>¥2,200</td><td class="num">8</td><td>炊飯器</td><td>¥2,200</td></tr>
-        <tr><td class="num">3</td><td>サーキュレーター</td><td>¥1,100</td><td class="num">9</td><td>電気ケトル</td><td>¥1,100</td></tr>
-        <tr><td class="num">4</td><td>ポータブル電源</td><td>¥3,300</td><td class="num">10</td><td>家電セット（上記9点まとめ）</td><td>¥11,000</td></tr>
-        <tr><td class="num">5</td><td>ドラムリール</td><td>¥1,100</td><td class="num">11</td><td>集客セット（ホワイトボード・マグネット・ペン）</td><td>¥1,100</td></tr>
-        <tr><td class="num">6</td><td>カセットコンロ</td><td>¥1,100</td><td class="num"></td><td></td><td></td></tr>
-      </tbody>
-    </table>
-    </div>
-
-    <h4>6.2 補償オプション（カテゴリ専用）</h4>
+    <h4>6.1 補償オプション（カテゴリ専用）</h4>
     <p class="sec-intro">補償はカテゴリごとに金額が異なるため、カテゴリ専用オプションとして設定しています（料金は24時間あたり）。</p>
     <div class="tbl-wrap">
     <table>
@@ -565,7 +547,8 @@
     <div class="callout">
       <span class="lbl">オプション設定の柔軟性</span>
       各オプションは対象カテゴリ（共通＝全車両カテゴリ／特定カテゴリ）・価格・課金単位を持ち、有効／無効を切り替えられます。
-      カテゴリを新設した場合、共通の装備オプションは自動的に適用され、そのカテゴリ固有のオプション（補償など）は管理画面から紐付けます。
+      カテゴリを新設した場合、そのカテゴリ固有のオプション（補償など）は管理画面から紐付けます。
+      適用範囲を「共通」に設定したオプションは、新設カテゴリにも自動的に適用されます。
     </div>
     <p class="sec-intro">
       ※ 学生・法人・二地域居住者の割引（24時間以上の利用で ¥1,100 引き）、および守成クラブ会員の割引（キッチンカーのみ ¥3,000 引き）は、
