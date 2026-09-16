@@ -1,12 +1,15 @@
 # グロースレンタカー
 
 北海道 北見・釧路のレンタカー / キッチンカー **予約サイト & 管理システム**。
-要件定義書 v3.0 (2026-06-26) に基づいて実装。素の HTML/CSS/JS + GitHub Pages で動作し、
-データ層は差替可能な抽象化 (`SkyRentStore`) により、デモはブラウザ内 localStorage、本番は GAS / AWS 等へ移行できます。
+要件定義書 v3.0 (2026-06-26) に基づく、素の HTML/CSS/JS + GitHub Pages の機能デモです。
+
+> [!WARNING]
+> 現在の公開版は `localStorage` を使うデモであり、本番システムではありません。認証・権限・予約競合制御・個人情報保護・監査・復旧が未実装のため、実在する顧客情報、免許情報、予約、請求情報を入力しないでください。
 
 - 予約サイト: https://playmark0227-svg.github.io/sky-rent/
 - 管理画面: https://playmark0227-svg.github.io/sky-rent/manage/dashboard.html
 - ドキュメント: https://playmark0227-svg.github.io/sky-rent/docs/
+- 本番化実装ハンドオフ: [`docs/production/README.md`](docs/production/README.md)
 
 ## 主な機能 (要件定義書 v3.0 準拠)
 
@@ -56,15 +59,19 @@ sky-rent/
 └── gas/               # (旧) Google Apps Script バックエンド雛形
 ```
 
-## データ層とバックエンド
+## データ層とバックエンド（現行デモ）
 
 デモ環境ではすべてのデータをブラウザの localStorage (`sky-rent.*` プレフィックス) に保存します。
-`SkyRentStore` / `SkyRentAPI` がデータアクセスの唯一の入口で、本番では `js/config.js` の `GAS_URL` を
-設定することで、同一インターフェースのまま Google Apps Script 等のサーバーサイドへ差し替えられます。
+`SkyRentAPI` は現在も `SkyRentStore` を呼ぶだけで、`GAS_URL` を設定しても HTTP API へは切り替わりません。
+また、一部の公開・管理画面は Store を経由せず localStorage を直接操作しています。本番化は設定変更ではなく、
+DB・認証・API・画面データ経路の実装が必要です。
 
-- メール送信は `SkyRentStore.notify()` にログ化 (本番は実送信へ差替)
-- データのバックアップ/復元は管理画面「プロフィール」から JSON で書き出し・読み込み可能
+- 「メール送信」は `SkyRentStore.notify()` にブラウザ内ログを残すだけで、実際には配信しません
+- バックアップ/復元 JSON はデモ専用で、認証情報・個人情報を安全に扱う仕組みではありません
 - デモデータの初期化も同画面から可能
+
+採用構成、DB/API 契約、認証・権限、移行、受入試験、実装順は
+[`docs/production/README.md`](docs/production/README.md) を参照してください。
 
 ## ドキュメント
 
@@ -74,6 +81,11 @@ sky-rent/
 - **基本設計書** (`docs/design.html`) — システム構成図・画面遷移図・DBスキーマ・API仕様
 - **管理者向けマニュアル** (`docs/manual.html`) — 管理画面の操作手順書
 - **開発規約** (`docs/dev-contract.md`) — データモデル・API・コーディング規約
+- **本番化実装ハンドオフ** (`docs/production/README.md`) — 採用構成・データ/API契約・認証・移行・実装順
+- **現状監査** (`docs/production/current-state-audit.md`) — 再利用可/要置換/本番禁止と仕様差分
+- **データモデル** (`docs/production/data-model.md`) — テーブル・制約・索引・RLS・トランザクション不変条件
+- **OpenAPI 3.1** (`docs/production/openapi.yaml`) — 本番 API 契約
+- **受入・Go/No-Go** (`docs/production/acceptance.md`) — チケット、完了条件、試験項目
 
 ## ライセンス
 

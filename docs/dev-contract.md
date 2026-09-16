@@ -1,6 +1,8 @@
 # グロースレンタカー 開発コントラクト (内部規約 / API仕様)
 
-全ページはこの規約に従って実装する。**このファイルが唯一の正**。
+> **旧デモ実装用の規約です。** 本番実装の正は [`production/README.md`](production/README.md)、[`production/data-model.md`](production/data-model.md)、[`production/openapi.yaml`](production/openapi.yaml)、[`production/acceptance.md`](production/acceptance.md) です。現行実装との差分は [`production/current-state-audit.md`](production/current-state-audit.md) を参照してください。
+
+以下は localStorage デモの保守時だけ参照します。本番の認証・予約・個人情報・管理 API には適用しません。
 
 ## スクリプト読み込み順 (必須)
 

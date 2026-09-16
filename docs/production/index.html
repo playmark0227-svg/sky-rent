@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>本番化実装ハンドオフ | グロースレンタカー</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif; background: #f4f6f9; color: #202a33; line-height: 1.75; }
+    main { max-width: 980px; margin: 0 auto; padding: 48px 20px 72px; }
+    header { padding: 32px; color: #fff; border-radius: 14px; background: linear-gradient(135deg, #173f6c, #2367a5); }
+    header p { margin: 10px 0 0; opacity: .9; }
+    h1 { margin: 0; font-size: clamp(25px, 4vw, 38px); }
+    h2 { margin: 34px 0 14px; color: #173f6c; font-size: 21px; }
+    .danger { margin: 22px 0; padding: 17px 19px; border: 2px solid #d17b00; border-radius: 10px; background: #fff8e7; color: #5a3b00; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .card { display: block; padding: 20px; border: 1px solid #d8e0e8; border-radius: 10px; background: #fff; color: inherit; text-decoration: none; }
+    .card:hover { border-color: #2367a5; box-shadow: 0 7px 20px rgba(21, 60, 96, .1); transform: translateY(-2px); }
+    .card strong { display: block; color: #173f6c; font-size: 17px; margin-bottom: 6px; }
+    .card span { color: #596875; font-size: 13px; }
+    ol { margin: 0; padding-left: 22px; }
+    code { background: #eaf0f5; padding: 2px 5px; border-radius: 4px; }
+    .status { width: 100%; border-collapse: collapse; background: #fff; }
+    .status th, .status td { padding: 11px 13px; border: 1px solid #d8e0e8; text-align: left; vertical-align: top; }
+    .status th { width: 29%; color: #173f6c; background: #eef4f8; }
+    .back { margin-top: 32px; }
+    .back a { color: #1668a8; font-weight: 700; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>本番化実装ハンドオフ v1</h1>
+      <p>グロースレンタカー予約・管理システム — 実装開始直前の設計パック</p>
+    </header>
+
+    <div class="danger" role="alert">
+      <strong>現在の公開版は本番利用 No-Go です。</strong><br>
+      localStorage を使う機能デモであり、認証・法務表示・予約競合制御・個人情報保護・監査・復旧は未実装です。受入チェック完了まで実在する顧客情報を入力しないでください。
+    </div>
+
+    <h2>設計パック</h2>
+    <div class="grid">
+      <a class="card" href="https://github.com/playmark0227-svg/sky-rent/blob/main/docs/production/README.md"><strong>01 本番化ハンドオフ</strong><span>採用構成、信頼境界、予約 transaction、認証、法務、移行、実装順、未決事項。</span></a>
+      <a class="card" href="https://github.com/playmark0227-svg/sky-rent/blob/main/docs/production/current-state-audit.md"><strong>02 現状監査</strong><span>再利用可・要置換・本番禁止の判定、実装根拠、仕様の矛盾。</span></a>
+      <a class="card" href="https://github.com/playmark0227-svg/sky-rent/blob/main/docs/production/data-model.md"><strong>03 データモデル</strong><span>テーブル、制約、索引、RLS、transaction 不変条件の実装前契約。</span></a>
+      <a class="card" href="https://github.com/playmark0227-svg/sky-rent/blob/main/docs/production/openapi.yaml"><strong>04 OpenAPI 3.1</strong><span>公開・会員・管理 API、認証、冪等性、楽観 lock、error schema。</span></a>
+      <a class="card" href="https://github.com/playmark0227-svg/sky-rent/blob/main/docs/production/acceptance.md"><strong>05 受入・Go/No-Go</strong><span>チケット、法務、完了条件、security・競合・移行・復元試験。</span></a>
+      <a class="card" href="legal/index.html"><strong>06 法務公開ページ案</strong><span>貸渡約款、料金・取消、特商法、privacy、cookie等の公開前テンプレート。</span></a>
+    </div>
+
+    <h2>推奨する技術方針（承認前）</h2>
+    <table class="status">
+      <tr><th>第一候補</th><td>Supabase / PostgreSQL / Auth / Edge Functions、東京リージョン</td></tr>
+      <tr><th>予約の正</th><td>PostgreSQL。半開区間 <code>[start_at, end_at)</code>、asset 単位で直列化</td></tr>
+      <tr><th>価格・権限</th><td>サーバーが再計算・再認可。ブラウザ値を信用しない</td></tr>
+      <tr><th>管理者</th><td>別サブドメイン、MFA、RBAC、拠点 scope、追記監査</td></tr>
+      <tr><th>法務</th><td>許可・料金・貸渡約款・privacy・最終確認画面を責任者/専門家承認後に公開</td></tr>
+      <tr><th>現行 UI</th><td>再利用可。localStorage / 認証 / 予約 / 料金処理は置換</td></tr>
+    </table>
+
+    <h2>次に行うこと</h2>
+    <ol>
+      <li>ハンドオフの事業判断 A〜P を owner 付きで承認する。</li>
+      <li>事業者・許可・約款・料金・取消・個人情報の確定値を法務テンプレートへ入力し、専門家確認を受ける。</li>
+      <li>受入資料の Phase 0 と Definition of Ready を完了する。</li>
+      <li>最初の実装 PR を環境分離と DB migration に限定して開始する。</li>
+    </ol>
+
+    <p class="back"><a href="../index.html">← システムドキュメント一覧へ戻る</a></p>
+  </main>
+</body>
+</html>
