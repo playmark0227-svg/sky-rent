@@ -12,8 +12,10 @@
   display: flex; align-items: center; justify-content: center;
   flex-direction: column; gap: 10px;
   transition: transform .8s cubic-bezier(.76,0,.24,1), visibility .8s;
+  animation: intro-failsafe 0s linear 5s forwards;
 }
 #intro.leave { transform: translateY(-100%); visibility: hidden; }
+@keyframes intro-failsafe { to { visibility: hidden; pointer-events: none; } }
 #intro .in-kanji {
   font-family: var(--font-sans);
   font-size: 64px; font-weight: 800; color: var(--color-primary);

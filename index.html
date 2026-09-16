@@ -52,6 +52,23 @@
     <div class="in-word">Growth Rent a Car</div>
     <div class="in-line"></div>
   </div>
+  <script>
+    // 外部スクリプトの読込・初期化に失敗しても画面を塞ぎ続けない最終安全策。
+    window.setTimeout(function () {
+      var intro = document.getElementById('intro');
+      if (!intro || intro.classList.contains('leave')) return;
+      intro.classList.add('leave');
+      document.body.classList.add('ready');
+      window.setTimeout(function () { if (intro.parentNode) intro.remove(); }, 900);
+    }, 4000);
+  </script>
+  <noscript>
+    <style>
+      #intro { display: none !important; }
+      .hero-h .hl span { transform: none !important; }
+      .hero-lead2, .hero-ctas, .hero-vertical, .hero-rsv { opacity: 1 !important; transform: none !important; }
+    </style>
+  </noscript>
 
   <!-- ===== ヘッダー ===== -->
   <header class="site-header on-hero">
@@ -297,12 +314,12 @@
   <div data-inc="cta"></div>
 
   <script src="js/config.js"></script>
-  <script src="js/store.js"></script>
+  <script src="js/store.js?v=20260916-1"></script>
   <script src="js/pricing.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/api.js"></script>
   <script src="js/photos.js"></script>
   <script src="js/partials-public.js"></script>
-  <script src="js/lp.js"></script>
+  <script src="js/lp.js?v=20260916-1"></script>
 </body>
 </html>

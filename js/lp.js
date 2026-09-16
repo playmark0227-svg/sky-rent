@@ -12,7 +12,8 @@
   const $ = s => document.querySelector(s);
   const $$ = s => document.querySelectorAll(s);
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduced = typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const CAT_EN = { 'cat-rental': 'Rental Car', 'cat-kitchen': 'Kitchen Car' };
 
@@ -20,13 +21,14 @@
   function intro() {
     const el = $('#intro');
     if (!el) { document.body.classList.add('ready'); return; }
-    const seen = sessionStorage.getItem('sky-rent.introSeen');
+    let seen = false;
+    try { seen = sessionStorage.getItem('sky-rent.introSeen'); } catch (e) { /* storage unavailable */ }
     const wait = (reduced || seen) ? 60 : 1500;
     if (reduced || seen) el.style.display = 'none';
     setTimeout(() => {
       el.classList.add('leave');
       document.body.classList.add('ready');
-      sessionStorage.setItem('sky-rent.introSeen', '1');
+      try { sessionStorage.setItem('sky-rent.introSeen', '1'); } catch (e) { /* storage unavailable */ }
       setTimeout(() => el.remove(), 900);
     }, wait);
   }
@@ -41,16 +43,25 @@
 
   // ===== スクロールリビール =====
   function reveals() {
+    const targets = $$('.rv, .rv-l, .rv-r, .rv-scale');
+    if (typeof IntersectionObserver !== 'function') {
+      targets.forEach(el => el.classList.add('in'));
+      return;
+    }
     const io = new IntersectionObserver(entries => {
       entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
     }, { threshold: 0.14, rootMargin: '0px 0px -6% 0px' });
-    $$('.rv, .rv-l, .rv-r, .rv-scale').forEach(el => io.observe(el));
+    targets.forEach(el => io.observe(el));
   }
 
   // ===== 数字カウントアップ =====
   function counters() {
     const els = $$('[data-count]');
     if (!els.length) return;
+    if (typeof IntersectionObserver !== 'function') {
+      els.forEach(el => { el.textContent = parseInt(el.dataset.count, 10) || 0; });
+      return;
+    }
     const io = new IntersectionObserver(entries => {
       entries.forEach(e => {
         if (!e.isIntersecting) return;
@@ -224,7 +235,7 @@
   // ===== 画面外の無限アニメーションを一時停止 (省電力・描画安定化) =====
   function pauseOffscreen() {
     const els = ['.lp-hero .bg', '.marquee .track', '.hero-scroll .line'].map(s => $(s)).filter(Boolean);
-    if (!els.length) return;
+    if (!els.length || typeof IntersectionObserver !== 'function') return;
     const io = new IntersectionObserver(entries => {
       entries.forEach(e => { e.target.style.animationPlayState = e.isIntersecting ? 'running' : 'paused'; });
     }, { threshold: 0 });
@@ -232,8 +243,12 @@
   }
 
   function boot() {
-    stats(); searchPanel(); catList(); classGrid(); lineup(); locations(); faq();
-    header(); reveals(); counters(); parallax(); pauseOffscreen(); intro();
+    // データ初期化や一部機能が失敗しても、イントロだけは必ず解除する。
+    intro();
+    [stats, searchPanel, catList, classGrid, lineup, locations, faq,
+      header, reveals, counters, parallax, pauseOffscreen].forEach(fn => {
+      try { fn(); } catch (e) { console.error(fn.name + ' init failed', e); }
+    });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

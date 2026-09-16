@@ -17,14 +17,54 @@
   const DATA_VERSION = 6;
   const DAY = 86400000;
 
+  // GitHub Pages では同じアカウント配下のサイトが同一オリジンになり、
+  // localStorage の容量を共有する。容量不足やプライバシー設定で永続化
+  // できない場合もデモを止めないよう、このタブ内のメモリへ退避する。
+  const memory = new Map();
+  let persistentWritesEnabled = true;
+  let storageWarningShown = false;
+
+  function warnStorage(e) {
+    if (storageWarningShown) return;
+    storageWarningShown = true;
+    console.warn('localStorage を利用できないため、このタブでは一時メモリで動作します。', e);
+  }
+
   // ===== 低レベル入出力 =====
   function read(key, fallback) {
+    if (memory.has(key)) {
+      try { return JSON.parse(memory.get(key)); } catch (e) { return fallback; }
+    }
     try {
       const raw = localStorage.getItem(PREFIX + key);
       return raw == null ? fallback : JSON.parse(raw);
-    } catch (e) { return fallback; }
+    } catch (e) {
+      persistentWritesEnabled = false;
+      warnStorage(e);
+      return fallback;
+    }
   }
-  function write(key, val) { localStorage.setItem(PREFIX + key, JSON.stringify(val)); }
+  function write(key, val) {
+    const raw = JSON.stringify(val);
+    memory.set(key, raw);
+    if (!persistentWritesEnabled) return val;
+    try {
+      localStorage.setItem(PREFIX + key, raw);
+    } catch (e) {
+      persistentWritesEnabled = false;
+      warnStorage(e);
+    }
+    return val;
+  }
+  function remove(key) {
+    memory.delete(key);
+    try {
+      localStorage.removeItem(PREFIX + key);
+    } catch (e) {
+      persistentWritesEnabled = false;
+      warnStorage(e);
+    }
+  }
 
   // 「今日」基準の相対日時 ISO (シードデータ用)
   function at(offsetDays, hour) {
@@ -219,7 +259,7 @@
     if (ver === DATA_VERSION) return;
     // 旧バージョンのデータキーを破棄 (settings.* は温存)
     ['vehicles', 'reservations', 'categories', 'locations', 'assets', 'options',
-     'members', 'invoices', 'notifications'].forEach(k => localStorage.removeItem(PREFIX + k));
+     'members', 'invoices', 'notifications'].forEach(remove);
     write('categories', SEED_CATEGORIES);
     write('locations', SEED_LOCATIONS);
     write('assets', SEED_ASSETS);
@@ -601,7 +641,12 @@
   // ===================================================================
   // 初期化 & 公開
   // ===================================================================
-  ensureSeeded();
+  try {
+    ensureSeeded();
+  } catch (e) {
+    // 想定外の初期化失敗でも API 自体は公開し、空データで画面を継続する。
+    console.error('SkyRentStore seed initialization failed', e);
+  }
 
   window.SkyRentStore = {
     PREFIX: PREFIX,
