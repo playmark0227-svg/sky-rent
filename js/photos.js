@@ -22,11 +22,10 @@
     'V004': 'images/cars/sienta.jpg'        // トヨタ シエンタ
   };
 
-  // 実車写真が未撮影の車両。カテゴリ既定 (乗用車) を出すと車種を誤認させるため、
-  // ボディタイプに合った暫定写真をあてる。撮影素材が届いたら asset.photo に差し替える。
-  const BODY_PHOTOS = {
-    '軽トラック': U('photo-1591768575198-88dac53fbd0a')  // 荷台のある小型トラック
-  };
+  // 実車写真が未撮影の車両は、ボディタイプに合わない写真を出すと誤解を招くため、写真を出さずアイコンで表示する。
+  // (以前ここで指定していた外部の仮写真は、実際には車両と無関係な画像だった)
+  // 撮影した写真が届いたら images/cars/ に置き、store.js / 管理画面の asset.photo に設定する。
+  const NO_STOCK_PHOTO_BODY = { '軽トラック': true };
 
   // manage/ 配下など、1階層深いページからでも解決できるようパスを補正
   function resolve(p) {
@@ -41,7 +40,7 @@
     if (asset.photo) return resolve(asset.photo);
     if (ASSET_PHOTOS[asset.assetId]) return resolve(ASSET_PHOTOS[asset.assetId]);
     const body = (asset.customFields || {}).bodyType;
-    if (body && BODY_PHOTOS[body]) return BODY_PHOTOS[body];
+    if (body && NO_STOCK_PHOTO_BODY[body]) return null;
     return CAT_PHOTOS[asset.categoryId] || null;
   }
 
