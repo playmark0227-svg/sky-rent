@@ -3,9 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>マイページ | グロースレンタカー</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/public.css">
+  <style>
+    .mp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+    @media (max-width: 720px) { .mp-grid { grid-template-columns: 1fr; } }
+    .mp-card { max-width: 560px; }
+    .mp-form .form-group { margin-bottom: 16px; }
+    .mp-form label .opt { font-size: 11px; font-weight: 600; color: var(--color-muted-2); margin-left: 6px; }
+    .mp-form label .req { margin-left: 4px; }
+    .mp-form small { display: block; line-height: 1.7; }
+    .mp-check { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: #cfcfcf; line-height: 1.8; margin: 4px 0 14px; cursor: pointer; }
+    .mp-check input { width: 17px; height: 17px; flex-shrink: 0; margin-top: 3px; accent-color: var(--color-primary); }
+    .mp-check a, .mp-link { color: var(--color-primary); }
+    .mp-purpose { font-size: 12px; color: var(--color-muted); line-height: 1.8; background: var(--ink-4); border-radius: 4px; padding: 10px 12px; margin-bottom: 14px; }
+    .mp-msg { border-radius: 6px; padding: 12px 16px; font-size: 13.5px; line-height: 1.85; margin-bottom: 16px; border: 1px solid var(--line-2); background: var(--ink-4); color: #e6e6e6; }
+    .mp-msg[hidden] { display: none; }
+    .mp-msg.ok { border-color: rgba(62,207,142,.5); background: rgba(62,207,142,.1); }
+    .mp-msg.err { border-color: rgba(255,92,71,.55); background: rgba(255,92,71,.1); color: #ffd3cc; }
+    .mp-msg.warn { border-color: rgba(245,179,1,.5); background: rgba(245,179,1,.08); }
+    .mp-msg ul { margin: 4px 0 0 1.2em; }
+    .mp-msg li { list-style: disc; }
+    .mp-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .mp-actions .btn { padding: 12px 24px; }
+    .mp-btn-sm { padding: 7px 14px !important; font-size: 12px !important; letter-spacing: .02em !important; }
+    .mp-btn-danger { background: #b3261e; color: #fff; }
+    .mp-btn-danger:hover { background: #8f1d17; }
+    .mp-jump { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .mp-jump button { background: var(--ink-3); border: 1px solid var(--line-2); color: #ddd; border-radius: 99px; padding: 7px 14px; font-size: 12.5px; cursor: pointer; font-family: inherit; }
+    .mp-jump button:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .mp-dl { display: grid; grid-template-columns: 9em 1fr; gap: 8px 14px; font-size: 13.5px; margin: 6px 0 14px; }
+    .mp-dl dt { color: var(--color-muted); }
+    .mp-dl dd { margin: 0; color: #eee; word-break: break-word; }
+    @media (max-width: 520px) { .mp-dl { grid-template-columns: 1fr; gap: 2px; } .mp-dl dd { margin-bottom: 8px; } }
+    .mp-lines { width: 100%; border-collapse: collapse; font-size: 13px; margin: 4px 0 12px; }
+    .mp-lines td { padding: 6px 0; border-bottom: 1px dashed var(--line); color: #d6d6d6; }
+    .mp-lines td:last-child { text-align: right; white-space: nowrap; }
+    .mp-lines tr.total td { border-bottom: none; font-weight: 700; color: #fff; font-size: 14.5px; padding-top: 10px; }
+    .mp-fee { border: 1px solid var(--color-primary); background: var(--color-primary-soft); border-radius: 6px; padding: 14px 16px; margin: 10px 0 14px; font-size: 13.5px; line-height: 1.85; }
+    .mp-fee strong { font-size: 18px; color: #fff; }
+    .mp-modal { position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 400; display: flex; align-items: flex-start; justify-content: center; padding: 60px 16px 24px; overflow-y: auto; }
+    .mp-modal[hidden] { display: none; }
+    .mp-modal-box { background: var(--ink-2); border: 1px solid var(--line-2); border-radius: 10px; width: 100%; max-width: 620px; padding: 22px 22px 18px; position: relative; }
+    .mp-modal-close { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #bbb; font-size: 22px; cursor: pointer; line-height: 1; padding: 6px; }
+    .mp-modal-close:hover { color: var(--color-primary); }
+    .mp-demo-hint { margin-top: 14px; padding: 10px; background: #fff8d6; border: 1px solid #f0e0a0; border-radius: 6px; font-size: 12px; color: #6a5a1a; line-height: 1.7; }
+    .mp-small { font-size: 12.5px; color: var(--color-muted); line-height: 1.85; }
+    .mp-res-actions { white-space: nowrap; }
+  </style>
 </head>
 <body>
   <header class="site-header solid">
@@ -23,163 +71,909 @@
   <main class="container page-offset" style="padding-bottom:60px;max-width:900px">
     <h1 class="mb24" style="font-size:26px" data-i18n="mypage.title">マイページ</h1>
 
-    <!-- 未ログイン -->
-    <div id="auth-view" hidden>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="auth-grid">
+    <!-- 画面全体のお知らせ (ログアウト・退会・リンクの結果など) -->
+    <div id="page-msg" class="mp-msg" role="status" hidden></div>
+
+    <!-- ===== 未ログイン: ログイン / 新規会員登録 ===== -->
+    <section id="view-auth" hidden>
+      <div class="mp-grid">
         <div class="p-card">
           <h3 data-i18n="mypage.login">ログイン</h3>
-          <form id="login-form" style="margin-top:12px">
-            <div class="form-group mb16"><label data-i18n="mypage.email">メールアドレス</label><input type="email" id="l-email" required></div>
-            <div class="form-group mb16"><label data-i18n="mypage.password">パスワード</label><input type="password" id="l-pass" required></div>
-            <p id="login-error" class="error-text" hidden></p>
-            <button type="submit" class="btn btn-primary" style="width:100%" data-i18n="mypage.login">ログイン</button>
+          <form id="login-form" class="mp-form" novalidate>
+            <div class="form-group"><label for="l-email">メールアドレス</label><input type="email" id="l-email" autocomplete="email" required></div>
+            <div class="form-group"><label for="l-pass">パスワード</label><input type="password" id="l-pass" autocomplete="current-password" required></div>
+            <div id="login-error" class="mp-msg err" role="alert" hidden></div>
+            <button type="submit" class="btn btn-primary" style="width:100%" id="login-btn">ログイン</button>
           </form>
-          <div style="margin-top:14px;padding:10px;background:#fff8d6;border:1px solid #f0e0a0;border-radius:6px;font-size:12px;color:#6a5a1a">
-            💡 デモ会員: <br>demo@example.com / demo1234 (一般)<br>corp@example.com / demo1234 (法人・請求書払い可)
+          <p class="mp-small" style="margin-top:14px"><button type="button" class="btn-link" id="to-reset">パスワードをお忘れの方はこちら</button></p>
+          <div class="mp-demo-hint" id="demo-hint" hidden>
+            デモ会員: <br>demo@example.com / demo1234 (一般)<br>corp@example.com / demo1234 (法人・請求書払い可)
           </div>
         </div>
+
         <div class="p-card">
           <h3 data-i18n="mypage.register">新規会員登録</h3>
-          <form id="reg-form" style="margin-top:12px">
-            <div class="form-group mb16"><label data-i18n="booking.name">お名前 *</label><input type="text" id="r-name" required></div>
-            <div class="form-group mb16"><label data-i18n="booking.kana">フリガナ</label><input type="text" id="r-kana"></div>
-            <div class="form-group mb16"><label data-i18n="mypage.email">メールアドレス *</label><input type="email" id="r-email" required></div>
-            <div class="form-group mb16"><label data-i18n="booking.phone">電話番号</label><input type="tel" id="r-phone"></div>
-            <div class="form-group mb16"><label data-i18n="booking.company">会社名 (法人の場合)</label><input type="text" id="r-company"></div>
-            <div class="form-group mb16"><label data-i18n="mypage.password">パスワード * (8文字以上)</label><input type="password" id="r-pass" minlength="8" required></div>
-            <p id="reg-error" class="error-text" hidden></p>
-            <button type="submit" class="btn btn-primary" style="width:100%" data-i18n="mypage.register">登録する</button>
+          <form id="reg-form" class="mp-form" novalidate>
+            <div class="form-group"><label for="r-name">お名前<span class="req">*</span></label><input type="text" id="r-name" autocomplete="name" maxlength="100" required></div>
+            <div class="form-group"><label for="r-kana">フリガナ<span class="opt">任意</span></label><input type="text" id="r-kana" maxlength="100"></div>
+            <div class="form-group"><label for="r-email">メールアドレス<span class="req">*</span></label><input type="email" id="r-email" autocomplete="email" maxlength="254" required></div>
+            <div class="form-group"><label for="r-phone">電話番号<span class="opt">任意</span></label><input type="tel" id="r-phone" autocomplete="tel" maxlength="20" placeholder="09012345678"></div>
+            <div class="form-group"><label for="r-company">会社名 (法人の場合)<span class="opt">任意</span></label><input type="text" id="r-company" autocomplete="organization" maxlength="200"></div>
+            <div class="form-group">
+              <label for="r-pass">パスワード<span class="req">*</span></label>
+              <input type="password" id="r-pass" autocomplete="new-password" minlength="8" required aria-describedby="r-pass-rule">
+              <small id="r-pass-rule">8文字以上で、英大文字・英小文字・数字をそれぞれ1文字以上含めてください。</small>
+            </div>
+            <div class="form-group"><label for="r-pass2">パスワード (確認用)<span class="req">*</span></label><input type="password" id="r-pass2" autocomplete="new-password" required></div>
+
+            <p class="mp-purpose">ご登録いただいた情報は、株式会社Skyward Growth が、会員サービス (予約履歴の表示・ポイント・クーポン) の提供と、ご予約・お問い合わせに関するご連絡のために利用します。詳しくは<a class="mp-link" href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a>をご確認ください。</p>
+            <label class="mp-check"><input type="checkbox" id="r-privacy" required><span id="r-privacy-label"><a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a>の内容を確認し、同意します (必須)</span></label>
+            <label class="mp-check"><input type="checkbox" id="r-marketing"><span>キャンペーンや空車情報などのお知らせをメールで受け取る (任意)。受け取りはマイページからいつでも停止できます。</span></label>
+
+            <div id="reg-error" class="mp-msg err" role="alert" hidden></div>
+            <button type="submit" class="btn btn-primary" style="width:100%" id="reg-btn">登録する</button>
+            <p class="mp-small" style="margin-top:10px" id="reg-note">ご登録のメールアドレスに確認メールをお送りします。メール内のリンクを開くと登録が完了します。</p>
           </form>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- ログイン後 -->
-    <div id="member-view" hidden></div>
+    <!-- ===== メールを送りました (会員登録の確認 / パスワード再設定) ===== -->
+    <section id="view-sent" hidden>
+      <div class="p-card mp-card">
+        <h3 id="sent-title">確認メールをお送りしました</h3>
+        <div id="sent-body" class="mp-small"></div>
+        <div id="sent-resend-msg" class="mp-msg" role="status" hidden></div>
+        <div class="mp-actions">
+          <button type="button" class="btn btn-primary" id="sent-resend-btn" data-resend-btn hidden>確認メールを再送</button>
+          <button type="button" class="btn btn-secondary" data-go="auth">ログイン画面に戻る</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== パスワード再設定 (メール送信) ===== -->
+    <section id="view-reset" hidden>
+      <div class="p-card mp-card">
+        <h3>パスワードの再設定</h3>
+        <p class="mp-small mb16">ご登録のメールアドレスを入力してください。パスワード再設定用のリンクをメールでお送りします。</p>
+        <form id="reset-form" class="mp-form" novalidate>
+          <div class="form-group"><label for="rs-email">メールアドレス</label><input type="email" id="rs-email" autocomplete="email" required></div>
+          <div id="reset-error" class="mp-msg err" role="alert" hidden></div>
+          <div class="mp-actions">
+            <button type="submit" class="btn btn-primary" id="reset-btn">再設定メールを送る</button>
+            <button type="button" class="btn btn-secondary" data-go="auth">ログイン画面に戻る</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== 新しいパスワードの設定 (再設定リンク / 招待リンクで開いたとき) ===== -->
+    <section id="view-newpass" hidden>
+      <div class="p-card mp-card">
+        <h3 id="np-title">新しいパスワードの設定</h3>
+        <p class="mp-small mb16" id="np-lead">新しいパスワードを入力してください。</p>
+        <form id="np-form" class="mp-form" novalidate>
+          <div class="form-group">
+            <label for="np-pass">新しいパスワード<span class="req">*</span></label>
+            <input type="password" id="np-pass" autocomplete="new-password" required aria-describedby="np-rule">
+            <small id="np-rule">8文字以上で、英大文字・英小文字・数字をそれぞれ1文字以上含めてください。</small>
+          </div>
+          <div class="form-group"><label for="np-pass2">新しいパスワード (確認用)<span class="req">*</span></label><input type="password" id="np-pass2" autocomplete="new-password" required></div>
+          <div id="np-error" class="mp-msg err" role="alert" hidden></div>
+          <button type="submit" class="btn btn-primary" id="np-btn">パスワードを設定する</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== メールのリンクが無効・期限切れ ===== -->
+    <section id="view-link" hidden>
+      <div class="p-card mp-card">
+        <h3>メールのリンクを開けませんでした</h3>
+        <div id="link-msg" class="mp-msg err" role="alert"></div>
+        <ul class="mp-small" style="margin:0 0 12px 1.2em">
+          <li style="list-style:disc">パスワード再設定のリンクの場合: 下の「パスワード再設定の画面へ」から、新しいリンクをお送りします。</li>
+          <li style="list-style:disc" id="link-signup-note">会員登録の確認リンクの場合: 下の「確認メールを再送」から、確認メールをお送りし直します。</li>
+          <li style="list-style:disc">メールのリンクは一度しか使えません。すでに手続きがお済みの場合は、そのままログインしてください。</li>
+        </ul>
+        <form id="link-resend-form" class="mp-form" novalidate hidden style="border-top:1px solid var(--line);padding-top:14px;margin-bottom:6px">
+          <p class="mp-small" style="margin-bottom:10px">会員登録の確認メールをもう一度お送りします。ご登録のメールアドレスを入力してください。</p>
+          <div class="form-group"><label for="lr-email">メールアドレス</label><input type="email" id="lr-email" autocomplete="email" maxlength="254"></div>
+          <div id="lr-msg" class="mp-msg" role="status" hidden></div>
+          <button type="submit" class="btn btn-primary" id="lr-btn" data-resend-btn>確認メールを再送</button>
+        </form>
+        <div class="mp-actions">
+          <button type="button" class="btn btn-secondary" data-go="reset">パスワード再設定の画面へ</button>
+          <button type="button" class="btn btn-secondary" data-go="auth">ログイン・会員登録へ</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ログイン後 ===== -->
+    <section id="view-member" hidden></section>
+
+    <!-- ===== 照会URL (#lookup=予約番号.照会キー) で開いたとき: ログイン不要の予約確認 ===== -->
+    <section id="view-lookup" hidden>
+      <div class="p-card">
+        <h3>ご予約の確認</h3>
+        <p class="mp-small mb16">予約確定メールに記載の照会URLから開いています。このURLを知っている方はご予約の確認・キャンセルができますので、他の方に共有しないでください。</p>
+        <div id="lookup-body" aria-live="polite"></div>
+        <div class="mp-actions" style="margin-top:16px">
+          <button type="button" class="btn btn-secondary" id="lookup-leave">マイページ (ログイン) へ</button>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <!-- 予約の詳細・キャンセル (会員) -->
+  <div class="mp-modal" id="mp-modal" hidden>
+    <div class="mp-modal-box" role="dialog" aria-modal="true" aria-labelledby="mp-modal-title">
+      <button type="button" class="mp-modal-close" id="mp-modal-close" aria-label="閉じる">×</button>
+      <h3 id="mp-modal-title" style="font-size:17px;font-weight:900;margin-bottom:12px" tabindex="-1">ご予約の詳細</h3>
+      <div id="mp-modal-body" aria-live="polite"></div>
+    </div>
+  </div>
 
   <footer class="site-footer"><div class="container"><div class="footer-bottom" style="border-top:none"><span data-i18n="footer.copyright">© 2026 グロースレンタカー</span><a href="index.html">← トップへ戻る</a></div></div></footer>
 
-  <script src="js/config.js"></script>
-  <script src="js/store.js?v=20260916-1"></script>
-  <script src="js/pricing.js"></script>
-  <script src="js/i18n.js"></script>
-  <script src="js/api.js"></script>
-  <script>
+  <script src="js/config.js?v=20260923"></script>
+  <script src="js/store.js?v=20260923"></script>
+  <script src="js/pricing-core.js?v=20260923"></script>
+  <script src="js/pricing.js?v=20260923"></script>
+  <script src="js/i18n.js?v=20260923"></script>
+  <script src="js/api.js?v=20260923"></script>
+  <script src="js/backend.js?v=20260923"></script>
+  <script src="js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
   (function () {
-    const S = window.SkyRentStore, I = window.SkyRentI18n;
+    'use strict';
+    const S = window.SkyRentStore, B = window.SkyRentBackend, I = window.SkyRentI18n;
     const $ = s => document.querySelector(s);
     function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
-    const isEn = () => I.getLang() === 'en';
-    function fmtDT(iso){if(!iso)return '-';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
-    function fmtD(iso){if(!iso)return '-';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate());}
+    const J = B.jst;
+    const fmtDT = v => J.format(v) || '-';
+    const fmtD = v => J.format(v, { time: false, weekday: false }) || '-';
+    const yen = n => '¥' + (Number(n) || 0).toLocaleString('ja-JP');
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const LINE_URL = 'https://lin.ee/PuLt0Ig';
+    // 公開中の法務文書の版 (本番はサーバーの legal_documents。デモは既定値)
+    const DEFAULT_LEGAL = { privacy: { id: 'privacy', version: '2026-08', title: 'プライバシーポリシー', url: 'privacy.html' } };
+    const VIEWS = ['auth', 'sent', 'reset', 'newpass', 'link', 'member', 'lookup'];
 
-    const L = {
-      welcome:{ja:'さん、こんにちは',en:''}, memberId:{ja:'会員ID',en:'Member ID'},
-      toNext:{ja:(m,a)=>'あと '+m+'pt で ¥'+a.toLocaleString()+' クーポン',en:(m,a)=>m+'pt to a ¥'+a.toLocaleString()+' coupon'},
-      couponsCount:{ja:(n,a)=>n+'枚 (¥'+a.toLocaleString()+'相当)',en:(n,a)=>n+' ('+'¥'+a.toLocaleString()+')'},
-      noCoupon:{ja:'利用可能なクーポンはありません',en:'No available coupons'},
-      used:{ja:'使用済',en:'Used'}, unused:{ja:'未使用',en:'Available'},
-      noHistory:{ja:'ご利用履歴はまだありません。',en:'No booking history yet.'},
-      toSearch:{ja:'車両を探す →',en:'Browse rentals →'},
-      hName:{ja:'対象',en:'Item'}, hPeriod:{ja:'期間',en:'Period'}, hQty:{ja:'数量',en:'Qty'}, hAmount:{ja:'金額',en:'Amount'}, hPay:{ja:'支払',en:'Pay'}, hStatus:{ja:'状態',en:'Status'}, hId:{ja:'予約ID',en:'ID'},
-      hDate:{ja:'日時',en:'Date'}, hDelta:{ja:'増減',en:'±'}, hReason:{ja:'事由',en:'Reason'},
-      issuedAt:{ja:'発行',en:'Issued'}
-    };
-    const tt = (k, ...a) => { const v = L[k][isEn()?'en':'ja']; return typeof v === 'function' ? v(...a) : v; };
+    let current = null;          // 表示中の画面
+    let memberNotice = null;     // 会員画面の上に出すお知らせ {type, html}
+    let newpassMode = 'recovery';
+    let selfAuthOp = 0;          // この画面の操作によるログアウト (onChange で二重に描画しない)
 
-    // ===== 認証フォーム =====
-    $('#login-form').addEventListener('submit', e => {
-      e.preventDefault();
-      const m = S.loginMember($('#l-email').value.trim(), $('#l-pass').value);
-      if (!m) { $('#login-error').hidden = false; $('#login-error').textContent = isEn() ? 'Email or password is incorrect.' : 'メールアドレスまたはパスワードが違います'; return; }
-      render();
-    });
-    $('#reg-form').addEventListener('submit', e => {
-      e.preventDefault();
-      const err = $('#reg-error'); err.hidden = true;
-      try {
-        if ($('#r-pass').value.length < 8) throw new Error(isEn() ? 'Password must be at least 8 characters.' : 'パスワードは8文字以上にしてください');
-        const m = S.registerMember({
-          name: $('#r-name').value.trim(), nameKana: $('#r-kana').value.trim(),
-          email: $('#r-email').value.trim(), phone: $('#r-phone').value.trim(),
-          company: $('#r-company').value.trim(), password: $('#r-pass').value
-        });
-        S.loginMember(m.email, m.password);
-        render();
-      } catch (ex) { err.hidden = false; err.textContent = ex.message; }
-    });
-
-    function memberReservations(m) {
-      return S.list('reservations').filter(r =>
-        (r.memberId && r.memberId === m.memberId) ||
-        (r.customerEmail && m.email && r.customerEmail.toLowerCase() === m.email.toLowerCase())
-      ).sort((a, b) => new Date(b.start) - new Date(a.start));
+    // ===================================================================
+    // 小物
+    // ===================================================================
+    function legalDoc(id) {
+      const list = S.read('legal', null);
+      const d = Array.isArray(list) ? list.find(x => x && x.id === id) : null;
+      return d && d.version ? d : DEFAULT_LEGAL[id];
+    }
+    // サイト内のページ (例 privacy.html / law.html#cancel) か https の URL だけをリンクにする
+    function safeUrl(u, fallback) {
+      const s = String(u || '');
+      return /^(https:\/\/|[A-Za-z0-9._-]+\.html(#[A-Za-z0-9_-]*)?$)/.test(s) ? s : fallback;
+    }
+    function validPhone(p) {
+      const s = String(p || '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/[‐－―ー−]/g, '-');
+      if (!/^[0-9+\-() ]{10,20}$/.test(s)) return false;
+      const d = s.replace(/\D/g, '').length;
+      return d >= 10 && d <= 15;
+    }
+    function show(view) {
+      current = view;
+      VIEWS.forEach(v => { const el = $('#view-' + v); if (el) el.hidden = v !== view; });
+      try { window.scrollTo(0, 0); } catch (e) { /* 続行 */ }
+    }
+    function setMsg(el, type, html) {
+      if (!el) return;
+      if (!html) { el.hidden = true; el.innerHTML = ''; return; }
+      el.className = 'mp-msg' + (type ? ' ' + type : '');
+      el.innerHTML = html;
+      el.hidden = false;
+    }
+    function pageMsg(type, html) { setMsg($('#page-msg'), type, html); }
+    // 入力エラー [[セレクタ, 文言]] を一覧にして、最初の欄へ移動
+    function showErrors(box, errs) {
+      setMsg(box, 'err', errs.length === 1 ? esc(errs[0][1]) : '<ul>' + errs.map(x => '<li>' + esc(x[1]) + '</li>').join('') + '</ul>');
+      const first = errs[0] && errs[0][0] && $(errs[0][0]);
+      if (first && typeof first.focus === 'function') first.focus();
+    }
+    // サーバーのエラー (e.code / e.message / e.fields) を表示。fieldMap: {サーバーの項目名: セレクタ}
+    function showServerError(box, e, fieldMap) {
+      const fields = e && e.fields && typeof e.fields === 'object' ? e.fields : null;
+      const errs = [];
+      if (fields) Object.keys(fields).forEach(k => { errs.push([(fieldMap || {})[k] || null, String(fields[k])]); });
+      if (!errs.length) errs.push([null, (e && e.message) || B.errorMessage('INTERNAL')]);
+      showErrors(box, errs);
+    }
+    // 送信中はボタンを無効にし、文言を変える
+    async function withBusy(btn, label, fn) {
+      const text = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = label; }
+      try { return await fn(); }
+      finally { if (btn) { btn.disabled = false; btn.textContent = text; } }
+    }
+    function emailStatusText(email, what) {
+      const st = email && email.status;
+      if (st === 'sent') return what + 'の確認メールをお送りしました。';
+      if (st === 'queued') return what + 'の確認メールは、まもなくお送りします。';
+      if (B.live) return '確認メールをお送りできませんでした (' + what + 'の手続きは完了しています)。必要な場合は公式LINEまたはお問い合わせフォームからご連絡ください。';
+      return 'デモ環境のため、確認メールは送信されません。';
     }
 
-    function renderMember(m) {
+    // ===================================================================
+    // 未ログイン: ログイン・会員登録・パスワード再設定
+    // ===================================================================
+    function renderAuth() {
+      show('auth');
+      $('#demo-hint').hidden = B.live;
+      const doc = legalDoc('privacy');
+      $('#r-privacy-label').innerHTML = '<a href="' + esc(safeUrl(doc.url, 'privacy.html')) + '" target="_blank" rel="noopener">' + esc(doc.title || 'プライバシーポリシー') + '</a> (' + esc(doc.version) + '版) の内容を確認し、同意します (必須)';
+      $('#reg-note').textContent = B.live
+        ? 'ご登録のメールアドレスに確認メールをお送りします。メール内のリンクを開くと登録が完了します。'
+        : 'デモ環境では確認メールは送信されず、すぐにログインした状態になります。';
+    }
+
+    $('#login-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const box = $('#login-error');
+      setMsg(box, null, '');
+      const email = $('#l-email').value.trim(), pw = $('#l-pass').value;
+      const errs = [];
+      if (!EMAIL_RE.test(email)) errs.push(['#l-email', 'メールアドレスを正しく入力してください。']);
+      if (!pw) errs.push(['#l-pass', 'パスワードを入力してください。']);
+      if (errs.length) return showErrors(box, errs);
+      try {
+        await withBusy($('#login-btn'), 'ログインしています…', () => B.auth.signIn(email, pw));
+        $('#l-pass').value = '';
+        pageMsg(null, '');
+        memberNotice = null;
+        renderMember();
+      } catch (ex) {
+        showServerError(box, ex, { email: '#l-email' });
+      }
+    });
+
+    $('#reg-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const box = $('#reg-error');
+      setMsg(box, null, '');
+      const v = id => ($(id).value || '').trim();
+      const p = { name: v('#r-name'), kana: v('#r-kana'), email: v('#r-email'), phone: v('#r-phone'), company: v('#r-company'), password: $('#r-pass').value };
+      const errs = [];
+      if (!p.name) errs.push(['#r-name', 'お名前を入力してください。']);
+      if (!EMAIL_RE.test(p.email)) errs.push(['#r-email', 'メールアドレスを正しく入力してください。']);
+      if (p.phone && !validPhone(p.phone)) errs.push(['#r-phone', '電話番号を正しく入力してください (半角数字とハイフン)。']);
+      const pc = B.auth.checkPassword(p.password);
+      if (!pc.ok) errs.push(['#r-pass', 'パスワードは' + pc.message]);
+      else if (p.password !== $('#r-pass2').value) errs.push(['#r-pass2', 'パスワード (確認用) が一致しません。同じものを入力してください。']);
+      if (!$('#r-privacy').checked) errs.push(['#r-privacy', 'プライバシーポリシーへの同意が必要です。内容をご確認のうえ、チェックしてください。']);
+      if (errs.length) return showErrors(box, errs);
+
+      const doc = legalDoc('privacy');
+      const at = new Date().toISOString();
+      const marketing = !!$('#r-marketing').checked;
+      p.marketingOptIn = marketing;
+      p.consent = {
+        documents: [{ id: 'privacy', version: doc.version }], agreedAt: at,
+        marketing: { optIn: marketing, at: at }, source: 'mypage'
+      };
+      try {
+        const res = await withBusy($('#reg-btn'), '登録しています…', () => B.auth.signUp(p));
+        $('#r-pass').value = ''; $('#r-pass2').value = '';
+        if (res && res.needsConfirmation) {
+          $('#reg-form').reset();
+          showSent('signup', p.email);
+        } else {
+          memberNotice = { type: 'ok', html: '会員登録が完了しました。ようこそ、' + esc(p.name) + ' 様。' };
+          renderMember();
+        }
+      } catch (ex) {
+        showServerError(box, ex, { email: '#r-email', password: '#r-pass', name: '#r-name', phone: '#r-phone' });
+      }
+    });
+
+    // ===================================================================
+    // 会員登録の確認メールの再送 (届かない・リンクの期限切れ)
+    //   連打防止: 送信中はボタンを無効にし、送ったあと (と送信回数の上限のとき) は RESEND_WAIT 秒待ってもらう
+    // ===================================================================
+    const RESEND_WAIT = 60;
+    let resendUntil = 0;
+    let resendTimer = null;
+    let resendBusy = false;
+    let sentEmail = '';
+    const RESEND_LABEL = '確認メールを再送';
+    function canResend() { return !!(B.auth && typeof B.auth.resendSignup === 'function'); }
+    function resendButtons() { return Array.prototype.slice.call(document.querySelectorAll('[data-resend-btn]')); }
+    function paintResendButtons() {
+      const left = Math.max(0, Math.ceil((resendUntil - Date.now()) / 1000));
+      resendButtons().forEach(b => {
+        b.disabled = resendBusy || left > 0;
+        b.textContent = resendBusy ? '送信しています…' : (left > 0 ? RESEND_LABEL + ' (あと' + left + '秒)' : RESEND_LABEL);
+      });
+      if (!left && resendTimer) { clearInterval(resendTimer); resendTimer = null; }
+    }
+    function startResendWait() {
+      resendUntil = Date.now() + RESEND_WAIT * 1000;
+      if (!resendTimer) resendTimer = setInterval(paintResendButtons, 1000);
+      paintResendButtons();
+    }
+    async function resendSignup(email, box, inputSel) {
+      if (resendBusy || Date.now() < resendUntil || !canResend()) return;
+      setMsg(box, null, '');
+      if (!EMAIL_RE.test(email || '')) return showErrors(box, [[inputSel || null, 'メールアドレスを正しく入力してください。']]);
+      resendBusy = true;
+      paintResendButtons();
+      let res = null, error = null;
+      try { res = await B.auth.resendSignup(email); } catch (ex) { error = ex; }
+      resendBusy = false;
+      if (error) {
+        showServerError(box, error, inputSel ? { email: inputSel } : {});
+        if (error.code === 'RATE_LIMITED') startResendWait();
+        else paintResendButtons();
+        return;
+      }
+      setMsg(box, 'ok', res && res.demo
+        ? 'デモ環境のため、メールは送信されません。'
+        : '<strong>' + esc(email) + '</strong> 宛てに、確認メールをもう一度お送りしました。メール内のリンクを開くと会員登録が完了します。' +
+          '届くまで数分かかることがあります。迷惑メールフォルダもご確認ください (登録の確認がお済みのメールアドレスには届きません。そのままログインしてください)。');
+      startResendWait();
+    }
+    $('#sent-resend-btn').addEventListener('click', () => resendSignup(sentEmail, $('#sent-resend-msg'), null));
+    $('#link-resend-form').addEventListener('submit', e => {
+      e.preventDefault();
+      resendSignup(($('#lr-email').value || '').trim(), $('#lr-msg'), '#lr-email');
+    });
+    // メールのリンクを開けなかった画面 (期限切れ・無効)
+    function showLinkError(html) {
+      setMsg($('#link-msg'), 'err', html);
+      setMsg($('#lr-msg'), null, '');
+      $('#link-resend-form').hidden = !canResend();
+      $('#link-signup-note').hidden = !canResend();
+      paintResendButtons();
+      show('link');
+    }
+
+    function showSent(kind, email) {
+      show('sent');
+      setMsg($('#sent-resend-msg'), null, '');
+      sentEmail = kind === 'signup' ? String(email || '') : '';
+      $('#sent-resend-btn').hidden = !(kind === 'signup' && sentEmail && canResend());
+      paintResendButtons();
+      if (kind === 'signup') {
+        $('#sent-title').textContent = '確認メールをお送りしました';
+        $('#sent-body').innerHTML =
+          '<p class="mb16"><strong style="color:#fff">' + esc(email) + '</strong> 宛てに、メールアドレス確認のメールをお送りしました。' +
+          'メール内の「メールアドレスを確認する」ボタン (リンク) を開くと会員登録が完了し、このマイページにログインした状態で戻ります。</p>' +
+          '<ul style="margin:0 0 8px 1.2em">' +
+          '<li style="list-style:disc">リンクには有効期限があります。お早めに開いてください。</li>' +
+          '<li style="list-style:disc">メールが届かない場合は、迷惑メールフォルダや受信設定 (ドメイン指定受信など) をご確認ください。</li>' +
+          '<li style="list-style:disc">すでに登録済みのメールアドレスの場合、確認メールは届きません。ログインするか、パスワードの再設定をご利用ください。</li>' +
+          '</ul>';
+      } else {
+        $('#sent-title').textContent = 'パスワード再設定のメールをお送りしました';
+        $('#sent-body').innerHTML = B.live
+          ? '<p class="mb16"><strong style="color:#fff">' + esc(email) + '</strong> がご登録のメールアドレスであれば、パスワード再設定用のメールが届きます。メール内のリンクを開き、新しいパスワードを設定してください。</p>' +
+            '<ul style="margin:0 0 8px 1.2em"><li style="list-style:disc">リンクには有効期限があり、一度しか使えません。</li>' +
+            '<li style="list-style:disc">メールが届かない場合は、迷惑メールフォルダをご確認のうえ、しばらくしてからもう一度お試しください。</li></ul>'
+          : '<p>デモ環境のため、メールは送信されません。デモ会員のパスワードはログイン画面の案内をご覧ください。</p>';
+      }
+    }
+
+    $('#to-reset').addEventListener('click', () => {
+      $('#rs-email').value = $('#l-email').value.trim();
+      goReset();
+    });
+    function goReset() {
+      pageMsg(null, '');
+      setMsg($('#reset-error'), null, '');
+      show('reset');
+    }
+    $('#reset-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const box = $('#reset-error');
+      setMsg(box, null, '');
+      const email = $('#rs-email').value.trim();
+      if (!EMAIL_RE.test(email)) return showErrors(box, [['#rs-email', 'メールアドレスを正しく入力してください。']]);
+      try {
+        await withBusy($('#reset-btn'), '送信しています…', () => B.auth.resetPassword(email));
+        showSent('recovery', email);
+      } catch (ex) {
+        showServerError(box, ex, { email: '#rs-email' });
+      }
+    });
+
+    // 画面の切り替えボタン (data-go)
+    document.addEventListener('click', e => {
+      const t = e.target && e.target.closest ? e.target.closest('[data-go]') : null;
+      if (!t) return;
+      const go = t.getAttribute('data-go');
+      if (go === 'reset') goReset();
+      else { pageMsg(null, ''); renderAuth(); }
+    });
+
+    // ===================================================================
+    // 新しいパスワードの設定 (再設定リンク・招待リンク)
+    // ===================================================================
+    function renderNewpass(mode) {
+      newpassMode = mode;
+      show('newpass');
+      setMsg($('#np-error'), null, '');
+      if (mode === 'invite') {
+        $('#np-title').textContent = 'パスワードの設定';
+        $('#np-lead').textContent = 'ご招待ありがとうございます。アカウントは有効になりました。今後ログインに使うパスワードを設定してください。';
+        $('#np-btn').textContent = 'パスワードを設定して始める';
+      } else {
+        $('#np-title').textContent = '新しいパスワードの設定';
+        $('#np-lead').textContent = 'パスワード再設定のリンクを確認しました。新しいパスワードを入力してください。';
+        $('#np-btn').textContent = 'パスワードを変更する';
+      }
+    }
+
+    $('#np-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const box = $('#np-error');
+      setMsg(box, null, '');
+      const pw = $('#np-pass').value;
+      const pc = B.auth.checkPassword(pw);
+      if (!pc.ok) return showErrors(box, [['#np-pass', 'パスワードは' + pc.message]]);
+      if (pw !== $('#np-pass2').value) return showErrors(box, [['#np-pass2', 'パスワード (確認用) が一致しません。同じものを入力してください。']]);
+      const session = await B.auth.session().catch(() => null);
+      if (!session) {
+        showLinkError(esc(B.errorMessage('LINK_INVALID')));
+        return;
+      }
+      try {
+        const btn = $('#np-btn');
+        await withBusy(btn, '設定しています…', () => B.auth.updatePassword(pw));
+        $('#np-pass').value = ''; $('#np-pass2').value = '';
+        const done = newpassMode === 'invite' ? 'パスワードを設定しました。次回からはメールアドレスとこのパスワードでログインできます。' : 'パスワードを変更しました。次回からは新しいパスワードでログインしてください。';
+        if (!S.currentMember() && B.live) { try { await B.member.reload(); } catch (ex) { /* 続行 */ } }
+        if (S.currentMember()) {
+          memberNotice = { type: 'ok', html: esc(done) };
+          renderMember();
+        } else {
+          // 会員ではないアカウント (スタッフなど): ログイン状態は残さない
+          selfAuthOp++;
+          try { await B.auth.signOut(); } catch (ex) { /* 続行 */ }
+          setTimeout(() => { selfAuthOp--; }, 500);
+          pageMsg('ok', esc(done));
+          renderAuth();
+        }
+      } catch (ex) {
+        showServerError(box, ex, { password: '#np-pass' });
+      }
+    });
+
+    // ===================================================================
+    // ログイン後 (会員)
+    // ===================================================================
+    function memberReservations(m) {
+      return S.list('reservations').filter(r =>
+        !r._busy && r.kind !== 'block' && (B.live || (r.memberId && r.memberId === m.memberId))
+      ).sort((a, b) => String(b.start).localeCompare(String(a.start)) || String(b.reservationId).localeCompare(String(a.reservationId)));
+    }
+    function isCancellable(r) {
+      const t = Date.parse(B.jst.fromInput(r.start) || '');
+      return r.status === 'confirmed' && isFinite(t) && t > Date.now();
+    }
+    function statusBadge(status) {
+      const cls = status === 'cancelled' || status === 'no_show' ? 'ng' : (status === 'confirmed' ? 'stock' : 'ok');
+      return '<span class="badge ' + cls + '">' + esc(S.STATUS_LABELS[status] || status || '-') + '</span>';
+    }
+    function payLabel(method) {
+      if (method === 'invoice') return '請求書払い';
+      if (method === 'onsite' || !method) return '当日店頭でのお支払い';
+      return S.PAYMENT_LABELS[method] || method;
+    }
+
+    function renderMember() {
+      const m = S.currentMember();
+      if (!m) { renderAuth(); return; }
+      show('member');
       const cfg = S.pointSettings();
       const coupons = m.coupons || [];
       const unused = coupons.filter(c => !c.usedAt);
       const couponSum = unused.reduce((s, c) => s + (c.amount || 0), 0);
-      const toNext = Math.max(0, (cfg.couponThreshold || 10) - ((m.points || 0) % (cfg.couponThreshold || 10)));
+      const th = cfg.couponThreshold || 10;
+      const toNext = Math.max(0, th - ((m.points || 0) % th));
       const res = memberReservations(m);
 
       let html = '';
+      if (memberNotice) html += '<div class="mp-msg ' + esc(memberNotice.type || '') + '" role="status">' + memberNotice.html + '</div>';
+
       // ヘッダ
       html += '<div class="p-card mb16"><div class="flex-sb">' +
-        '<div><div style="font-size:20px;font-weight:700">' + esc(m.name) + (isEn() ? '' : ' 様') + (m.company ? ' <span class="muted" style="font-size:13px">(' + esc(m.company) + ')</span>' : '') + (m.invoiceAllowed ? ' <span class="badge stock">' + (isEn() ? 'Invoice OK' : '請求書払い可') + '</span>' : '') + '</div>' +
-        '<div class="muted" style="font-size:12px;margin-top:2px">' + tt('memberId') + ': ' + esc(m.memberId) + ' ・ ' + esc(m.email) + '</div></div>' +
-        '<button class="btn btn-secondary" id="logout-btn" data-i18n="mypage.logout">ログアウト</button></div></div>';
+        '<div><div style="font-size:20px;font-weight:700">' + esc(m.name || 'お客様') + ' 様' + (m.company ? ' <span class="muted" style="font-size:13px">(' + esc(m.company) + ')</span>' : '') +
+        (m.invoiceAllowed ? ' <span class="badge stock">請求書払い可</span>' : '') + '</div>' +
+        '<div class="muted" style="font-size:12px;margin-top:2px">会員番号: ' + esc(m.memberId || '-') + ' ・ ' + esc(m.email || '') + '</div></div>' +
+        '<button type="button" class="btn btn-secondary mp-btn-sm" id="logout-btn">ログアウト</button></div></div>';
 
-      // スタッツ
-      html += '<div class="member-hero mb24">' +
-        '<div class="stat-tile"><div class="lbl">' + I.t('mypage.points') + '</div><div class="val">' + (m.points || 0) + ' <small>pt</small></div>' +
-        '<div style="font-size:11px;opacity:.85;margin-top:4px">' + tt('toNext', toNext, cfg.couponAmount || 1000) + '</div></div>' +
-        '<div class="stat-tile alt"><div class="lbl">' + I.t('mypage.coupons') + '</div><div class="val">' + unused.length + ' <small>' + (isEn() ? '' : '枚') + '</small></div>' +
-        '<div style="font-size:11px;opacity:.85;margin-top:4px">¥' + couponSum.toLocaleString() + (isEn() ? '' : '相当') + '</div></div></div>';
+      html += '<nav class="mp-jump" aria-label="マイページの項目">' +
+        '<button type="button" data-jump="sec-res">ご予約</button>' +
+        '<button type="button" data-jump="sec-points">ポイント・クーポン</button>' +
+        '<button type="button" data-jump="sec-profile">登録情報の変更</button>' +
+        '<button type="button" data-jump="sec-password">パスワードの変更</button>' +
+        '<button type="button" data-jump="sec-close">退会</button></nav>';
 
-      // クーポン
-      html += '<div class="p-card mb16"><h3 class="mb16">' + I.t('mypage.coupons') + '</h3>';
-      if (!coupons.length) html += '<p class="muted">' + tt('noCoupon') + '</p>';
+      // 予約一覧
+      html += '<div class="p-card mb16" id="sec-res"><div class="flex-sb mb16"><h3 style="margin:0">' + esc(I.t('mypage.history')) + '</h3>' +
+        '<a href="search.html" class="btn btn-primary mp-btn-sm">新しく予約する</a></div>';
+      if (!res.length) {
+        html += '<p class="muted">ご予約はまだありません。<a href="search.html" class="mp-link">空き状況を検索する →</a></p>';
+      } else {
+        html += '<div class="p-table-wrap"><table class="p-table"><thead><tr><th>予約番号</th><th>車両</th><th>貸出</th><th>返却</th><th>金額 (税込)</th><th>状態</th><th></th></tr></thead><tbody>' +
+          res.map(r => {
+            const total = r.total != null ? r.total : ((r.price && r.price.total) || 0);
+            const can = isCancellable(r);
+            return '<tr><td><code>' + esc(r.reservationId) + '</code></td>' +
+              '<td>' + esc(r.assetName || r.vehicleName || '') + '</td>' +
+              '<td style="white-space:nowrap">' + esc(fmtDT(r.start)) + '</td>' +
+              '<td style="white-space:nowrap">' + esc(fmtDT(r.end)) + '</td>' +
+              '<td>' + yen(total) + (r.status === 'cancelled' && r.cancelFee ? '<div class="muted" style="font-size:11px">キャンセル料 ' + yen(r.cancelFee) + '</div>' : '') + '</td>' +
+              '<td>' + statusBadge(r.status) + '</td>' +
+              '<td class="mp-res-actions"><button type="button" class="btn btn-secondary mp-btn-sm" data-res="' + esc(r.reservationId) + '">' + (can ? '詳細・キャンセル' : '詳細') + '</button></td></tr>';
+          }).join('') + '</tbody></table></div>';
+        html += '<p class="mp-small" style="margin-top:12px">キャンセルは貸出開始日時の前まで、この画面からお手続きいただけます。キャンセル料は、お手続きの前に金額を表示します。日時・車両の変更は<a class="mp-link" href="' + LINE_URL + '" target="_blank" rel="noopener">公式LINE</a>または<a class="mp-link" href="contact.html">お問い合わせフォーム</a>からご相談ください。</p>';
+      }
+      html += '</div>';
+
+      // ポイント・クーポン
+      html += '<div id="sec-points"><div class="member-hero mb16">' +
+        '<div class="stat-tile"><div class="lbl">' + esc(I.t('mypage.points')) + '</div><div class="val">' + (m.points || 0) + ' <small>pt</small></div>' +
+        '<div style="font-size:11px;opacity:.85;margin-top:4px">あと ' + toNext + 'pt で ' + yen(cfg.couponAmount || 1000) + ' クーポン</div></div>' +
+        '<div class="stat-tile alt"><div class="lbl">' + esc(I.t('mypage.coupons')) + '</div><div class="val">' + unused.length + ' <small>枚</small></div>' +
+        '<div style="font-size:11px;opacity:.85;margin-top:4px">' + yen(couponSum) + '相当</div></div></div>';
+      html += '<div class="p-card mb16"><h3 class="mb16">' + esc(I.t('mypage.coupons')) + '</h3>';
+      if (!coupons.length) html += '<p class="muted">利用可能なクーポンはありません。</p>';
       else html += coupons.slice().reverse().map(c =>
-        '<div class="coupon-card' + (c.usedAt ? ' used' : '') + '"><div><div class="amt">¥' + c.amount.toLocaleString() + '</div><div class="muted" style="font-size:11px">' + esc(c.reason || '') + ' ・ ' + tt('issuedAt') + ' ' + fmtD(c.issuedAt) + '</div></div>' +
-        '<div>' + (c.usedAt ? '<span class="muted" style="font-size:12px">' + tt('used') + (c.usedFor ? ' (' + esc(c.usedFor) + ')' : '') + '</span>' : '<span class="badge ok">' + tt('unused') + '</span>') + '</div></div>'
+        '<div class="coupon-card' + (c.usedAt ? ' used' : '') + '"><div><div class="amt">' + yen(c.amount) + '</div><div class="muted" style="font-size:11px">' + esc(c.reason || '') + ' ・ 発行 ' + esc(fmtD(c.issuedAt)) +
+        (c.expiresAt && !c.usedAt ? ' ・ 有効期限 ' + esc(fmtD(c.expiresAt)) : '') + '</div></div>' +
+        '<div>' + (c.usedAt ? '<span class="muted" style="font-size:12px">使用済' + (c.usedFor ? ' (' + esc(c.usedFor) + ')' : '') + '</span>' : '<span class="badge ok">未使用</span>') + '</div></div>'
       ).join('');
       html += '</div>';
-
-      // 予約履歴
-      html += '<div class="p-card mb16"><h3 class="mb16">' + I.t('mypage.history') + '</h3>';
-      if (!res.length) html += '<p class="muted">' + tt('noHistory') + ' <a href="search.html" style="color:var(--color-primary)">' + tt('toSearch') + '</a></p>';
-      else html += '<div class="p-table-wrap"><table class="p-table"><thead><tr><th>' + tt('hId') + '</th><th>' + tt('hName') + '</th><th>' + tt('hPeriod') + '</th><th>' + tt('hQty') + '</th><th>' + tt('hAmount') + '</th><th>' + tt('hPay') + '</th><th>' + tt('hStatus') + '</th></tr></thead><tbody>' +
-        res.map(r => '<tr><td><code>' + esc(r.reservationId) + '</code></td><td>' + esc(r.assetName || r.vehicleName) + '</td><td style="white-space:nowrap">' + fmtD(r.start) + '〜' + fmtD(r.end) + '</td><td style="text-align:center">' + (r.quantity || 1) + '</td><td>¥' + ((r.price && r.price.total) || 0).toLocaleString() + '</td><td>' + (S.PAYMENT_LABELS[r.payment ? r.payment.method : 'onsite'] || '-') + '</td><td><span class="badge ' + (r.status === 'cancelled' ? 'ng' : 'ok') + '">' + (S.STATUS_LABELS[r.status] || r.status) + '</span></td></tr>').join('') +
-        '</tbody></table></div>';
-      html += '</div>';
-
-      // ポイント履歴
       const ph = (m.pointHistory || []).slice().reverse();
-      html += '<div class="p-card"><h3 class="mb16">' + I.t('mypage.pointHistory') + '</h3>';
-      if (!ph.length) html += '<p class="muted">-</p>';
-      else html += '<div class="p-table-wrap"><table class="p-table"><thead><tr><th>' + tt('hDate') + '</th><th>' + tt('hDelta') + '</th><th>' + tt('hReason') + '</th></tr></thead><tbody>' +
-        ph.map(h => '<tr><td>' + fmtDT(h.at) + '</td><td style="font-weight:700;color:' + (h.delta >= 0 ? 'var(--color-success)' : 'var(--color-error)') + '">' + (h.delta >= 0 ? '+' : '') + h.delta + 'pt</td><td>' + esc(h.reason) + '</td></tr>').join('') +
+      html += '<div class="p-card mb16"><h3 class="mb16">' + esc(I.t('mypage.pointHistory')) + '</h3>';
+      if (!ph.length) html += '<p class="muted">ポイントの履歴はまだありません。</p>';
+      else html += '<div class="p-table-wrap"><table class="p-table"><thead><tr><th>日時</th><th>増減</th><th>事由</th></tr></thead><tbody>' +
+        ph.map(h => '<tr><td style="white-space:nowrap">' + esc(fmtDT(h.at)) + '</td><td style="font-weight:700;color:' + (h.delta >= 0 ? 'var(--color-success)' : 'var(--color-error)') + '">' + (h.delta >= 0 ? '+' : '') + esc(h.delta) + 'pt</td><td>' + esc(h.reason) + '</td></tr>').join('') +
         '</tbody></table></div>';
-      html += '</div>';
+      html += '</div></div>';
 
-      $('#member-view').innerHTML = html;
-      $('#logout-btn').addEventListener('click', () => { S.logoutMember(); render(); });
+      // 登録情報の変更
+      html += '<div class="p-card mb16" id="sec-profile"><h3>登録情報の変更</h3>' +
+        '<form id="pf-form" class="mp-form" novalidate>' +
+        '<div class="form-group"><label>メールアドレス</label><div style="padding:6px 0;color:#eee">' + esc(m.email || '') + '</div><small>メールアドレスの変更をご希望の場合は、<a class="mp-link" href="contact.html">お問い合わせフォーム</a>からご連絡ください。</small></div>' +
+        '<div class="form-group"><label for="pf-name">お名前<span class="req">*</span></label><input type="text" id="pf-name" maxlength="100" autocomplete="name" value="' + esc(m.name || '') + '"></div>' +
+        '<div class="form-group"><label for="pf-kana">フリガナ<span class="opt">任意</span></label><input type="text" id="pf-kana" maxlength="100" value="' + esc(m.nameKana || '') + '"></div>' +
+        '<div class="form-group"><label for="pf-phone">電話番号<span class="opt">任意</span></label><input type="tel" id="pf-phone" maxlength="20" autocomplete="tel" value="' + esc(m.phone || '') + '"></div>' +
+        '<div class="form-group"><label for="pf-company">会社名 (法人の場合)<span class="opt">任意</span></label><input type="text" id="pf-company" maxlength="200" autocomplete="organization" value="' + esc(m.company || '') + '"></div>' +
+        '<label class="mp-check"><input type="checkbox" id="pf-marketing"' + (m.marketingOptIn ? ' checked' : '') + '><span>キャンペーンや空車情報などのお知らせをメールで受け取る (任意)。チェックを外して保存すると、配信を停止します。ご予約に関するメールは設定にかかわらずお送りします。</span></label>' +
+        '<div id="pf-msg" class="mp-msg" role="status" hidden></div>' +
+        '<button type="submit" class="btn btn-primary" id="pf-btn">登録情報を保存する</button></form></div>';
+
+      // パスワードの変更
+      html += '<div class="p-card mb16" id="sec-password"><h3>パスワードの変更</h3>' +
+        '<form id="pw-form" class="mp-form" novalidate>' +
+        '<div class="form-group"><label for="pw-new">新しいパスワード<span class="req">*</span></label><input type="password" id="pw-new" autocomplete="new-password">' +
+        '<small>8文字以上で、英大文字・英小文字・数字をそれぞれ1文字以上含めてください。</small></div>' +
+        '<div class="form-group"><label for="pw-new2">新しいパスワード (確認用)<span class="req">*</span></label><input type="password" id="pw-new2" autocomplete="new-password"></div>' +
+        '<div id="pw-msg" class="mp-msg" role="status" hidden></div>' +
+        '<button type="submit" class="btn btn-primary" id="pw-btn">パスワードを変更する</button></form></div>';
+
+      // 退会
+      html += '<div class="p-card mb16" id="sec-close"><h3>退会</h3>' +
+        '<ul class="mp-small" style="margin:0 0 12px 1.2em">' +
+        '<li style="list-style:disc">退会すると、このアカウントではログインできなくなります。登録情報 (お名前・連絡先) は削除します。</li>' +
+        '<li style="list-style:disc">保有ポイントと未使用のクーポンは失効し、元に戻せません。</li>' +
+        '<li style="list-style:disc">確定済みのご予約はキャンセルされません。キャンセルが必要な場合は、先に上のご予約一覧からお手続きください。</li>' +
+        '<li style="list-style:disc">ご予約・ご請求の記録は、法令・会計上必要な期間、当社で保存します (<a class="mp-link" href="privacy.html">プライバシーポリシー</a>)。</li></ul>' +
+        '<form id="close-form" novalidate>' +
+        '<label class="mp-check"><input type="checkbox" id="close-confirm"><span>上記の内容を確認し、退会します。</span></label>' +
+        '<div id="close-msg" class="mp-msg" role="alert" hidden></div>' +
+        '<button type="submit" class="btn mp-btn-danger" id="close-btn">退会する</button></form></div>';
+
+      $('#view-member').innerHTML = html;
+      memberNotice = null;
+      bindMember(m);
     }
 
-    function render() {
-      const m = S.currentMember();
-      if (m) { $('#auth-view').hidden = true; $('#member-view').hidden = false; renderMember(m); }
-      else { $('#auth-view').hidden = false; $('#member-view').hidden = true; }
-      // レスポンシブ: 認証グリッドを狭幅で1カラムに
-      if (window.matchMedia('(max-width:640px)').matches) $('#auth-grid').style.gridTemplateColumns = '1fr';
+    function bindMember(m) {
+      $('#logout-btn').addEventListener('click', async () => {
+        selfAuthOp++;
+        try { await withBusy($('#logout-btn'), 'ログアウト中…', () => B.auth.signOut()); }
+        catch (ex) { /* ログアウトはこの端末では完了している */ }
+        finally { setTimeout(() => { selfAuthOp--; }, 500); }
+        pageMsg('ok', 'ログアウトしました。');
+        renderAuth();
+      });
+      $('#view-member').querySelectorAll('[data-jump]').forEach(b => b.addEventListener('click', () => {
+        const el = document.getElementById(b.getAttribute('data-jump'));
+        if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }));
+      $('#view-member').querySelectorAll('[data-res]').forEach(b => b.addEventListener('click', () => openModal(b.getAttribute('data-res'))));
+
+      $('#pf-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const box = $('#pf-msg');
+        setMsg(box, null, '');
+        const v = id => ($(id).value || '').trim();
+        const patch = { name: v('#pf-name'), nameKana: v('#pf-kana'), phone: v('#pf-phone'), company: v('#pf-company'), marketingOptIn: !!$('#pf-marketing').checked };
+        const errs = [];
+        if (!patch.name) errs.push(['#pf-name', 'お名前を入力してください。']);
+        if (patch.phone && !validPhone(patch.phone)) errs.push(['#pf-phone', '電話番号を正しく入力してください (半角数字とハイフン)。']);
+        if (errs.length) return showErrors(box, errs);
+        try {
+          await withBusy($('#pf-btn'), '保存しています…', () => B.member.updateProfile(patch));
+          memberNotice = { type: 'ok', html: '登録情報を保存しました。' + (patch.marketingOptIn ? '' : ' お知らせメールは配信しません。') };
+          renderMember();
+          const sec = $('#sec-profile');
+          if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start' });
+        } catch (ex) {
+          showServerError(box, ex, {});
+        }
+      });
+
+      $('#pw-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const box = $('#pw-msg');
+        setMsg(box, null, '');
+        const pw = $('#pw-new').value;
+        const pc = B.auth.checkPassword(pw);
+        if (!pc.ok) return showErrors(box, [['#pw-new', 'パスワードは' + pc.message]]);
+        if (pw !== $('#pw-new2').value) return showErrors(box, [['#pw-new2', 'パスワード (確認用) が一致しません。同じものを入力してください。']]);
+        try {
+          await withBusy($('#pw-btn'), '変更しています…', () => B.auth.updatePassword(pw));
+          $('#pw-new').value = ''; $('#pw-new2').value = '';
+          setMsg(box, 'ok', 'パスワードを変更しました。次回からは新しいパスワードでログインしてください。');
+        } catch (ex) {
+          showServerError(box, ex, { password: '#pw-new' });
+        }
+      });
+
+      $('#close-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const box = $('#close-msg');
+        setMsg(box, null, '');
+        if (!$('#close-confirm').checked) return showErrors(box, [['#close-confirm', '退会する場合は、内容を確認のうえチェックしてください。']]);
+        selfAuthOp++;
+        try {
+          await withBusy($('#close-btn'), '手続きしています…', () => B.member.close());
+          pageMsg('ok', '退会の手続きが完了しました。これまでのご利用、ありがとうございました。');
+          renderAuth();
+        } catch (ex) {
+          showServerError(box, ex, {});
+        } finally {
+          setTimeout(() => { selfAuthOp--; }, 500);
+        }
+      });
     }
 
-    document.addEventListener('DOMContentLoaded', render);
-    document.addEventListener('sky-rent:langchange', render);
-    if (document.readyState !== 'loading') render();
+    // ===================================================================
+    // 予約の詳細・キャンセル (会員のモーダル / ゲスト照会で共用)
+    //   ctx: {id, token|null, box: 描画先, onChanged()}
+    // ===================================================================
+    function detailHtml(res) {
+      const r = res.reservation || {};
+      const cn = res.cancellation || {};
+      const price = r.price && typeof r.price === 'object' ? r.price : {};
+      const lines = Array.isArray(price.lines) ? price.lines : (Array.isArray(price.breakdown) ? price.breakdown : []);
+      const total = r.total != null ? r.total : (price.total || 0);
+      let h = '<dl class="mp-dl">' +
+        '<dt>予約番号</dt><dd><code>' + esc(r.id || r.reservationId) + '</code> ' + statusBadge(r.status) + '</dd>' +
+        (r.customerName ? '<dt>ご予約者</dt><dd>' + esc(r.customerName) + ' 様</dd>' : '') +
+        '<dt>車両</dt><dd>' + esc(r.assetName || '-') + '</dd>' +
+        '<dt>店舗</dt><dd>' + esc(r.locationName || '-') + (r.locationAddress ? '<div class="muted" style="font-size:12px">' + esc(r.locationAddress) + '</div>' : '') + '</dd>' +
+        '<dt>貸出日時</dt><dd>' + esc(fmtDT(r.start)) + '</dd>' +
+        '<dt>返却日時</dt><dd>' + esc(fmtDT(r.end)) + '</dd>' +
+        '<dt>お支払い方法</dt><dd>' + esc(payLabel(r.paymentMethod)) + '</dd>' +
+        '</dl>';
+      h += '<table class="mp-lines"><tbody>' +
+        lines.map(l => '<tr><td>' + esc(l.label) + '</td><td>' + (Number(l.amount) < 0 ? '-' + yen(-l.amount) : yen(l.amount)) + '</td></tr>').join('') +
+        '<tr class="total"><td>合計 (税込)</td><td>' + yen(total) + '</td></tr></tbody></table>';
+
+      if (r.status === 'cancelled') {
+        h += '<div class="mp-msg">このご予約はキャンセル済みです' + (r.cancelledAt ? ' (' + esc(fmtDT(r.cancelledAt)) + ')' : '') + '。' +
+          (r.cancelFee != null ? ' キャンセル料: <strong>' + yen(r.cancelFee) + '</strong>' : '') + '</div>';
+      } else if (cn.cancellable) {
+        h += '<div class="mp-fee" data-fee-box>いまキャンセルした場合のキャンセル料: <strong>' + yen(cn.fee) + '</strong> <span class="muted">(' + esc(cn.label || '') + ')</span>' +
+          '<div class="mp-small" style="margin-top:4px">キャンセル料は、貸出日とキャンセルのお手続きの日 (いずれも日本時間の日付) の差で決まります。' +
+          (cn.fee > 0 ? ' お支払い方法は、当社からあらためてご連絡します。' : '') +
+          ' 規定の詳細は<a class="mp-link" href="law.html#cancel" target="_blank" rel="noopener">キャンセル料の表</a>をご覧ください。</div></div>' +
+          '<div data-cancel-step1><button type="button" class="btn btn-secondary" data-cancel-open>このご予約をキャンセルする</button></div>' +
+          '<div data-cancel-step2 hidden><div class="mp-msg warn">ご予約 <strong>' + esc(r.id || r.reservationId) + '</strong> をキャンセルします。キャンセル料は <strong data-fee-amount>' + yen(cn.fee) + '</strong> です。この操作は取り消せません。</div>' +
+          '<div class="mp-actions"><button type="button" class="btn mp-btn-danger" data-cancel-go>キャンセルを確定する</button>' +
+          '<button type="button" class="btn btn-secondary" data-cancel-back>やめる</button></div></div>';
+      } else if (r.status === 'confirmed' || r.status === 'in_use') {
+        h += '<div class="mp-msg">貸出開始日時を過ぎているため、Webではキャンセルできません。' +
+          '<a class="mp-link" href="' + LINE_URL + '" target="_blank" rel="noopener">公式LINE</a>または<a class="mp-link" href="contact.html">お問い合わせフォーム</a>からご連絡ください。</div>';
+      }
+      h += '<div data-result></div>';
+      return h;
+    }
+
+    async function loadDetail(ctx) {
+      const box = ctx.box;
+      box.innerHTML = '<p class="muted">ご予約の内容を読み込んでいます…</p>';
+      let res;
+      try {
+        res = await B.lookupReservation({ id: ctx.id, token: ctx.token || undefined });
+      } catch (ex) {
+        box.innerHTML = '<div class="mp-msg err" role="alert">' + esc(ex.message || B.errorMessage('INTERNAL')) + '</div>' +
+          '<div class="mp-actions"><button type="button" class="btn btn-secondary" data-retry>もう一度読み込む</button></div>';
+        box.querySelector('[data-retry]').addEventListener('click', () => loadDetail(ctx));
+        return;
+      }
+      renderDetail(ctx, res);
+    }
+
+    function renderDetail(ctx, res, resultHtml) {
+      const box = ctx.box;
+      box.innerHTML = detailHtml(res);
+      if (resultHtml) box.querySelector('[data-result]').innerHTML = resultHtml;
+      const cn = res.cancellation || {};
+      if (!cn.cancellable) return;
+      let expectedFee = cn.fee;
+      const step1 = box.querySelector('[data-cancel-step1]');
+      const step2 = box.querySelector('[data-cancel-step2]');
+      const result = box.querySelector('[data-result]');
+      box.querySelector('[data-cancel-open]').addEventListener('click', () => {
+        step1.hidden = true; step2.hidden = false;
+        const go = box.querySelector('[data-cancel-go]');
+        if (go) go.focus();
+      });
+      box.querySelector('[data-cancel-back]').addEventListener('click', () => { step2.hidden = true; step1.hidden = false; });
+      box.querySelector('[data-cancel-go]').addEventListener('click', async ev => {
+        result.innerHTML = '';
+        try {
+          const out = await withBusy(ev.currentTarget, 'キャンセルしています…', () =>
+            B.cancelReservation({ id: ctx.id, token: ctx.token || undefined, expectedFee: expectedFee }));
+          const fee = out && out.cancellation ? out.cancellation.fee : expectedFee;
+          const after = { reservation: Object.assign({}, res.reservation, out && out.reservation, { status: 'cancelled', cancelFee: fee }), cancellation: { cancellable: false } };
+          renderDetail(ctx, after, '<div class="mp-msg ok" role="status">キャンセルが完了しました。キャンセル料: <strong>' + yen(fee) + '</strong><br>' + esc(emailStatusText(out && out.email, 'キャンセル')) + '</div>');
+          if (ctx.onChanged) ctx.onChanged();
+        } catch (ex) {
+          if (ex.code === 'PRICE_CHANGED' && ex.cancellation && ex.cancellation.fee != null) {
+            // 日付が変わるなどしてキャンセル料が変わった: 新しい金額を見せて、もう一度確認してもらう
+            expectedFee = ex.cancellation.fee;
+            const amt = box.querySelector('[data-fee-amount]');
+            if (amt) amt.textContent = yen(expectedFee);
+            const feeBox = box.querySelector('[data-fee-box] strong');
+            if (feeBox) feeBox.textContent = yen(expectedFee);
+            result.innerHTML = '<div class="mp-msg err" role="alert">キャンセル料が変わりました。新しい金額 <strong>' + yen(expectedFee) + '</strong>' +
+              (ex.cancellation.label ? ' (' + esc(ex.cancellation.label) + ')' : '') + ' をご確認のうえ、もう一度「キャンセルを確定する」を押してください。</div>';
+          } else if (ex.code === 'NOT_CANCELLABLE') {
+            await loadDetail(ctx);
+            ctx.box.querySelector('[data-result]').innerHTML = '<div class="mp-msg err" role="alert">' + esc(ex.message) + '</div>';
+            if (ctx.onChanged) ctx.onChanged();
+          } else {
+            result.innerHTML = '<div class="mp-msg err" role="alert">' + esc(ex.message || B.errorMessage('INTERNAL')) + '</div>';
+          }
+        }
+      });
+    }
+
+    // 会員: モーダル
+    let modalChanged = false;
+    function openModal(id) {
+      modalChanged = false;
+      const modal = $('#mp-modal');
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
+      $('#mp-modal-title').textContent = 'ご予約の詳細 (' + id + ')';
+      try { $('#mp-modal-title').focus(); } catch (e) { /* 続行 */ }
+      loadDetail({ id: id, token: null, box: $('#mp-modal-body'), onChanged: () => { modalChanged = true; } });
+    }
+    async function closeModal() {
+      const modal = $('#mp-modal');
+      if (modal.hidden) return;
+      modal.hidden = true;
+      document.body.style.overflow = '';
+      $('#mp-modal-body').innerHTML = '';
+      if (modalChanged) {
+        modalChanged = false;
+        if (B.live) { try { await B.member.reload(); } catch (e) { /* 表示中のデータで続行 */ } }
+        if (current === 'member') renderMember();
+      }
+    }
+    $('#mp-modal-close').addEventListener('click', closeModal);
+    $('#mp-modal').addEventListener('click', e => { if (e.target === $('#mp-modal')) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // ===================================================================
+    // ゲスト照会 (#lookup=<予約番号>.<照会キー>)
+    // ===================================================================
+    function parseLookup() {
+      let raw = '';
+      try { raw = String(location.hash || ''); } catch (e) { raw = ''; }
+      if (raw.length < 2) return null;
+      let v;
+      try { v = new URLSearchParams(raw.slice(1)).get('lookup'); } catch (e) { v = null; }
+      if (v == null) return null;
+      v = String(v).trim();
+      const i = v.indexOf('.');
+      const id = (i > 0 ? v.slice(0, i) : '').toUpperCase();
+      const token = i > 0 ? v.slice(i + 1) : '';
+      return { id: id, token: token, valid: /^[A-Z]{1,3}-?\d{1,12}$/.test(id) && /^[A-Za-z0-9_-]{8,200}$/.test(token) };
+    }
+
+    function renderLookup(lk) {
+      closeModal();
+      show('lookup');
+      pageMsg(null, '');
+      const box = $('#lookup-body');
+      if (!lk.valid) {
+        box.innerHTML = '<div class="mp-msg err" role="alert">照会URLが正しくありません。予約確定メールに記載のURLを、途中で切れないようにもう一度開いてください。</div>';
+        return;
+      }
+      loadDetail({ id: lk.id, token: lk.token, box: box, onChanged: () => { if (S.currentMember() && B.live) B.member.reload().catch(() => {}); } });
+    }
+
+    $('#lookup-leave').addEventListener('click', () => {
+      try { history.replaceState(history.state, '', location.pathname + location.search); } catch (e) { /* 続行 */ }
+      route(false);
+    });
+    window.addEventListener('hashchange', () => {
+      const lk = parseLookup();
+      if (lk) renderLookup(lk);
+    });
+
+    // ===================================================================
+    // 起動: メールのリンク・照会URL・ログイン状態で最初の画面を決める
+    // ===================================================================
+    async function route(first) {
+      const lk = parseLookup();
+      if (lk) return renderLookup(lk);
+      if (first) {
+        const ev = B.auth.urlEvent();
+        if (ev.error) {
+          showLinkError(esc(ev.error.message || B.errorMessage('LINK_INVALID')));
+          return;
+        }
+        if (ev.type === 'recovery' || ev.type === 'invite') {
+          const session = await B.auth.session().catch(() => null);
+          if (session) return renderNewpass(ev.type);
+          showLinkError(esc(B.errorMessage('LINK_INVALID')));
+          return;
+        }
+        if (ev.type === 'signup' || ev.type === 'magiclink' || ev.type === 'email_change') {
+          const m = S.currentMember();
+          const msg = ev.type === 'signup' ? 'メールアドレスの確認が完了し、会員登録が完了しました。' + (m ? 'ようこそ、' + esc(m.name || 'お客様') + ' 様。' : '')
+            : ev.type === 'email_change' ? 'メールアドレスの変更を受け付けました。' : 'ログインしました。';
+          if (m) { memberNotice = { type: 'ok', html: msg }; return renderMember(); }
+          pageMsg('ok', msg + ' メールアドレスとパスワードでログインしてください。');
+          return renderAuth();
+        }
+        if (ev.message) pageMsg(null, 'メールのリンクを確認しました。案内に従って手続きを続けてください。');
+      }
+      if (S.currentMember()) renderMember();
+      else renderAuth();
+    }
+
+    // 別のタブでのログアウト・ログイン状態の期限切れ
+    B.auth.onChange(event => {
+      if (event === 'PASSWORD_RECOVERY' && current !== 'newpass') { renderNewpass('recovery'); return; }
+      if (event !== 'SIGNED_OUT' || selfAuthOp > 0) return;
+      if (current === 'member') {
+        closeModal();
+        // 画面用のデータからも会員情報を外す (ログインしていない状態で読み直す)
+        Promise.resolve(B.live ? B.member.reload() : null).catch(() => null).then(() => {
+          if (S.currentMember() || current !== 'member') return;
+          pageMsg('warn', 'ログイン状態が終了しました。もう一度ログインしてください。');
+          renderAuth();
+        });
+      }
+    });
+
+    document.addEventListener('sky-rent:langchange', () => {
+      if (current === 'member') renderMember();
+    });
+
+    route(true);
   })();
   </script>
 </body>

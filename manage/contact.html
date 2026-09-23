@@ -3,87 +3,86 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>お問合せ | グロースレンタカー 管理画面</title>
+  <title>システムについてのお問合せ | グロースレンタカー 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
+  <style>
+    .ct-card { padding: 20px 24px; margin-bottom: 14px; }
+    .ct-card h2 { font-size: 15px; color: var(--primary); margin-bottom: 10px; }
+    .ct-links li { list-style: disc; margin-left: 20px; font-size: 13.5px; line-height: 1.9; }
+    .ct-links a { color: var(--link); text-decoration: underline; }
+    .ct-links small { color: #777; }
+    .ct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .ct-grid .card { padding: 20px; text-align: center; }
+    .ct-trouble th, .ct-trouble td { border: 1px solid #e4e8ec; padding: 7px 10px; text-align: left; vertical-align: top; font-size: 13px; line-height: 1.7; }
+    .ct-trouble th { background: #f4f7fa; width: 34%; font-weight: 600; }
+    .ct-trouble a { color: var(--link); text-decoration: underline; }
+    .ct-note { font-size: 13px; line-height: 1.8; }
+    .ct-note li { list-style: disc; margin-left: 20px; }
+    @media (max-width: 760px) { .ct-grid { grid-template-columns: 1fr; } .ct-card { padding: 16px 14px; } }
+  </style>
 </head>
 <body>
   <div data-include="topbar"></div>
 
   <main class="main">
-    <h1 class="page-title">お問合せ</h1>
-    <p class="page-note">グロースレンタカー システムに関するご質問・不具合のご連絡はこちらから。</p>
+    <h1 class="page-title">システムについてのお問合せ</h1>
+    <p class="page-note">操作方法や不具合で困ったときは、まず下の「よくあるトラブル」と運用手順書をご確認ください。解決しない場合は、下記の連絡先までご連絡ください。</p>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-      <section class="card" style="padding:20px;text-align:center">
+    <section class="card ct-card">
+      <h2>運用手順書・ドキュメント</h2>
+      <ul class="ct-links">
+        <li><a href="https://github.com/playmark0227-svg/sky-rent/blob/main/docs/production/setup.md" target="_blank" rel="noopener">本番環境の立ち上げ・運用手順書 (docs/production/setup.md)</a>
+          <small>— Supabase・メール送信 (Resend)・Google カレンダー連携・管理者の二段階認証・困ったとき (12章)</small></li>
+        <li><a href="../docs/manual.html" target="_blank" rel="noopener">操作マニュアル</a> <small>— 管理画面の使い方</small></li>
+        <li><a href="../docs/index.html" target="_blank" rel="noopener">システムドキュメント</a> <small>— 要件定義・設計資料</small></li>
+      </ul>
+    </section>
+
+    <section class="card ct-card">
+      <h2>よくあるトラブル</h2>
+      <table class="ct-trouble">
+        <tbody>
+          <tr><th>予約メールがお客様に届かない</th><td><a href="mail-log.html">メール送信状況</a> で失敗の内容を確認し、再送してください。「メール送信サービス未設定」と表示される場合は、技術担当者に手順書 5章の設定を依頼してください。</td></tr>
+          <tr><th>予約時に「担当者の予定を確認できません」と表示される</th><td><a href="calendar.html">Googleカレンダー連携</a> で接続の状態と接続テストの結果を確認してください。Google 側の障害が長引く場合は、一時的に「Google に接続できないとき予約を受ける」を ON にする判断もできます。</td></tr>
+          <tr><th>予約がスタッフのカレンダーに書き込まれない</th><td>共有の権限が「予定の変更」になっているか (接続テストで <code>events</code>)、「予約をカレンダーに書き込む」が ON かを確認してください。同期の結果は <a href="mail-log.html?kind=gcal">メール送信状況 (カレンダー同期)</a> で確認できます。</td></tr>
+          <tr><th>「他のスタッフが先に更新しました」と表示される</th><td>同じ予約を別の画面・別のスタッフが先に変更しています。画面を再読み込みして最新の内容を確認してから、もう一度操作してください。</td></tr>
+          <tr><th>管理画面にログインできない</th><td>二段階認証のアプリの6桁のコードを確認してください。スタッフの無効化・役割は管理者が「スタッフ・権限」で確認できます。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="ct-grid">
+      <section class="card">
         <div style="font-size:36px;margin-bottom:8px">💬</div>
-        <h3 style="font-size:15px;color:var(--primary);margin-bottom:6px">公式LINEでのお問合せ</h3>
-        <p style="font-size:15px;font-weight:700;margin-bottom:4px"><a href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener">lin.ee/PuLt0Ig</a></p>
+        <h2 style="font-size:15px;color:var(--primary);margin-bottom:6px">公式LINEでのお問合せ</h2>
+        <p style="font-size:15px;font-weight:700;margin-bottom:4px"><a href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener" style="color:var(--link)">lin.ee/PuLt0Ig</a></p>
         <p style="font-size:12px;color:var(--muted)">9:00〜19:00 (年中無休)</p>
       </section>
-      <section class="card" style="padding:20px;text-align:center">
+      <section class="card">
         <div style="font-size:36px;margin-bottom:8px">📧</div>
-        <h3 style="font-size:15px;color:var(--primary);margin-bottom:6px">メールでのお問合せ</h3>
-        <p style="font-size:14px;font-weight:700;margin-bottom:4px">daichi.fujimoto@skyward-growth.com</p>
+        <h2 style="font-size:15px;color:var(--primary);margin-bottom:6px">メールでのお問合せ</h2>
+        <p style="font-size:14px;font-weight:700;margin-bottom:4px"><a href="mailto:daichi.fujimoto@skyward-growth.com" style="color:var(--link)">daichi.fujimoto@skyward-growth.com</a></p>
         <p style="font-size:12px;color:var(--muted)">24時間受付・48時間以内に返信</p>
       </section>
     </div>
 
-    <section class="card" style="padding:24px">
-      <h3 style="font-size:15px;color:var(--primary);margin-bottom:14px">お問合せフォーム</h3>
-      <form id="contact-form">
-        <div class="form-row">
-          <label>お問合せ種別 <span style="color:#c0392b">*</span></label>
-          <select class="form-input" name="category" required>
-            <option value="">選択してください</option>
-            <option>機能のご質問</option>
-            <option>不具合のご報告</option>
-            <option>機能追加のご要望</option>
-            <option>料金プラン・契約について</option>
-            <option>解約のご連絡</option>
-            <option>その他</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <label>件名 <span style="color:#c0392b">*</span></label>
-          <input type="text" class="form-input" name="subject" required maxlength="100">
-        </div>
-        <div class="form-row">
-          <label>お問合せ内容 <span style="color:#c0392b">*</span></label>
-          <textarea class="form-input" name="body" rows="6" required maxlength="2000"></textarea>
-        </div>
-        <div class="form-row">
-          <label>返信先メール</label>
-          <input type="email" class="form-input" name="email" placeholder="自動入力されます">
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary" style="padding:12px 50px;font-size:15px">送信する</button>
-        </div>
-      </form>
+    <section class="card ct-card">
+      <h2>ご連絡のときに教えていただきたいこと</h2>
+      <ul class="ct-note">
+        <li>画面の名前と、行った操作 (例: 予約一覧で R00012 をキャンセルしようとした)</li>
+        <li>日時と、表示されたメッセージ (「受付番号」や requestId が表示されていればその値も)</li>
+        <li><strong>お客様の電話番号・メールアドレス・パスワード・二段階認証のコードは書かないでください。</strong> 予約番号・受付番号だけで確認できます。</li>
+      </ul>
     </section>
   </main>
 
   <script src="partials.js"></script>
-  <script>
-    // ログインユーザー情報からメールを自動入力
-    const saved = JSON.parse(localStorage.getItem('sky-rent.settings.site') || '{}');
-    document.querySelector('input[name="email"]').value = saved['notify.storeEmail'] || '';
 
-    document.querySelector('#contact-form').addEventListener('submit', e => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      // 送信履歴を保存
-      const log = JSON.parse(localStorage.getItem('sky-rent.contact-log') || '[]');
-      log.unshift({
-        date: new Date().toISOString(),
-        category: fd.get('category'),
-        subject: fd.get('subject'),
-        body: fd.get('body'),
-        email: fd.get('email')
-      });
-      localStorage.setItem('sky-rent.contact-log', JSON.stringify(log));
-      alert('✓ お問合せを受け付けました\n通常 48 時間以内にご返信いたします。');
-      e.target.reset();
-    });
-  </script>
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
 </body>
 </html>

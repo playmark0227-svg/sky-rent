@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>操作履歴 | グロースレンタカー 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">操作履歴</h1>
+    <p class="page-note">予約・会員・設定などの追加・変更・削除を、誰がいつ行ったかを新しい順に表示します (管理者のみ)。履歴は追記だけで、誰も書き換え・削除できません。</p>
+
+    <div id="audit-notice" class="page-notice" role="status" hidden></div>
+
+    <div id="audit-main" hidden>
+      <section class="card audit-help">
+        <p><strong>「***」について</strong> — メールアドレス・電話番号・お問い合わせの本文などの個人情報は、操作履歴に値を残していません。変更があったことだけを <span class="masked">***</span> で示しています。実際の値は各画面 (予約一覧・会員管理など) でご確認ください。</p>
+        <p><strong>変更の見方</strong> — 「変更」は <em>変更後の値</em> だけを記録しています。変更前の値は、同じ対象の一つ前の履歴 (対象の「履歴」リンク) で確認できます。「追加」は登録時の内容です。</p>
+      </section>
+
+      <form class="card filter-bar" id="audit-filter">
+        <div class="filter-group">
+          <label for="f-table">対象</label>
+          <select id="f-table"></select>
+        </div>
+        <div class="filter-group">
+          <label for="f-row">対象ID</label>
+          <input type="text" id="f-row" placeholder="例: R00012" maxlength="120" style="width:130px">
+        </div>
+        <div class="filter-group">
+          <label for="f-actor">操作者</label>
+          <select id="f-actor"><option value="">すべて</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="f-action">操作</label>
+          <select id="f-action">
+            <option value="">すべて</option>
+            <option value="insert">追加</option>
+            <option value="update">変更</option>
+            <option value="delete">削除</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="f-from">期間</label>
+          <input type="date" id="f-from"> 〜 <input type="date" id="f-to">
+        </div>
+        <span style="flex:1"></span>
+        <button type="submit" class="btn btn-primary">絞り込む</button>
+        <button type="button" class="btn btn-gray" id="btn-clear">条件をクリア</button>
+      </form>
+
+      <section class="card">
+        <div class="audit-pager" id="pager-top"></div>
+        <table class="data-table list audit-table">
+          <thead>
+            <tr><th style="width:150px">日時</th><th style="width:150px">操作者</th><th style="width:170px">対象</th><th style="width:60px">操作</th><th>内容</th></tr>
+          </thead>
+          <tbody id="tbl"><tr class="empty"><td colspan="5">読み込み中...</td></tr></tbody>
+        </table>
+        <div class="audit-pager" id="pager-bottom"></div>
+      </section>
+    </div>
+  </main>
+
+  <style>
+    .page-notice { background: #fff8d6; border: 1px solid #f0e0a0; color: #5c4a00; border-radius: 4px; padding: 14px 16px; font-size: 13px; line-height: 1.7; margin-bottom: 16px; }
+    .page-notice.is-error { background: #fdecea; border-color: #f5c2bd; color: #7a1c12; }
+    .page-notice[hidden], #audit-main[hidden] { display: none !important; }
+    .audit-help { padding: 12px 16px; font-size: 12px; color: #555; line-height: 1.8; margin-bottom: 14px; }
+    .audit-help p { margin: 0 0 4px; }
+    .masked { display: inline-block; background: #f1f1f1; color: #666; border-radius: 3px; padding: 0 5px; font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 11px; }
+    .audit-table td { vertical-align: top; font-size: 12px; }
+    .audit-table .actor-role { display: block; color: var(--muted); font-size: 11px; }
+    .audit-table .target code { font-size: 11px; word-break: break-all; }
+    .audit-table .target a { font-size: 11px; }
+    .act { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+    .act-insert { background: #e3f5ec; color: #1e8a4a; }
+    .act-update { background: #e3edfb; color: #1d5cb8; }
+    .act-delete { background: #fde8e6; color: #c0392b; }
+    .diff { list-style: none; margin: 0; padding: 0; }
+    .diff li { padding: 1px 0; line-height: 1.6; word-break: break-word; }
+    .diff .k { color: #555; font-weight: 600; }
+    .diff .v-code { font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 11px; background: #f7f7f7; padding: 0 4px; border-radius: 3px; }
+    .diff details summary { cursor: pointer; color: var(--link); font-size: 11px; }
+    .diff-note { color: var(--muted); }
+    .audit-pager { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 8px 12px; font-size: 12px; color: #555; }
+    .audit-pager .btn { padding: 4px 12px; font-size: 12px; }
+    .audit-pager .btn[disabled] { opacity: .45; cursor: default; }
+    #audit-filter input[type=date] { padding: 6px 8px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; }
+  </style>
+
+  <script src="partials.js"></script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
+  (function () {
+    'use strict';
+    const B = window.SkyRentBackend;
+    const S = window.SkyRentStore;
+    const $ = s => document.querySelector(s);
+    function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
+    const PAGE = 50;
+    const DAY = 86400000;
+
+    const TABLES = [
+      ['reservations', '予約'], ['members', '会員'], ['coupons', 'クーポン'], ['point_ledger', 'ポイント'],
+      ['invoices', '請求書'], ['inquiries', 'お問い合わせ'], ['staff', 'スタッフ'],
+      ['assets', '車両'], ['categories', 'カテゴリ'], ['options', 'オプション'], ['locations', '拠点 (店舗)'],
+      ['app_settings', '設定'], ['app_collections', '一覧データ (お知らせ・FAQ など)'], ['legal_documents', '規約・ポリシー']
+    ];
+    const tableLabel = t => (TABLES.find(x => x[0] === t) || [t, t || '(不明)'])[1];
+
+    const ROLE_LABELS = {
+      admin: '管理者', store_staff: '店舗スタッフ', accounting: '経理', maintenance: '整備担当', viewer: '閲覧のみ',
+      authenticated: 'お客様 (会員)', anon: 'お客様', service_role: 'システム (Web予約・自動処理)', system: 'システム'
+    };
+    const ACTIONS = { insert: '追加', update: '変更', delete: '削除' };
+
+    const COLS = {
+      status: '状態', staff_note: 'スタッフメモ', note: '備考', name: '名前', name_kana: 'フリガナ', name_en: '英語名',
+      role: '役割', active: '有効', location_ids: '担当拠点', payment_status: '支払状況', payment_method: '支払方法',
+      total: '合計金額', price: '料金', start_at: '貸出日時', end_at: '返却日時', asset_id: '車両', category_id: 'カテゴリ',
+      location_id: '拠点', customer_name: 'お客様名', customer_kana: 'フリガナ', company: '会社名', option_ids: 'オプション',
+      options: 'オプション (詳細)', discount_type: '割引', coupon_id: 'クーポン', invoice_id: '請求書', point_granted: 'ポイント付与済み',
+      cancel_fee: 'キャンセル料', cancelled_at: 'キャンセル日時', cancelled_by: 'キャンセルした人', license_confirmed: '免許の確認',
+      kind: '種類', source: '登録経路', gcal_events: 'カレンダーの予定', user_id: 'ユーザー', member_no: '会員番号',
+      invoice_allowed: '請求書払い', marketing_opt_in: '案内メールの受け取り', is_corporate: '法人', amount: '金額', reason: '理由',
+      delta: '増減', used_at: '使用日時', used_for: '使用した予約', expires_at: '有効期限', issued_at: '発行日', value: '値', key: '設定の種類',
+      collection: '一覧の種類', data: '内容', sort: '並び順', price_hour: '時間料金', price_day: '1日料金', price_week: '週料金',
+      price_month: '月料金', price_short: '短時間料金', price_type: '料金の種類', plate: 'ナンバー', topic: '件名', assigned_to: '担当者',
+      due_date: '支払期限', paid_at: '入金日', reservation_ids: '対象の予約', reservation_id: '予約', case_name: '件名', address: '住所',
+      consent: '同意', version: '版', email: 'メールアドレス', phone: '電話番号', customer_email: 'メールアドレス',
+      customer_phone: '電話番号', tel: '電話番号', body: '本文', id: 'ID', title: 'タイトル', effective_at: '施行日', url: 'URL',
+      extra: '追加項目', custom_fields: 'カスタム項目', custom_field_defs: 'カスタム項目の定義', description: '説明', stock: '台数',
+      capacity: '定員', image: '画像', photo: '写真', hours: '営業時間', holiday: '定休日', required_license: '必要な免許',
+      shaken_date: '車検日', maintenance_date: '点検日', type: '種別', icon: 'アイコン', category_ids: '対象カテゴリ',
+      exclusive_group: '同時に選べないグループ', last_use_at: '最終利用日', closed_at: '退会日', guest_token_hash: '照会キー'
+    };
+    const STATUS = {
+      reservations: { confirmed: '確定', in_use: '貸出中', returned: '返却済', cancelled: 'キャンセル', no_show: '無断キャンセル' },
+      invoices: { unpaid: '未入金', paid: '入金済', void: '取消' },
+      inquiries: { new: '新規', in_progress: '対応中', closed: '対応済' },
+      members: { active: '有効', closed: '退会' }
+    };
+    const PAYMENT = { unpaid: '未払い', paid: '支払済', refunded: '返金済', onsite: '当日店頭', invoice: '請求書' };
+    const HIDE_ON_INSERT = ['created_at', 'updated_at'];
+
+    function notice(text, isError) {
+      const el = $('#audit-notice');
+      el.textContent = text || '';
+      el.hidden = !text;
+      el.classList.toggle('is-error', !!isError);
+    }
+
+    if (!B.live) {
+      notice('操作履歴は本番接続時に使えます。本番では、予約・会員・設定などの追加・変更・削除が、操作したスタッフと日時つきで自動的に記録されます (デモ環境では記録されません)。');
+      return;
+    }
+    if (!B.admin.staff) {
+      notice('ログイン情報を確認できないため、この画面を表示できません。画面を再読み込みしてください。', true);
+      return;
+    }
+    if (!B.admin.can('audit.read')) {
+      notice('この画面を使う権限がありません。操作履歴は管理者だけが確認できます。必要な場合は管理者にご依頼ください。', true);
+      return;
+    }
+    const client = B.client;
+    if (!client) {
+      notice(B.errorMessage('NETWORK'), true);
+      return;
+    }
+    $('#audit-main').hidden = false;
+
+    // ---- 絞り込みの選択肢 ----
+    $('#f-table').innerHTML = '<option value="">すべて</option>' + TABLES.map(t => '<option value="' + esc(t[0]) + '">' + esc(t[1]) + '</option>').join('');
+    let staffById = {};
+    function fillActors() {
+      const staff = Object.keys(staffById).map(k => staffById[k]).sort((a, b) => String(a.name).localeCompare(String(b.name), 'ja'));
+      const cur = $('#f-actor').value;
+      $('#f-actor').innerHTML = '<option value="">すべて</option>' +
+        '<optgroup label="スタッフ">' + staff.map(s => '<option value="' + esc(s.userId) + '">' + esc(s.name || s.email || s.userId) + (s.active ? '' : ' (無効)') + '</option>').join('') + '</optgroup>' +
+        '<option value="__member">お客様 (会員)</option>' +
+        '<option value="__system">システム (Web予約・自動処理)</option>';
+      $('#f-actor').value = cur;
+    }
+
+    const memberByUser = {};
+    try { (S.members() || []).forEach(m => { if (m.userId) memberByUser[m.userId] = m; }); } catch (e) { /* 続行 */ }
+
+    // ---- 表示 ----
+    function actorHtml(row) {
+      const roleText = ROLE_LABELS[row.actor_role] || row.actor_role || '';
+      if (!row.actor) return esc(ROLE_LABELS[row.actor_role] || 'システム');
+      const st = staffById[row.actor];
+      if (st) return esc(st.name || st.email) + '<span class="actor-role">' + esc(roleText) + '</span>';
+      if (row.actor_role === 'authenticated') {
+        const m = memberByUser[row.actor];
+        return 'お客様' + (m ? '<span class="actor-role">会員 ' + esc(m.memberId) + '</span>' : '<span class="actor-role">会員</span>');
+      }
+      return '不明なアカウント<span class="actor-role">' + esc(roleText) + ' / ' + esc(String(row.actor).slice(0, 8)) + '…</span>';
+    }
+
+    const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+    function valueHtml(key, v, table) {
+      if (v === '***') return '<span class="masked" title="個人情報のため値は記録していません">***</span>';
+      if (v === null || v === undefined || v === '') return '<span class="diff-note">(なし)</span>';
+      if (typeof v === 'boolean') return v ? 'はい' : 'いいえ';
+      if (typeof v === 'number') return esc(v.toLocaleString('ja-JP'));
+      if (typeof v === 'string') {
+        if (key === 'status' && STATUS[table] && STATUS[table][v]) return esc(STATUS[table][v]);
+        if ((key === 'payment_status' || key === 'payment_method') && PAYMENT[v]) return esc(PAYMENT[v]);
+        if (key === 'role' && ROLE_LABELS[v]) return esc(ROLE_LABELS[v]);
+        if (key === 'cancelled_by') return esc(v === 'customer' ? 'お客様' : v === 'staff' ? 'スタッフ' : v);
+        if (key === 'kind') return esc(v === 'block' ? '貸出停止枠' : v === 'rental' ? 'レンタル予約' : v);
+        if (key === 'user_id' || key === 'assigned_to' || key === 'actor') {
+          const st = staffById[v];
+          if (st) return esc(st.name || st.email);
+          const m = memberByUser[v];
+          if (m) return '会員 ' + esc(m.memberId);
+          return '<span class="v-code">' + esc(v.slice(0, 8)) + '…</span>';
+        }
+        if (key === 'asset_id') { const a = S.getAsset(v); return esc(a ? a.name + ' (' + v + ')' : v); }
+        if (key === 'location_id') { const l = S.getLocation(v); return esc(l ? l.name : v); }
+        if (ISO_RE.test(v)) { const f = B.jst.format(v); if (f) return esc(f); }
+        return esc(v.length > 200 ? v.slice(0, 200) + '…' : v);
+      }
+      if (Array.isArray(v) && key === 'location_ids') return esc(v.map(id => { const l = S.getLocation(id); return l ? l.name : id; }).join('、') || '(なし)');
+      let json = '';
+      try { json = JSON.stringify(v); } catch (e) { json = String(v); }
+      if (json.length > 300) json = json.slice(0, 300) + '…';
+      return '<span class="v-code">' + esc(json) + '</span>';
+    }
+
+    function diffHtml(row) {
+      const d = row.diff && typeof row.diff === 'object' ? row.diff : {};
+      if (row.action === 'delete') return '<span class="diff-note">この対象を削除しました。</span>';
+      let keys = Object.keys(d);
+      if (row.action === 'insert') keys = keys.filter(k => HIDE_ON_INSERT.indexOf(k) < 0);
+      if (!keys.length) return '<span class="diff-note">(記録された項目はありません)</span>';
+      const sep = row.action === 'update' ? ' → ' : ': ';
+      const item = k => '<li><span class="k">' + esc(COLS[k] || k) + '</span>' + sep + valueHtml(k, d[k], row.table_name) + '</li>';
+      const LIMIT = row.action === 'insert' ? 5 : 12;
+      const head = keys.slice(0, LIMIT).map(item).join('');
+      const rest = keys.slice(LIMIT);
+      const more = rest.length
+        ? '<li><details><summary>ほか ' + rest.length + ' 項目を表示</summary><ul class="diff">' + rest.map(item).join('') + '</ul></details></li>'
+        : '';
+      return (row.action === 'update' ? '<div class="diff-note">変更後の値:</div>' : '') + '<ul class="diff">' + head + more + '</ul>';
+    }
+
+    function targetHtml(row) {
+      const id = row.row_id || '';
+      let link = '';
+      if (row.table_name === 'reservations' && /^[A-Z]\d+$/.test(id)) link = ' <a href="reservation-list.html#' + encodeURIComponent(id) + '">予約一覧</a>';
+      return '<div class="target">' + esc(tableLabel(row.table_name)) + '<br><code>' + esc(id) + '</code>' +
+        (id ? ' <a href="#" class="js-history" data-table="' + esc(row.table_name || '') + '" data-row="' + esc(id) + '">履歴</a>' : '') + link + '</div>';
+    }
+
+    // ---- 読み込み ----
+    const state = { offset: 0, rows: [], hasMore: false, loading: false, seq: 0 };
+
+    function filters() {
+      return {
+        table: $('#f-table').value,
+        row: $('#f-row').value.trim(),
+        actor: $('#f-actor').value,
+        action: $('#f-action').value,
+        from: $('#f-from').value,
+        to: $('#f-to').value
+      };
+    }
+
+    function dayStartIso(ymd) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null;
+      return B.jst.fromInput(ymd + 'T00:00');
+    }
+
+    function errorOf(err) {
+      const msg = String((err && err.message) || '');
+      if (err && (err.code === '42501' || /permission denied/i.test(msg))) return B.errorMessage('FORBIDDEN');
+      if (err && (err.code === 'PGRST301' || /JWT/.test(msg))) return B.errorMessage('UNAUTHENTICATED');
+      if (/fetch|network|Load failed/i.test(msg)) return B.errorMessage('NETWORK');
+      return B.errorMessage('INTERNAL');
+    }
+
+    async function load() {
+      const f = filters();
+      const from = f.from ? dayStartIso(f.from) : null;
+      const toStart = f.to ? dayStartIso(f.to) : null;
+      if (from && toStart && Date.parse(toStart) < Date.parse(from)) {
+        $('#tbl').innerHTML = '<tr class="empty"><td colspan="5">期間の終わりは、始まりと同じ日かそれより後の日を指定してください。</td></tr>';
+        renderPager();
+        return;
+      }
+      const seq = ++state.seq;
+      state.loading = true;
+      $('#tbl').innerHTML = '<tr class="empty"><td colspan="5">読み込み中...</td></tr>';
+      renderPager();
+      let q = client.from('audit_log')
+        .select('id,at,actor,actor_role,action,table_name,row_id,diff')
+        .order('at', { ascending: false })
+        .order('id', { ascending: false });
+      if (f.table) q = q.eq('table_name', f.table);
+      if (f.row) q = q.eq('row_id', f.row);
+      if (f.action) q = q.eq('action', f.action);
+      if (f.actor === '__system') q = q.is('actor', null);
+      else if (f.actor === '__member') q = q.eq('actor_role', 'authenticated');
+      else if (f.actor) q = q.eq('actor', f.actor);
+      if (from) q = q.gte('at', from);
+      if (toStart) q = q.lt('at', new Date(Date.parse(toStart) + DAY).toISOString());
+      let res;
+      try {
+        res = await q.range(state.offset, state.offset + PAGE);  // 1 件多く取り、次のページの有無を知る
+      } catch (e) {
+        res = { data: null, error: e };
+      }
+      if (seq !== state.seq) return;  // 後から出した検索の結果を優先
+      state.loading = false;
+      if (res.error) {
+        state.rows = [];
+        state.hasMore = false;
+        $('#tbl').innerHTML = '<tr class="empty"><td colspan="5">操作履歴を読み込めませんでした。' + esc(errorOf(res.error)) + '</td></tr>';
+        renderPager();
+        return;
+      }
+      const rows = res.data || [];
+      state.hasMore = rows.length > PAGE;
+      state.rows = rows.slice(0, PAGE);
+      render();
+    }
+
+    function render() {
+      if (!state.rows.length) {
+        $('#tbl').innerHTML = '<tr class="empty"><td colspan="5">' + (state.offset ? 'これ以上の履歴はありません。' : '条件に合う操作履歴はありません。') + '</td></tr>';
+      } else {
+        $('#tbl').innerHTML = state.rows.map(r =>
+          '<tr data-id="' + esc(r.id) + '">' +
+            '<td>' + esc(B.jst.format(r.at)) + '</td>' +
+            '<td>' + actorHtml(r) + '</td>' +
+            '<td>' + targetHtml(r) + '</td>' +
+            '<td><span class="act act-' + esc(r.action) + '">' + esc(ACTIONS[r.action] || r.action) + '</span></td>' +
+            '<td>' + diffHtml(r) + '</td>' +
+          '</tr>').join('');
+      }
+      renderPager();
+    }
+
+    function renderPager() {
+      const n = state.rows.length;
+      const range = state.loading ? '' : (n ? (state.offset + 1) + '〜' + (state.offset + n) + ' 件目' : '');
+      const html = '<span>' + esc(range) + '</span>' +
+        '<button type="button" class="btn btn-gray js-prev"' + (state.loading || state.offset === 0 ? ' disabled' : '') + '>← 新しい履歴</button>' +
+        '<button type="button" class="btn btn-gray js-next"' + (state.loading || !state.hasMore ? ' disabled' : '') + '>古い履歴 →</button>';
+      $('#pager-top').innerHTML = html;
+      $('#pager-bottom').innerHTML = html;
+    }
+
+    document.querySelector('.main').addEventListener('click', e => {
+      const t = e.target;
+      if (t.closest('.js-prev') && !t.closest('[disabled]')) { state.offset = Math.max(0, state.offset - PAGE); load(); return; }
+      if (t.closest('.js-next') && !t.closest('[disabled]')) { state.offset += PAGE; load(); return; }
+      const h = t.closest('.js-history');
+      if (h) {
+        e.preventDefault();
+        $('#f-table').value = h.getAttribute('data-table');
+        $('#f-row').value = h.getAttribute('data-row');
+        $('#f-actor').value = '';
+        $('#f-action').value = '';
+        $('#f-from').value = '';
+        $('#f-to').value = '';
+        state.offset = 0;
+        load();
+      }
+    });
+
+    $('#audit-filter').addEventListener('submit', e => { e.preventDefault(); state.offset = 0; load(); });
+    $('#btn-clear').addEventListener('click', () => {
+      $('#audit-filter').reset();
+      state.offset = 0;
+      load();
+    });
+
+    // ?table=reservations&row=R00012 で開いたら、その対象の履歴から表示する
+    const qs = new URLSearchParams(location.search);
+    if (qs.get('table') && TABLES.some(t => t[0] === qs.get('table'))) $('#f-table').value = qs.get('table');
+    if (qs.get('row')) $('#f-row').value = qs.get('row').slice(0, 120);
+
+    fillActors();
+    window.SkyRentAuditPage = { reload: load, state: state };
+
+    // 操作者の名前はスタッフ一覧から (読めなくても履歴は表示する)
+    Promise.resolve()
+      .then(() => B.admin.listStaff())
+      .then(res => {
+        ((res && res.staff) || []).forEach(s => { staffById[s.userId] = s; });
+        fillActors();
+        if (state.rows.length) render();
+      })
+      .catch(err => { console.warn('スタッフ一覧を読み込めませんでした', err && err.code); });
+    load();
+  })();
+  </script>
+</body>
+</html>

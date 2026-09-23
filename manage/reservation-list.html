@@ -5,6 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>予約一覧 | グロースレンタカー 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
+  <style>
+    .status-no_show { background: #f3e5f5; color: #7b1fa2; }
+    .status-block { background: #eceff1; color: #455a64; }
+    .rl-block-row td { background: #f7f8f9; }
+    .rl-sub { color: #888; font-size: 11.5px; }
+    .rd-grid { display: grid; grid-template-columns: 120px 1fr; gap: 9px; font-size: 13px; }
+    .rd-grid > div:nth-child(odd) { color: #777; font-weight: 600; }
+    .rd-grid a { color: var(--link); text-decoration: underline; }
+    .rd-msg { margin: 0 22px; padding: 10px 14px; border-radius: 4px; font-size: 13px; line-height: 1.7; }
+    .rd-msg.is-error { background: #fdf0ef; border: 1px solid #f3c4bf; color: #8a2419; }
+    .rd-msg.is-info { background: #eef4fa; border: 1px solid #d4e2ef; color: #1c4a7a; }
+    .rd-msg .btn { padding: 5px 14px; font-size: 12.5px; margin-left: 6px; }
+    .rd-panel { border: 2px solid #c0392b; border-radius: 6px; padding: 14px 16px; margin-top: 16px; background: #fffafa; }
+    .rd-panel.is-noshow { border-color: #7b1fa2; background: #fdf8fe; }
+    .rd-panel h4 { font-size: 14px; margin-bottom: 8px; }
+    .rd-panel table { font-size: 13px; margin-bottom: 10px; }
+    .rd-panel th, .rd-panel td { border: 1px solid #eee; padding: 5px 9px; text-align: left; }
+    .rd-panel th { background: #f7f7f7; width: 130px; font-weight: 600; }
+    .rd-fee { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+    .rd-fee input[type="number"] { width: 130px; padding: 7px 9px; border: 1px solid #ccc; border-radius: 3px; font-size: 15px; font-weight: 700; text-align: right; }
+    .rd-fee .btn { padding: 6px 12px; font-size: 12.5px; }
+    .rd-panel label.rd-l { display: block; font-weight: 600; font-size: 12.5px; color: #555; margin: 8px 0 4px; }
+    .rd-panel input[type="text"] { width: 100%; padding: 7px 9px; border: 1px solid #ccc; border-radius: 3px; font: inherit; }
+    .rd-panel .chk { display: inline-flex; gap: 6px; align-items: center; margin-top: 10px; cursor: pointer; font-size: 13px; }
+    .rd-panel .rd-note { font-size: 12px; color: #666; margin-top: 8px; line-height: 1.6; }
+    .rd-panel .rd-err { color: #c0392b; font-size: 12.5px; margin-top: 6px; }
+    .rd-panel .rd-btns { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .rd-panel .rd-btns .btn { padding: 8px 18px; }
+    .btn-danger { background: #c0392b; color: #fff; }
+    .btn-danger:hover { background: #a93226; }
+    .btn-noshow { background: #7b1fa2; color: #fff; }
+    .bk-form .crud-field input[type="datetime-local"] { max-width: 240px; }
+    .bk-err { color: #c0392b; font-size: 12.5px; padding: 0 20px 10px; }
+    .gc-line small { color: #888; }
+  </style>
 </head>
 <body>
   <div data-include="topbar"></div>
@@ -14,15 +49,17 @@
 
     <section class="card filter-bar">
       <div class="filter-group"><label>期間</label><input type="date" id="from"> 〜 <input type="date" id="to"></div>
-      <div class="filter-group"><label>状態</label><select id="status-filter"><option value="">すべて</option><option value="confirmed">確定</option><option value="in_use">貸出中</option><option value="returned">返却済</option><option value="cancelled">キャンセル</option></select></div>
+      <div class="filter-group"><label>状態</label><select id="status-filter"><option value="">すべて</option><option value="confirmed">確定</option><option value="in_use">貸出中</option><option value="returned">返却済</option><option value="cancelled">キャンセル</option><option value="no_show">無断キャンセル</option></select></div>
+      <div class="filter-group"><label>種別</label><select id="kind-filter"><option value="">すべて</option><option value="rental">予約</option><option value="block">貸出停止枠 (整備・車検)</option></select></div>
       <div class="filter-group"><label>拠点</label><select id="loc-filter"></select></div>
       <div class="filter-group"><label>カテゴリ</label><select id="cat-filter"></select></div>
       <div class="filter-group"><label>キーワード</label><input type="text" id="keyword" placeholder="顧客名・対象・予約ID"></div>
       <button class="btn btn-primary" id="btn-filter">検 索</button>
     </section>
 
-    <div class="flex-sb" style="margin-bottom:8px;padding:0 2px">
+    <div class="flex-sb" style="margin-bottom:8px;padding:0 2px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <span class="muted" id="count-info" style="font-size:13px;color:#777"></span>
+      <button type="button" class="btn btn-gray" id="btn-block" style="padding:7px 16px" hidden>+ 貸出停止枠 (整備・車検) を登録</button>
     </div>
 
     <section class="card">
@@ -38,21 +75,54 @@
   <div id="loading" class="loading" hidden><div class="spinner"></div></div>
 
   <script src="partials.js"></script>
-  <script src="../js/config.js"></script>
-  <script src="../js/store.js?v=20260916-1"></script>
-  <script src="../js/pricing.js"></script>
-  <script src="../js/api.js"></script>
-  <script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/api.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
   (function () {
+    'use strict';
     const S = window.SkyRentStore;
+    const B = window.SkyRentBackend;
+    const P = window.SkyRentPricing;
     const $ = s => document.querySelector(s);
     function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
-    function fmtDT(s){if(!s)return '';const d=new Date(s);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
+    const LIVE = !!B.live;
+    const DAY = 86400000;
     let allRows = [];
 
+    // 日時は常に日本時間 (SkyRentBackend.jst)
+    function ms(v) { const iso = B.jst.fromInput(v); return iso ? Date.parse(iso) : NaN; }
+    function fmtDT(v) { return v ? B.jst.format(v, { weekday: false }) : ''; }
+    function yen(n) { return P.yen(n); }
+    function isBlock(r) { return r.kind === 'block'; }
+    function totalOf(r) { return r.total != null ? (Number(r.total) || 0) : ((r.price && Number(r.price.total)) || 0); }
+    function statusLabel(r) {
+      if (isBlock(r)) return r.status === 'cancelled' ? '解除済み' : '停止中';
+      return S.STATUS_LABELS[r.status] || r.status;
+    }
+    function statusBadge(r) {
+      const cls = isBlock(r) ? (r.status === 'cancelled' ? 'cancelled' : 'block') : r.status;
+      return '<span class="status status-' + esc(cls) + '">' + esc(statusLabel(r)) + '</span>';
+    }
+
+    // エラー → {code, message(日本語)}
+    function describe(e) {
+      const msg = String((e && e.message) || '');
+      if (/^[A-Z][A-Z0-9_]{2,}$/.test(msg)) return { code: msg, message: B.errorMessage(msg) };
+      if (e && e.code && /^[A-Z][A-Z_]+$/.test(String(e.code)) && /[^\x00-\x7F]/.test(msg)) return { code: e.code, message: msg };
+      if (e && (e.code === '42501' || /permission denied|row-level security/i.test(msg))) return { code: 'FORBIDDEN', message: B.errorMessage('FORBIDDEN') };
+      if (/fetch|network|Load failed/i.test(msg)) return { code: 'NETWORK', message: B.errorMessage('NETWORK') };
+      return { code: 'INTERNAL', message: B.errorMessage('INTERNAL') };
+    }
+
     function initFilters() {
-      $('#loc-filter').innerHTML = '<option value="">全拠点</option>' + S.locations().map(l => '<option value="' + l.locationId + '">' + esc(l.name) + '</option>').join('');
-      $('#cat-filter').innerHTML = '<option value="">全カテゴリ</option>' + S.categories(true).map(c => '<option value="' + c.categoryId + '">' + esc(c.name) + '</option>').join('');
+      $('#loc-filter').innerHTML = '<option value="">全拠点</option>' + S.locations().map(l => '<option value="' + esc(l.locationId) + '">' + esc(l.name) + '</option>').join('');
+      $('#cat-filter').innerHTML = '<option value="">全カテゴリ</option>' + S.categories(true).map(c => '<option value="' + esc(c.categoryId) + '">' + esc(c.name) + '</option>').join('');
     }
 
     async function load() {
@@ -60,117 +130,406 @@
       try {
         allRows = await window.SkyRentAPI.listReservations();
         applyFilter();
-        // ハッシュで詳細を開く
-        if (location.hash.length > 1) { const id = location.hash.slice(1); if (allRows.some(r => r.reservationId === id)) openDetail(id); }
-      } catch (e) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="11">読み込み失敗: ' + e.message + '</td></tr>'; }
+      } catch (e) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="11">読み込み失敗: ' + esc(describe(e).message) + '</td></tr>'; }
       finally { $('#loading').hidden = true; }
     }
 
     function applyFilter() {
-      const from = $('#from').value, to = $('#to').value, st = $('#status-filter').value;
+      const from = $('#from').value, to = $('#to').value, st = $('#status-filter').value, kind = $('#kind-filter').value;
       const loc = $('#loc-filter').value, cat = $('#cat-filter').value, kw = $('#keyword').value.trim().toLowerCase();
       let rows = allRows.slice();
-      if (from) rows = rows.filter(r => new Date(r.end) >= new Date(from));
-      if (to) rows = rows.filter(r => new Date(r.start) <= new Date(to + 'T23:59:59'));
+      if (from) { const f = ms(from + 'T00:00'); rows = rows.filter(r => ms(r.end) >= f); }
+      if (to) { const t = ms(to + 'T00:00') + DAY; rows = rows.filter(r => ms(r.start) < t); }
       if (st) rows = rows.filter(r => r.status === st);
+      if (kind) rows = rows.filter(r => (isBlock(r) ? 'block' : 'rental') === kind);
       if (loc) rows = rows.filter(r => r.locationId === loc);
       if (cat) rows = rows.filter(r => r.categoryId === cat);
-      if (kw) rows = rows.filter(r => [r.customerName, r.assetName, r.vehicleName, r.reservationId].some(x => (x || '').toLowerCase().includes(kw)));
+      if (kw) rows = rows.filter(r => [r.customerName, r.assetName, r.vehicleName, r.reservationId, r.staffNote].some(x => (x || '').toLowerCase().includes(kw)));
       render(rows);
     }
 
     function render(rows) {
-      const total = rows.filter(r => r.status !== 'cancelled').reduce((s, r) => s + ((r.price && r.price.total) || 0), 0);
-      $('#count-info').textContent = rows.length + ' 件 ／ 合計金額 (キャンセル除く): ¥' + total.toLocaleString();
+      const counted = rows.filter(r => !isBlock(r) && r.status !== 'cancelled' && r.status !== 'no_show');
+      const total = counted.reduce((s, r) => s + totalOf(r), 0);
+      $('#count-info').textContent = rows.length + ' 件 ／ 合計金額 (キャンセル・貸出停止枠を除く): ' + yen(total);
       if (!rows.length) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="11">該当する予約はありません</td></tr>'; return; }
       $('#tbl').innerHTML = rows.map(r => {
         const l = S.getLocation(r.locationId), c = S.getCategory(r.categoryId);
-        const pay = (r.payment ? (S.PAYMENT_LABELS[r.payment.method] || '') : '') + (r.payment && r.payment.status === 'paid' ? ' <span class="status status-paid">済</span>' : (r.payment && r.status !== 'cancelled' ? ' <span class="status status-unpaid">未</span>' : ''));
+        if (isBlock(r)) {
+          return '<tr class="rl-block-row">' +
+            '<td><code>' + esc(r.reservationId) + '</code></td>' +
+            '<td>' + statusBadge(r) + '</td>' +
+            '<td>' + esc(fmtDT(r.start)) + '</td><td>' + esc(fmtDT(r.end)) + '</td>' +
+            '<td>' + esc(r.assetName || r.vehicleName) + '</td>' +
+            '<td>' + esc(c ? c.name : '') + '</td>' +
+            '<td>' + esc(l ? l.name : '') + '</td>' +
+            '<td>🔧 貸出停止枠<div class="rl-sub">' + esc(r.staffNote || '') + '</div></td>' +
+            '<td>-</td><td style="text-align:right">-</td>' +
+            '<td style="text-align:center"><a href="#" class="detail-link" data-id="' + esc(r.reservationId) + '">詳細</a></td>' +
+            '</tr>';
+        }
+        const pay = (r.payment ? esc(S.PAYMENT_LABELS[r.payment.method] || '') : '') + (r.payment && r.payment.status === 'paid' ? ' <span class="status status-paid">済</span>' : (r.payment && r.status !== 'cancelled' && r.status !== 'no_show' ? ' <span class="status status-unpaid">未</span>' : ''));
+        const fee = (r.status === 'cancelled' || r.status === 'no_show') && r.cancelFee != null ? '<div class="rl-sub">キャンセル料 ' + yen(r.cancelFee) + '</div>' : '';
+        const ev = r.gcalEvents || {};
+        const gcal = ev.pickup || ev.return ? '<div class="rl-sub" title="担当者の Google カレンダーに登録済み">📅 カレンダー登録済み</div>' : '';
         return '<tr>' +
           '<td><code>' + esc(r.reservationId) + '</code></td>' +
-          '<td><span class="status status-' + r.status + '">' + (S.STATUS_LABELS[r.status] || r.status) + '</span></td>' +
-          '<td>' + fmtDT(r.start) + '</td><td>' + fmtDT(r.end) + '</td>' +
-          '<td>' + esc(r.assetName || r.vehicleName) + (r.quantity > 1 ? ' ×' + r.quantity : '') + '</td>' +
+          '<td>' + statusBadge(r) + gcal + '</td>' +
+          '<td>' + esc(fmtDT(r.start)) + '</td><td>' + esc(fmtDT(r.end)) + '</td>' +
+          '<td>' + esc(r.assetName || r.vehicleName) + (r.quantity > 1 ? ' ×' + esc(r.quantity) : '') + '</td>' +
           '<td>' + esc(c ? c.name : '') + '</td>' +
           '<td>' + esc(l ? l.name : '') + '</td>' +
           '<td>' + (r.memberId ? '👤 ' : '') + esc(r.customerName) + '</td>' +
           '<td style="font-size:12px">' + pay + '</td>' +
-          '<td style="text-align:right">¥' + ((r.price && r.price.total) || 0).toLocaleString() + '</td>' +
+          '<td style="text-align:right">' + yen(totalOf(r)) + fee + '</td>' +
           '<td style="text-align:center"><a href="#" class="detail-link" data-id="' + esc(r.reservationId) + '">詳細</a></td>' +
           '</tr>';
       }).join('');
       $('#tbl').querySelectorAll('.detail-link').forEach(a => a.addEventListener('click', e => { e.preventDefault(); openDetail(a.dataset.id); }));
     }
 
-    function openDetail(id) {
-      const r = allRows.find(x => x.reservationId === id);
-      if (!r) return;
-      const a = S.getAsset(r.assetId), c = S.getCategory(r.categoryId), l = S.getLocation(r.locationId);
-      const days = Math.max(1, Math.ceil((new Date(r.end) - new Date(r.start)) / 86400000));
-      const lines = (r.price && (r.price.lines || r.price.breakdown)) || [];
+    // ---------------------------------------------------------------
+    // 予約の更新 (本番は admin_update_reservation を待って結果を確かめる)
+    //   updates: store の形 (デモ)、patch: DB の形 (本番)。版 (version) が違えば VERSION_CONFLICT
+    // ---------------------------------------------------------------
+    async function applyChange(id, updates, patch) {
+      if (!LIVE) return S.updateReservation(id, updates);
+      const c = B.client;
+      if (!c) throw new Error('NETWORK');
+      const cur = S.findById('reservations', 'reservationId', id);
+      const version = cur && cur.version != null && isFinite(Number(cur.version)) ? Number(cur.version) : null;
+      const res = await c.rpc('admin_update_reservation', { p_id: id, p_patch: patch, p_version: version });
+      if (res.error) throw res.error;
+      const row = B.fromDb.reservation(res.data);
+      const list = S.list('reservations');
+      const i = list.findIndex(x => x.reservationId === row.reservationId);
+      if (i >= 0) list[i] = row; else list.push(row);
+      S._hydrate({ reservations: list });
+      return row;
+    }
 
-      // 状態遷移ボタン
-      let actions = '';
-      if (r.status === 'confirmed') actions += '<button type="button" class="btn btn-primary" id="act-inuse">🚗 貸出処理 (出発)</button>';
-      if (r.status === 'in_use') actions += '<button type="button" class="btn btn-primary" id="act-return" style="background:#1e8a4a">✅ 返却処理</button>';
-      if (r.status === 'confirmed' || r.status === 'in_use') actions += '<button type="button" class="btn btn-gray" id="act-cancel" style="background:#c0392b">予約をキャンセル</button>';
-      if (r.payment && r.payment.status === 'unpaid' && r.status !== 'cancelled' && r.payment.method === 'onsite') actions += '<button type="button" class="btn btn-gray" id="act-pay" style="background:#2e7d5b">入金を記録</button>';
+    // ---------------------------------------------------------------
+    // Google カレンダー同期の状態
+    // ---------------------------------------------------------------
+    function gcalText(r) {
+      const cfg = S.read('settings.calendar', null) || {};
+      const enabled = cfg.enabled === true, write = cfg.writeEvents !== false;
+      const loc = cfg.locations && cfg.locations[r.locationId];
+      const cals = loc && Array.isArray(loc.calendarIds) ? loc.calendarIds.filter(Boolean) : [];
+      const ev = r.gcalEvents || {};
+      if (ev.pickup || ev.return) {
+        const parts = [];
+        if (ev.pickup) parts.push('貸出');
+        if (ev.return) parts.push('返却');
+        const cal = (ev.pickup || ev.return).calendarId;
+        const gone = r.status === 'cancelled' || r.status === 'no_show';
+        return '<span class="status status-confirmed">登録済み</span> ' + parts.join('・') + 'の予定' +
+          (cal ? ' <small>(' + esc(cal) + ')</small>' : '') + (gone ? ' <small>※取消のため削除待ち</small>' : '');
+      }
+      if (r.status === 'cancelled' || r.status === 'no_show') return enabled ? 'カレンダーの予定はありません (取消済み)' : '連携していません';
+      if (!enabled) return '連携していません <small>(<a href="calendar.html">Googleカレンダー連携</a>)</small>';
+      if (!write) return 'カレンダーへの書き込みは無効に設定されています';
+      if (!cals.length) return 'この拠点はカレンダー未登録のため書き込みません';
+      return '<span class="status status-soon">未登録</span> 同期待ち、または同期に失敗しています';
+    }
 
-      const rows = [
-        ['状態', '<span class="status status-' + r.status + '">' + (S.STATUS_LABELS[r.status] || r.status) + '</span>'],
-        ['対象', '<strong>' + esc(r.assetName || r.vehicleName) + '</strong>' + (r.quantity > 1 ? ' × ' + r.quantity : '') + ' (' + esc(r.assetId) + ')'],
-        ['カテゴリ', esc(c ? c.name : '')],
-        ['拠点', esc(l ? l.name : '')],
-        ['期間', fmtDT(r.start) + ' 〜 ' + fmtDT(r.end) + ' <small style="color:#888">(' + days + '日間)</small>'],
-        ['借受人', '<strong>' + esc(r.customerName) + '</strong> 様' + (r.company ? ' / ' + esc(r.company) : '') + (r.memberId ? ' <span class="chip">会員 ' + esc(r.memberId) + '</span>' : '')],
-        ['連絡先', esc(r.customerEmail || '-') + ' / ' + esc(r.customerPhone || '-')]
-      ];
-      if (c && c.type === 'vehicle') rows.push(['免許証番号', esc(r.licenseNo || '-') + (r.licenseConfirmed ? ' <span class="chip">✓ 必要資格確認済</span>' : '')]);
-      rows.push(['支払方法', (r.payment ? (S.PAYMENT_LABELS[r.payment.method] || '') : '') + ' / ' + (r.payment && r.payment.status === 'paid' ? '<span class="status status-paid">入金済</span>' : '<span class="status status-unpaid">未入金</span>')]);
-      if (r.invoiceId) rows.push(['請求書', '<a href="invoices.html" class="detail-link">' + esc(r.invoiceId) + '</a>']);
-      if (r.couponId) rows.push(['クーポン', '利用あり']);
-      rows.push(['備考', esc(r.note || '-')]);
-      rows.push(['登録日時', fmtDT(r.createdAt)]);
+    // 本番: この予約の最新のカレンダー同期ジョブ (メール送信状況) を表示
+    async function loadGcalJob(r, el) {
+      if (!LIVE || !B.admin.can('outbox.read') || !B.client || !el) return;
+      try {
+        const res = await B.client.from('outbox').select('id,status,last_error,attempts,created_at')
+          .eq('template', 'gcal_sync').eq('ref_id', r.reservationId).order('id', { ascending: false }).range(0, 0);
+        const job = res && !res.error && res.data && res.data[0];
+        if (!job) return;
+        const names = { pending: '同期待ち', sending: '同期中', sent: '反映済み', failed: '失敗', skipped: '対象外' };
+        el.insertAdjacentHTML('beforeend', '<div><small>最新の同期処理: ' + esc(names[job.status] || job.status) +
+          (job.last_error ? ' (' + esc(job.last_error) + ')' : '') + ' — <a href="mail-log.html?kind=gcal&amp;q=' + encodeURIComponent(r.reservationId) + '">メール送信状況で確認</a></small></div>');
+      } catch (e) { /* 補助的な表示 */ }
+    }
 
-      const html =
-        '<div class="crud-modal-bg"></div><div class="crud-modal-card" style="min-width:560px;max-width:620px">' +
-        '<div class="crud-modal-head"><h3>予約詳細 <code style="background:rgba(255,255,255,.2);color:#fff;font-size:12px;margin-left:8px;padding:2px 8px;border-radius:2px">' + esc(r.reservationId) + '</code></h3><button class="crud-close" type="button">×</button></div>' +
-        '<div style="padding:18px 22px;max-height:66vh;overflow:auto">' +
-          '<div style="display:grid;grid-template-columns:110px 1fr;gap:9px;font-size:13px">' +
-          rows.map(row => '<div style="color:#777;font-weight:600">' + row[0] + '</div><div>' + row[1] + '</div>').join('') +
-          '</div>' +
-          (lines.length ? '<div style="margin-top:14px"><strong class="card-section-title">料金内訳</strong><table class="data-table" style="margin-top:4px">' +
-            lines.map(li => '<tr><td>' + esc(li.label) + '</td><td style="text-align:right">' + (li.amount < 0 ? '-¥' + Math.abs(li.amount).toLocaleString() : '¥' + li.amount.toLocaleString()) + '</td></tr>').join('') +
-            '<tr><td style="font-weight:700">合計</td><td style="text-align:right;font-weight:700">¥' + ((r.price && r.price.total) || 0).toLocaleString() + '</td></tr></table></div>' : '') +
-        '</div>' +
-        '<div class="crud-modal-foot" style="flex-wrap:wrap;gap:8px">' + actions +
-          '<span style="flex:1"></span><a href="forms.html" class="btn btn-gray">帳票出力</a><button type="button" class="btn btn-gray crud-cancel">閉じる</button></div></div>';
-
+    // ---------------------------------------------------------------
+    // モーダル
+    // ---------------------------------------------------------------
+    function openModal(html) {
       let modal = document.getElementById('crud-modal');
       if (!modal) { modal = document.createElement('div'); modal.id = 'crud-modal'; modal.className = 'crud-modal'; document.body.appendChild(modal); }
       modal.innerHTML = html;
       const close = () => modal.remove();
       modal.querySelector('.crud-modal-bg').addEventListener('click', close);
-      modal.querySelector('.crud-close').addEventListener('click', close);
-      modal.querySelector('.crud-cancel').addEventListener('click', close);
+      modal.querySelectorAll('.crud-close, .crud-cancel').forEach(b => b.addEventListener('click', close));
+      return { modal: modal, close: close };
+    }
 
-      function reloadAfter() { close(); load(); }
-      const inuse = modal.querySelector('#act-inuse');
-      if (inuse) inuse.addEventListener('click', () => { if (!confirm('貸出処理を行いますか? (状態を「貸出中」に変更します)')) return; S.updateReservation(id, { status: 'in_use' }); reloadAfter(); });
-      const ret = modal.querySelector('#act-return');
-      if (ret) ret.addEventListener('click', () => { if (!confirm('返却処理を行いますか?\n会員予約の場合はポイントが自動付与されます。')) return; S.updateReservation(id, { status: 'returned' }); reloadAfter(); });
-      const can = modal.querySelector('#act-cancel');
-      if (can) can.addEventListener('click', () => { if (!confirm('予約 ' + id + ' をキャンセルしますか?\n借受人: ' + r.customerName + ' 様')) return; S.updateReservation(id, { status: 'cancelled' }); reloadAfter(); });
-      const pay = modal.querySelector('#act-pay');
-      if (pay) pay.addEventListener('click', () => { S.updateReservation(id, { payment: Object.assign({}, r.payment, { status: 'paid' }) }); alert('✓ 入金を記録しました'); reloadAfter(); });
+    function showMsg(modal, e) {
+      const box = modal.querySelector('#rd-msg');
+      if (!box) return;
+      const d = describe(e);
+      box.className = 'rd-msg is-error';
+      box.hidden = false;
+      box.innerHTML = esc(d.message) + (d.code === 'VERSION_CONFLICT' || d.code === 'INVALID_TRANSITION'
+        ? '<button type="button" class="btn btn-primary" id="rd-reload">最新の情報を読み込む</button>' : '');
+      const rl = box.querySelector('#rd-reload');
+      if (rl) rl.addEventListener('click', () => {
+        try { location.hash = box.dataset.id || ''; } catch (err) { /* 無視 */ }
+        location.reload();
+      });
+      try { box.scrollIntoView({ block: 'nearest' }); } catch (err) { /* 無視 */ }
+    }
+
+    function openDetail(id) {
+      const r = S.findById('reservations', 'reservationId', id) || allRows.find(x => x.reservationId === id);
+      if (!r) return;
+      const c = S.getCategory(r.categoryId), l = S.getLocation(r.locationId);
+      const days = Math.max(1, Math.ceil((ms(r.end) - ms(r.start)) / DAY));
+      const lines = (r.price && (r.price.lines || r.price.breakdown)) || [];
+      const canRes = B.admin.can('reservations.write');
+      const canPay = B.admin.can('payments.write') || canRes;
+      const canBlock = B.admin.can('blocks.write');
+
+      let actions = '';
+      let rows;
+      if (isBlock(r)) {
+        if (r.status !== 'cancelled' && canBlock) actions += '<button type="button" class="btn btn-danger" id="act-unblock">停止枠を解除</button>';
+        rows = [
+          ['状態', statusBadge(r)],
+          ['対象', '<strong>' + esc(r.assetName || r.vehicleName) + '</strong> (' + esc(r.assetId) + ')'],
+          ['拠点', esc(l ? l.name : '')],
+          ['期間', esc(fmtDT(r.start)) + ' 〜 ' + esc(fmtDT(r.end))],
+          ['理由・メモ', esc(r.staffNote || r.note || '-')],
+          ['登録日時', esc(fmtDT(r.createdAt))]
+        ];
+      } else {
+        if (canRes) {
+          if (r.status === 'confirmed') {
+            actions += '<button type="button" class="btn btn-primary" id="act-inuse">🚗 貸出処理 (出発)</button>';
+            actions += '<button type="button" class="btn btn-danger" id="act-cancel">キャンセル</button>';
+            actions += '<button type="button" class="btn btn-noshow" id="act-noshow">無断キャンセル</button>';
+          }
+          if (r.status === 'in_use') actions += '<button type="button" class="btn btn-primary" id="act-return" style="background:#1e8a4a">✅ 返却処理</button>';
+          if (r.status === 'no_show') {
+            actions += '<button type="button" class="btn btn-gray" id="act-restore">確定に戻す</button>';
+            actions += '<button type="button" class="btn btn-danger" id="act-cancel">キャンセル扱いに変更</button>';
+          }
+        }
+        if (canPay && r.payment && r.payment.status === 'unpaid' && r.status !== 'cancelled' && r.status !== 'no_show' && r.payment.method === 'onsite') {
+          actions += '<button type="button" class="btn btn-gray" id="act-pay" style="background:#2e7d5b">入金を記録</button>';
+        }
+        rows = [
+          ['状態', statusBadge(r)],
+          ['対象', '<strong>' + esc(r.assetName || r.vehicleName) + '</strong>' + (r.quantity > 1 ? ' × ' + esc(r.quantity) : '') + ' (' + esc(r.assetId) + ')'],
+          ['カテゴリ', esc(c ? c.name : '')],
+          ['拠点', esc(l ? l.name : '')],
+          ['期間', esc(fmtDT(r.start)) + ' 〜 ' + esc(fmtDT(r.end)) + ' <small style="color:#888">(' + days + '日間)</small>'],
+          ['借受人', '<strong>' + esc(r.customerName) + '</strong> 様' + (r.company ? ' / ' + esc(r.company) : '') + (r.memberId ? ' <span class="chip">会員 ' + esc(r.memberId) + '</span>' : '')],
+          ['連絡先', esc(r.customerEmail || '-') + ' / ' + esc(r.customerPhone || '-')]
+        ];
+        if (c && c.type === 'vehicle') rows.push(['運転免許証', r.licenseConfirmed ? '<span class="chip">✓ 運転者全員の免許の確認に同意 (当日店頭で確認)</span>' : '<span style="color:#b56b00">未確認 (当日店頭で確認してください)</span>']);
+        rows.push(['支払方法', esc(r.payment ? (S.PAYMENT_LABELS[r.payment.method] || '') : '') + ' / ' + (r.payment && r.payment.status === 'paid' ? '<span class="status status-paid">入金済</span>' : '<span class="status status-unpaid">未入金</span>')]);
+        if (r.invoiceId) rows.push(['請求書', '<a href="invoices.html" class="detail-link">' + esc(r.invoiceId) + '</a>']);
+        if (r.couponId) rows.push(['クーポン', '利用あり']);
+        if (r.status === 'cancelled' || r.status === 'no_show') {
+          rows.push(['キャンセル料', r.cancelFee != null ? yen(r.cancelFee) : '-']);
+          if (r.cancelledAt) rows.push(['取消日時', esc(fmtDT(r.cancelledAt)) + (r.cancelledBy ? ' (' + (r.cancelledBy === 'customer' ? 'お客様' : 'スタッフ') + ')' : '')]);
+        }
+        rows.push(['Googleカレンダー', '<div class="gc-line" id="rd-gcal">' + gcalText(r) + '</div>']);
+        rows.push(['備考', esc(r.note || '-')]);
+        if (r.staffNote) rows.push(['スタッフメモ', '<span style="white-space:pre-wrap">' + esc(r.staffNote) + '</span>']);
+      }
+      rows.push(['登録日時', esc(fmtDT(r.createdAt))]);
+
+      const html =
+        '<div class="crud-modal-bg"></div><div class="crud-modal-card" style="min-width:560px;max-width:660px">' +
+        '<div class="crud-modal-head"><h3>' + (isBlock(r) ? '貸出停止枠' : '予約詳細') + ' <code style="background:rgba(255,255,255,.2);color:#fff;font-size:12px;margin-left:8px;padding:2px 8px;border-radius:2px">' + esc(r.reservationId) + '</code></h3><button class="crud-close" type="button" aria-label="閉じる">×</button></div>' +
+        '<div style="padding:18px 22px;max-height:66vh;overflow:auto" id="rd-body">' +
+          '<div class="rd-grid">' + rows.map(row => '<div>' + row[0] + '</div><div>' + row[1] + '</div>').join('') + '</div>' +
+          (lines.length && !isBlock(r) ? '<div style="margin-top:14px"><strong class="card-section-title">料金内訳</strong><table class="data-table" style="margin-top:4px">' +
+            lines.map(li => '<tr><td>' + esc(li.label) + '</td><td style="text-align:right">' + yen(li.amount) + '</td></tr>').join('') +
+            '<tr><td style="font-weight:700">合計</td><td style="text-align:right;font-weight:700">' + yen(totalOf(r)) + '</td></tr></table></div>' : '') +
+          '<div id="rd-panel"></div>' +
+        '</div>' +
+        '<div class="rd-msg" id="rd-msg" role="alert" data-id="' + esc(r.reservationId) + '" hidden></div>' +
+        '<div class="crud-modal-foot" style="flex-wrap:wrap;gap:8px" id="rd-foot">' + actions +
+          '<span style="flex:1"></span>' + (isBlock(r) ? '' : '<a href="forms.html" class="btn btn-gray">帳票出力</a>') + '<button type="button" class="btn btn-gray crud-cancel">閉じる</button></div></div>';
+
+      const m = openModal(html);
+      const modal = m.modal;
+      loadGcalJob(r, modal.querySelector('#rd-gcal'));
+
+      async function run(btn, updates, patch, okMsg) {
+        modal.querySelectorAll('#rd-foot button, #rd-panel button').forEach(b => { b.disabled = true; });
+        try {
+          await applyChange(id, updates, patch);
+          m.close();
+          B.toast(okMsg, 'success');
+          load();
+        } catch (e) {
+          modal.querySelectorAll('#rd-foot button, #rd-panel button').forEach(b => { b.disabled = false; });
+          showMsg(modal, e);
+        }
+      }
+      const on = (sel, fn) => { const el = modal.querySelector(sel); if (el) el.addEventListener('click', () => fn(el)); };
+      on('#act-inuse', b => { if (confirm('貸出処理を行いますか? (状態を「貸出中」に変更します)')) run(b, { status: 'in_use' }, { status: 'in_use' }, '予約 ' + id + ' を貸出中にしました。'); });
+      on('#act-return', b => { if (confirm('返却処理を行いますか?\n会員予約の場合はポイントが自動付与されます。')) run(b, { status: 'returned' }, { status: 'returned' }, '予約 ' + id + ' を返却済にしました。'); });
+      on('#act-restore', b => { if (confirm('無断キャンセルを取り消して「確定」に戻しますか?')) run(b, { status: 'confirmed', cancelFee: null }, { status: 'confirmed', cancel_fee: 0 }, '予約 ' + id + ' を確定に戻しました。'); });
+      on('#act-pay', b => run(b, { payment: Object.assign({}, r.payment, { status: 'paid' }) }, { payment_status: 'paid' }, '予約 ' + id + ' の入金を記録しました。'));
+      on('#act-cancel', () => openFeePanel(r, 'cancel', modal, run));
+      on('#act-noshow', () => openFeePanel(r, 'no_show', modal, run));
+      on('#act-unblock', async b => {
+        if (!confirm('貸出停止枠 ' + id + ' を解除しますか? (この期間も予約を受け付けるようになります)')) return;
+        b.disabled = true;
+        try {
+          await B.admin.deleteBlock(id);
+          m.close();
+          B.toast('貸出停止枠 ' + id + ' を解除しました。', 'success');
+          load();
+        } catch (e) { b.disabled = false; showMsg(modal, e); }
+      });
+    }
+
+    // ---------------------------------------------------------------
+    // キャンセル・無断キャンセル: 料金ルールでキャンセル料を示し、減額・免除も入力できる
+    // ---------------------------------------------------------------
+    function openFeePanel(r, kind, modal, run) {
+      const noShow = kind === 'no_show';
+      let fee = null;
+      try { fee = P.cancellationFee({ reservation: r, noShow: noShow }); } catch (e) { fee = null; }
+      const rule = fee ? fee.fee : 0;
+      const total = totalOf(r);
+      const max = Math.max(total, rule);
+      const clsName = { compact: 'コンパクト・SUV 等', large: '大型 (SUV・ミニバン)', kitchen: 'キッチンカー' };
+      const whenText = fee ? (fee.daysBefore < 0 ? '貸出日を過ぎています' : (fee.daysBefore === 0 ? '当日' : fee.daysBefore + '日前')) : '';
+      const panel = modal.querySelector('#rd-panel');
+      panel.innerHTML =
+        '<div class="rd-panel' + (noShow ? ' is-noshow' : '') + '">' +
+        '<h4>' + (noShow ? '無断キャンセルにする' : (r.status === 'no_show' ? 'キャンセル扱いに変更する' : 'この予約をキャンセルする')) + ' — キャンセル料の確認</h4>' +
+        (fee ? '<table><tbody>' +
+          '<tr><th>規定</th><td>' + esc(fee.label) + (noShow ? '' : ' <small style="color:#888">(' + esc(whenText) + (fee.busy ? '・繁忙期' : '') + ')</small>') + '</td></tr>' +
+          '<tr><th>車種区分</th><td>' + esc(clsName[fee.cls] || fee.cls) + '</td></tr>' +
+          '<tr><th>規定のキャンセル料</th><td><strong id="rd-rule">' + yen(rule) + '</strong> <small style="color:#888">(基本料金 × ' + esc(fee.pct) + '%)</small></td></tr>' +
+          '</tbody></table>'
+          : '<p class="rd-err">キャンセル料を自動で計算できませんでした。金額を入力してください。</p>') +
+        '<label class="rd-l" for="rd-fee">請求するキャンセル料</label>' +
+        '<div class="rd-fee"><input type="number" id="rd-fee" min="0" max="' + max + '" step="1" value="' + rule + '" inputmode="numeric"> 円' +
+          '<button type="button" class="btn btn-gray" data-fee="' + rule + '">規定どおり</button>' +
+          '<button type="button" class="btn btn-gray" data-fee="0">免除 (0円)</button></div>' +
+        '<label class="rd-l" for="rd-reason">減額・免除の理由 (規定と違う金額にするときは必須。スタッフメモに残ります)</label>' +
+        '<input type="text" id="rd-reason" maxlength="200" placeholder="例: 悪天候で欠航のため免除 / 常連のため半額">' +
+        (noShow ? '' : '<label class="chk"><input type="checkbox" id="rd-notify" checked> お客様にキャンセルのお知らせメールを送る</label>') +
+        '<p class="rd-note">キャンセル料の請求・お支払いの受け取りは、この画面とは別に行ってください (ここでは金額を記録します)。' +
+          (noShow ? '無断キャンセルではお客様にメールは送りません。' : '') + '</p>' +
+        '<p class="rd-err" id="rd-fee-err" hidden></p>' +
+        '<div class="rd-btns"><button type="button" class="btn ' + (noShow ? 'btn-noshow' : 'btn-danger') + '" id="rd-confirm">' + (noShow ? '無断キャンセルとして確定' : 'キャンセルを確定') + '</button>' +
+        '<button type="button" class="btn btn-gray" id="rd-back">やめる</button></div>' +
+        '</div>';
+      panel.querySelectorAll('[data-fee]').forEach(b => b.addEventListener('click', () => { panel.querySelector('#rd-fee').value = b.dataset.fee; }));
+      panel.querySelector('#rd-back').addEventListener('click', () => { panel.innerHTML = ''; });
+      try { panel.scrollIntoView({ block: 'nearest' }); } catch (e) { /* 無視 */ }
+      panel.querySelector('#rd-confirm').addEventListener('click', () => {
+        const err = panel.querySelector('#rd-fee-err');
+        err.hidden = true;
+        const raw = String(panel.querySelector('#rd-fee').value).trim();
+        const amount = Number(raw);
+        const reason = panel.querySelector('#rd-reason').value.trim();
+        let problem = '';
+        if (raw === '' || !isFinite(amount) || Math.round(amount) !== amount || amount < 0) problem = 'キャンセル料は 0 円以上の整数で入力してください。';
+        else if (amount > max) problem = 'キャンセル料が予約の合計金額 (' + yen(max) + ') を超えています。';
+        else if (fee && amount !== rule && !reason) problem = '規定 (' + yen(rule) + ') と違う金額にするときは、理由を入力してください。';
+        if (problem) { err.textContent = problem; err.hidden = false; return; }
+        const notifyEl = panel.querySelector('#rd-notify');
+        const notify = notifyEl ? notifyEl.checked : false;
+        const status = noShow ? 'no_show' : 'cancelled';
+        const staffName = (B.admin.staff && B.admin.staff.name) || '';
+        let staffNote = r.staffNote || '';
+        if (amount !== rule || !fee) {
+          const line = '【' + (noShow ? '無断キャンセル' : 'キャンセル') + '料】' + yen(amount) + (fee ? ' (規定 ' + yen(rule) + ')' : '') +
+            (reason ? ' 理由: ' + reason : '') + ' — ' + B.jst.format(new Date(), { weekday: false }) + (staffName ? ' ' + staffName : '');
+          staffNote = (staffNote ? staffNote + '\n' : '') + line;
+        }
+        const updates = { status: status, cancelFee: amount, staffNote: staffNote };
+        if (!noShow) { updates.cancelledAt = new Date().toISOString(); updates.cancelledBy = 'staff'; }
+        const patch = { status: status, cancel_fee: amount };
+        if (staffNote !== (r.staffNote || '')) patch.staff_note = staffNote;
+        if (!noShow && !notify) patch.notify = false;
+        const msg = '予約 ' + r.reservationId + ' を' + (noShow ? '無断キャンセル' : 'キャンセル') + 'にしました (キャンセル料 ' + yen(amount) + ')。' +
+          (!noShow && notify && LIVE ? ' お客様にお知らせメールを送ります。' : '');
+        run(panel.querySelector('#rd-confirm'), updates, patch, msg);
+      });
+    }
+
+    // ---------------------------------------------------------------
+    // 貸出停止枠 (整備・車検) の登録
+    // ---------------------------------------------------------------
+    function defaultTimes() {
+      const today = B.jst.ymd(new Date());
+      const base = ms(today + 'T00:00') + DAY;
+      return { start: B.jst.toInput(new Date(base + 9 * 3600000)), end: B.jst.toInput(new Date(base + 18 * 3600000)) };
+    }
+
+    function openBlockForm() {
+      const t = defaultTimes();
+      const assets = S.assets().slice().sort((a, b) => String(a.locationId).localeCompare(String(b.locationId)) || (a.sort || 99) - (b.sort || 99));
+      const opts = assets.map(a => { const l = S.getLocation(a.locationId); return '<option value="' + esc(a.assetId) + '">' + esc((l ? l.name + ' / ' : '') + a.name + ' (' + a.assetId + ')') + (a.active === false ? ' [非公開]' : '') + '</option>'; }).join('');
+      const html =
+        '<div class="crud-modal-bg"></div><div class="crud-modal-card bk-form">' +
+        '<div class="crud-modal-head"><h3>貸出停止枠 (整備・車検) の登録</h3><button class="crud-close" type="button" aria-label="閉じる">×</button></div>' +
+        '<div style="padding:6px 0">' +
+          '<p style="padding:10px 20px 4px;font-size:12.5px;color:#555">指定した期間は、この車両の予約を受け付けなくなります (公開サイトでも「空きなし」と表示されます)。</p>' +
+          '<div class="crud-field"><label for="bk-asset">対象車両</label><select id="bk-asset">' + opts + '</select></div>' +
+          '<div class="crud-field"><label for="bk-start">開始 (日本時間)</label><input type="datetime-local" id="bk-start" value="' + esc(t.start) + '"></div>' +
+          '<div class="crud-field"><label for="bk-end">終了 (日本時間)</label><input type="datetime-local" id="bk-end" value="' + esc(t.end) + '"></div>' +
+          '<div class="crud-field"><label for="bk-reason">理由</label><select id="bk-reason"><option>車検</option><option>定期点検</option><option>整備・修理</option><option>清掃・その他</option></select></div>' +
+          '<div class="crud-field"><label for="bk-memo">メモ</label><input type="text" id="bk-memo" maxlength="200" placeholder="例: ○○自動車で12か月点検"></div>' +
+        '</div>' +
+        '<p class="bk-err" id="bk-err" role="alert" hidden></p>' +
+        '<div class="crud-modal-foot"><span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">キャンセル</button><button type="button" class="btn btn-primary" id="bk-save">登録</button></div></div>';
+      const m = openModal(html);
+      const modal = m.modal;
+      modal.querySelector('#bk-save').addEventListener('click', async () => {
+        const err = modal.querySelector('#bk-err');
+        err.hidden = true;
+        const assetId = modal.querySelector('#bk-asset').value;
+        const start = B.jst.fromInput(modal.querySelector('#bk-start').value);
+        const end = B.jst.fromInput(modal.querySelector('#bk-end').value);
+        const memo = modal.querySelector('#bk-memo').value.trim();
+        const note = modal.querySelector('#bk-reason').value + (memo ? ' — ' + memo : '');
+        let problem = '';
+        if (!assetId) problem = '対象車両を選んでください。';
+        else if (!start || !end) problem = '開始と終了の日時を入力してください。';
+        else if (Date.parse(end) <= Date.parse(start)) problem = '終了は開始より後の日時にしてください。';
+        if (problem) { err.textContent = problem; err.hidden = false; return; }
+        const btn = modal.querySelector('#bk-save');
+        btn.disabled = true;
+        try {
+          const res = await B.admin.createBlock({ assetId: assetId, start: start, end: end, note: note });
+          m.close();
+          B.toast('貸出停止枠' + (res && res.reservation ? ' ' + res.reservation.reservationId : '') + ' を登録しました。', 'success');
+          load();
+        } catch (e) {
+          btn.disabled = false;
+          const d = describe(e);
+          err.textContent = d.code === 'AVAILABILITY_CONFLICT'
+            ? 'この車両は指定の期間に予約または別の停止枠が入っているため登録できません。予約表で空きを確認してください。'
+            : d.message;
+          err.hidden = false;
+        }
+      });
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       initFilters();
       $('#btn-filter').addEventListener('click', applyFilter);
       $('#keyword').addEventListener('keypress', e => { if (e.key === 'Enter') applyFilter(); });
-      ['#status-filter', '#loc-filter', '#cat-filter'].forEach(s => $(s).addEventListener('change', applyFilter));
-      load();
+      ['#status-filter', '#kind-filter', '#loc-filter', '#cat-filter'].forEach(s => $(s).addEventListener('change', applyFilter));
+      if (B.admin.can('blocks.write')) {
+        $('#btn-block').hidden = false;
+        $('#btn-block').addEventListener('click', openBlockForm);
+      }
+      load().then(() => {
+        // reservation-list.html#R00012 で詳細を開く
+        let id = '';
+        try { id = decodeURIComponent(location.hash.slice(1)); } catch (e) { id = ''; }
+        if (id && allRows.some(r => r.reservationId === id)) openDetail(id);
+      });
     });
   })();
   </script>

@@ -8,21 +8,31 @@
  *   - 会員・ポイント・クーポン制度 / 請求書払い (法人・行政のみ)
  *   - 通知ログ (メール送信のデモ代替)
  *
- * ストレージ: localStorage (デモ) / 本番は js/api.js 経由で GAS 等へ差替可能。
+ * ストレージ:
+ *   デモモード (js/config.js の SUPABASE_URL が空) … localStorage。これまでどおり。
+ *   本番モード (SUPABASE_URL と SUPABASE_ANON_KEY あり) … このタブのメモリだけ。
+ *     シードは投入せず、localStorage / sessionStorage に業務データを書かない。
+ *     データは js/backend.js がサーバーから読み込んで _hydrate() で入れ、
+ *     画面からの書き込みは _setWriteHook() で登録された関数がサーバーへ反映する。
  * すべてのキーは 'sky-rent.' プレフィックス。
  */
 (function () {
   'use strict';
   const PREFIX = 'sky-rent.';
-  const DATA_VERSION = 6;
+  const DATA_VERSION = 7;
   const DAY = 86400000;
+  const CONFIG = window.SKY_RENT_CONFIG || {};
+  const LIVE = !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY);
 
   // GitHub Pages では同じアカウント配下のサイトが同一オリジンになり、
   // localStorage の容量を共有する。容量不足やプライバシー設定で永続化
   // できない場合もデモを止めないよう、このタブ内のメモリへ退避する。
+  // 本番モードでは常にメモリだけを使う。
   const memory = new Map();
-  let persistentWritesEnabled = true;
+  let persistentWritesEnabled = !LIVE;
   let storageWarningShown = false;
+  let writeHook = null;
+  let extraAvailabilityCheck = null;
 
   function warnStorage(e) {
     if (storageWarningShown) return;
@@ -35,6 +45,7 @@
     if (memory.has(key)) {
       try { return JSON.parse(memory.get(key)); } catch (e) { return fallback; }
     }
+    if (LIVE) return fallback;
     try {
       const raw = localStorage.getItem(PREFIX + key);
       return raw == null ? fallback : JSON.parse(raw);
@@ -44,34 +55,90 @@
       return fallback;
     }
   }
-  function write(key, val) {
+  function memorySet(key, val) {
     const raw = JSON.stringify(val);
-    memory.set(key, raw);
-    if (!persistentWritesEnabled) return val;
-    try {
-      localStorage.setItem(PREFIX + key, raw);
-    } catch (e) {
-      persistentWritesEnabled = false;
-      warnStorage(e);
+    if (raw === undefined) memory.delete(key); else memory.set(key, raw);
+    return raw;
+  }
+  function write(key, val) {
+    const prev = writeHook ? read(key, undefined) : undefined;
+    const raw = memorySet(key, val);
+    if (persistentWritesEnabled && raw !== undefined) {
+      try {
+        localStorage.setItem(PREFIX + key, raw);
+      } catch (e) {
+        persistentWritesEnabled = false;
+        warnStorage(e);
+      }
+    }
+    if (writeHook) {
+      // フックには画面側と共有しないコピーを渡す
+      try { writeHook(key, raw === undefined ? undefined : JSON.parse(raw), prev); }
+      catch (e) { console.error('SkyRentStore write hook failed', key, e); }
     }
     return val;
   }
   function remove(key) {
+    const prev = writeHook ? read(key, undefined) : undefined;
     memory.delete(key);
-    try {
-      localStorage.removeItem(PREFIX + key);
-    } catch (e) {
-      persistentWritesEnabled = false;
-      warnStorage(e);
+    if (!LIVE) {
+      try {
+        localStorage.removeItem(PREFIX + key);
+      } catch (e) {
+        persistentWritesEnabled = false;
+        warnStorage(e);
+      }
+    }
+    if (writeHook) {
+      try { writeHook(key, undefined, prev); }
+      catch (e) { console.error('SkyRentStore write hook failed', key, e); }
     }
   }
 
-  // 「今日」基準の相対日時 ISO (シードデータ用)
+  // サーバーから読み込んだ値を入れる (書込フックを通さない・永続化しない)
+  function hydrate(values) {
+    if (!values || typeof values !== 'object') return;
+    Object.keys(values).forEach(key => { memorySet(key, values[key]); });
+  }
+  // fn(key, next, prev): write() のたびに呼ばれる (本番の管理画面でサーバーへ反映する)
+  function setWriteHook(fn) { writeHook = typeof fn === 'function' ? fn : null; }
+  // fn(asset, start, end) -> {ok, reason} | null : availability() の最後に適用する追加判定
+  function setExtraAvailabilityCheck(fn) { extraAvailabilityCheck = typeof fn === 'function' ? fn : null; }
+
+  // ===== 日時 (日本時間) =====
+  // 画面の datetime-local の値 ('YYYY-MM-DDTHH:MM'。タイムゾーン表記なし) は、端末のタイムゾーンに
+  // 関係なく日本時間として扱う。解釈は SkyRentPricingCore.toMs (料金計算と同じ規則) に任せる
+  // (このファイルは pricing-core.js より先に読み込まれるので、呼ばれた時点で探す)。
+  const JST_OFFSET = 9 * 3600000;
+  const DATE_TEXT_RE = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2})(?:[.,](\d+))?)?)?\s*(Z|[+-]\d{2}(?::?\d{2})?)?$/i;
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function toMs(v) {
+    if (v instanceof Date) return v.getTime();
+    if (typeof v === 'number') return isFinite(v) ? v : NaN;
+    if (typeof v !== 'string') return NaN;
+    const s = v.trim();
+    const m = DATE_TEXT_RE.exec(s);
+    if (m) {
+      const time = m[4] ? 'T' + pad2(+m[4]) + ':' + m[5] + (m[6] ? ':' + m[6] + (m[7] ? '.' + m[7] : '') : '') : '';
+      const iso = m[1] + '-' + pad2(+m[2]) + '-' + pad2(+m[3]) + time + (m[8] || '');
+      const core = window.SkyRentPricingCore;
+      if (core && typeof core.toMs === 'function') return core.toMs(iso);
+      if (m[8]) return time ? Date.parse(iso) : NaN;
+      return Date.parse(iso + (time ? '' : 'T00:00') + '+09:00');
+    }
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return NaN;
+    return s ? Date.parse(s) : NaN;  // Date#toString などタイムゾーン付きの文字列
+  }
+  // 解釈できる日時は ISO (UTC) にそろえる。できなければ元の値
+  function isoOr(v) {
+    const t = toMs(v);
+    return isFinite(t) ? new Date(t).toISOString() : v;
+  }
+
+  // 「今日 (日本時間)」基準の相対日時 ISO (シードデータ用)。hour は日本時間の時
   function at(offsetDays, hour) {
-    const d = new Date();
-    d.setHours(hour, 0, 0, 0);
-    d.setDate(d.getDate() + offsetDays);
-    return d.toISOString();
+    const today = Math.floor((Date.now() + JST_OFFSET) / DAY) * DAY - JST_OFFSET;  // 今日 0:00 (日本時間)
+    return new Date(today + offsetDays * DAY + hour * 3600000).toISOString();
   }
 
   // ===================================================================
@@ -139,11 +206,11 @@
   // オプション: categoryIds = null → 共通 (全車両カテゴリ)。priceType: per_day | per_rental
   const SEED_OPTIONS = [
     // 補償 (レンタカー)
-    { optionId: 'OP101', name: '免責補償制度 (CDW)',   price: 1650, priceType: 'per_day', categoryIds: ['cat-rental'], active: true },
-    { optionId: 'OP102', name: '安心保証コース (PAP)', price: 3300, priceType: 'per_day', categoryIds: ['cat-rental'], active: true },
+    { optionId: 'OP101', name: '免責補償制度 (CDW)',   price: 1650, priceShort: 1100, priceType: 'per_day', categoryIds: ['cat-rental'], kind: 'cover', exclusiveGroup: 'cover', active: true },
+    { optionId: 'OP102', name: '安心保証コース (PAP)', price: 3300, priceShort: 2200, priceType: 'per_day', categoryIds: ['cat-rental'], kind: 'cover', exclusiveGroup: 'cover', active: true },
     // 補償 (キッチンカー)
-    { optionId: 'OP201', name: '免責補償制度 (CDW)',   price: 3300, priceType: 'per_day', categoryIds: ['cat-kitchen'], active: true },
-    { optionId: 'OP202', name: '安心保証コース (PAP)', price: 6600, priceType: 'per_day', categoryIds: ['cat-kitchen'], active: true }
+    { optionId: 'OP201', name: '免責補償制度 (CDW)',   price: 3300, priceShort: null, priceType: 'per_day', categoryIds: ['cat-kitchen'], kind: 'cover', exclusiveGroup: 'cover', active: true },
+    { optionId: 'OP202', name: '安心保証コース (PAP)', price: 6600, priceShort: null, priceType: 'per_day', categoryIds: ['cat-kitchen'], kind: 'cover', exclusiveGroup: 'cover', active: true }
   ];
 
   const SEED_MEMBERS = [
@@ -349,12 +416,12 @@
 
   // ===== 空き状況 (車両=重複不可 / 物品=在庫数と照合) =====
   function reservedQty(assetId, start, end, excludeReservationId) {
-    const s = new Date(start), e = new Date(end);
+    const s = toMs(start), e = toMs(end);
     return list('reservations')
       .filter(r => String(r.assetId) === String(assetId)
-        && r.status !== 'cancelled'
+        && r.status !== 'cancelled' && r.status !== 'no_show'
         && r.reservationId !== excludeReservationId
-        && new Date(r.start) < e && new Date(r.end) > s)
+        && toMs(r.start) < e && toMs(r.end) > s)
       .reduce((sum, r) => sum + (Number(r.quantity) || 1), 0);
   }
   function availability(assetId, start, end, qty, excludeReservationId) {
@@ -364,12 +431,24 @@
     const used = reservedQty(assetId, start, end, excludeReservationId);
     const remaining = Math.max(0, stock - used);
     const need = Number(qty) || 1;
-    return {
+    const result = {
       ok: remaining >= need,
       remaining: remaining,
       stock: stock,
       reason: remaining >= need ? '' : (stock > 1 ? '在庫不足 (残り' + remaining + ')' : '他の予約と重複しています')
     };
+    // 追加判定 (本番: 受け渡し担当者の予定・受け渡し時刻の重複)。在庫で予約可のときだけ見る
+    if (result.ok && extraAvailabilityCheck) {
+      let extra = null;
+      try { extra = extraAvailabilityCheck(a, start, end); } catch (e) { console.error('availability check failed', e); }
+      if (extra && extra.ok === false) {
+        result.ok = false;
+        result.remaining = 0;
+        result.reason = extra.reason || '選択された日時はご予約いただけません';
+        if (extra.code) result.code = extra.code;
+      }
+    }
+    return result;
   }
 
   // 検索: カテゴリ・拠点・期間・カスタム項目フィルタ
@@ -426,7 +505,7 @@
       company: payload.company || '',
       licenseNo: payload.licenseNo || '',
       memberId: payload.memberId || null,
-      start: payload.start, end: payload.end,
+      start: isoOr(payload.start), end: isoOr(payload.end),
       optionIds: payload.optionIds || [],
       options: payload.options || [],
       payment: { method: payload.paymentMethod || 'onsite', status: 'unpaid' },
@@ -462,11 +541,14 @@
     if (i < 0) return null;
     const before = arr[i];
     const after = Object.assign({}, before, updates);
+    // 画面の datetime-local の値 (日本時間) は ISO にそろえて持つ
+    if (updates && updates.start !== undefined) after.start = isoOr(after.start);
+    if (updates && updates.end !== undefined) after.end = isoOr(after.end);
     arr[i] = after;
     saveList('reservations', arr);
 
     if (updates.status && updates.status !== before.status) {
-      const labels = { confirmed: '確定', in_use: '貸出中', returned: '返却済', cancelled: 'キャンセル' };
+      const labels = { confirmed: '確定', in_use: '貸出中', returned: '返却済', cancelled: 'キャンセル', no_show: '無断キャンセル' };
       notify('status', '予約 ' + reservationId + ' の状態を「' + (labels[updates.status] || updates.status) + '」に変更しました。通知メールを送信しました', reservationId);
       // 返却完了 → ポイント付与 (会員のみ・重複防止)
       if (updates.status === 'returned' && after.memberId && !after.pointGranted) {
@@ -506,14 +588,24 @@
     return m;
   }
   function loginMember(email, password) {
+    // 本番: パスワード照合はサーバー (SkyRentBackend.auth.signIn) が行う
+    if (LIVE) return null;
     const m = findMemberByEmail(email);
     if (!m || m.password !== password) return null;
     sessionStorage.setItem(PREFIX + 'memberSession', JSON.stringify({ memberId: m.memberId, at: new Date().toISOString() }));
     return m;
   }
-  function logoutMember() { sessionStorage.removeItem(PREFIX + 'memberSession'); }
+  function logoutMember() {
+    if (LIVE) { memory.delete('memberSession'); return; }
+    sessionStorage.removeItem(PREFIX + 'memberSession');
+  }
   function currentMember() {
     try {
+      if (LIVE) {
+        // 本番: ログイン中の会員は backend が _hydrate({memberSession, members}) で入れる
+        const ls = read('memberSession', null);
+        return ls ? getMember(ls.memberId) : null;
+      }
       const s = JSON.parse(sessionStorage.getItem(PREFIX + 'memberSession') || 'null');
       if (!s) return null;
       return expirePointsIfNeeded(getMember(s.memberId));
@@ -635,22 +727,26 @@
   }
 
   // ===== 状態ラベル =====
-  const STATUS_LABELS = { confirmed: '確定', in_use: '貸出中', returned: '返却済', cancelled: 'キャンセル' };
+  const STATUS_LABELS = { confirmed: '確定', in_use: '貸出中', returned: '返却済', cancelled: 'キャンセル', no_show: '無断キャンセル' };
   const PAYMENT_LABELS = { onsite: '現地決済', invoice: '請求書払い', online: 'オンライン決済' };
 
   // ===================================================================
   // 初期化 & 公開
   // ===================================================================
-  try {
-    ensureSeeded();
-  } catch (e) {
-    // 想定外の初期化失敗でも API 自体は公開し、空データで画面を継続する。
-    console.error('SkyRentStore seed initialization failed', e);
+  if (!LIVE) {
+    try {
+      ensureSeeded();
+    } catch (e) {
+      // 想定外の初期化失敗でも API 自体は公開し、空データで画面を継続する。
+      console.error('SkyRentStore seed initialization failed', e);
+    }
   }
 
   window.SkyRentStore = {
     PREFIX: PREFIX,
     DATA_VERSION: DATA_VERSION,
+    live: LIVE,
+    _hydrate: hydrate, _setWriteHook: setWriteHook, _setExtraAvailabilityCheck: setExtraAvailabilityCheck,
     read: read, write: write,
     list: list, saveList: saveList, findById: findById, upsert: upsert, removeById: removeById, genId: genId,
     categories: categories, getCategory: getCategory,

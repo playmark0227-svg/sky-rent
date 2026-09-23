@@ -1,7 +1,11 @@
 /**
  * グロースレンタカー 管理画面 - 汎用 CRUD ライブラリ
  *
- * localStorage をバックエンドに、テーブル表示・追加・編集・削除 を一括提供。
+ * SkyRentStore (js/store.js) の read/write をバックエンドに、テーブル表示・追加・編集・削除 を一括提供。
+ *   デモモード … これまでどおり localStorage に保存 (初回は defaults を投入)
+ *   本番モード … サーバーから読み込んだ一覧を表示し、保存は store の書込フック経由でサーバーへ。
+ *                defaults (デモの初期行) は書き込まない。
+ * store が読み込まれていないページでは、従来どおり localStorage を直接使う。
  * 各ページは設定オブジェクトを 1 つ渡すだけで実装できる。
  *
  * 使い方:
@@ -25,14 +29,44 @@
  *   </script>
  */
 (function () {
+  'use strict';
   const STORE_PREFIX = 'sky-rent.';
 
+  // store は crud.js より後に読み込まれるページがあるため、使う時点で取りに行く
+  function store() {
+    const S = window.SkyRentStore;
+    return S && typeof S.read === 'function' && typeof S.write === 'function' ? S : null;
+  }
+  function isLive() {
+    const S = store();
+    return !!(S && S.live);
+  }
+  // 'sky-rent.xxx' と書かれていても 'xxx' として扱う
+  function keyOf(key) {
+    const k = String(key || '');
+    return k.indexOf(STORE_PREFIX) === 0 ? k.slice(STORE_PREFIX.length) : k;
+  }
+
   function load(key, defaults) {
-    const raw = localStorage.getItem(STORE_PREFIX + key);
+    const k = keyOf(key);
+    const S = store();
+    if (S) {
+      const v = S.read(k, null);
+      if (v == null) {
+        // 初回: 既定値を保存 (デモのみ。本番ではデモの初期行を書き込まない)
+        if (!S.live && defaults && defaults.length) {
+          S.write(k, defaults);
+          return defaults.slice();
+        }
+        return [];
+      }
+      return v;
+    }
+    const raw = localStorage.getItem(STORE_PREFIX + k);
     if (raw == null) {
       // 初回: 既定値を保存
       if (defaults && defaults.length) {
-        localStorage.setItem(STORE_PREFIX + key, JSON.stringify(defaults));
+        localStorage.setItem(STORE_PREFIX + k, JSON.stringify(defaults));
         return defaults.slice();
       }
       return [];
@@ -40,7 +74,10 @@
     try { return JSON.parse(raw); } catch (e) { return []; }
   }
   function save(key, list) {
-    localStorage.setItem(STORE_PREFIX + key, JSON.stringify(list));
+    const k = keyOf(key);
+    const S = store();
+    if (S) { S.write(k, list); return; }
+    localStorage.setItem(STORE_PREFIX + k, JSON.stringify(list));
   }
 
   function escapeHtml(s) {
@@ -180,15 +217,16 @@
       const tbody = document.querySelector(tableSelector);
       if (!tbody) return;
 
-      let rows = data.slice();
-      if (sortBy) rows.sort((a, b) => String(a[sortBy] || '').localeCompare(String(b[sortBy] || '')));
+      // 並べ替えても編集対象は data の元の位置 (i) で指す
+      let rows = data.map((item, i) => ({ item: item, i: i }));
+      if (sortBy) rows.sort((a, b) => String(a.item[sortBy] || '').localeCompare(String(b.item[sortBy] || '')));
 
       if (!rows.length) {
         tbody.innerHTML = `<tr class="empty"><td colspan="${columns.length + 1}" style="text-align:center;padding:24px;color:#888">データがありません。「+ 追加」から登録してください</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = rows.map((item, i) => `
+      tbody.innerHTML = rows.map(({ item, i }) => `
         <tr data-idx="${i}">
           ${columns.map(col => `<td${col.center?' style="text-align:center"':''}${col.right?' style="text-align:right"':''}>${formatCell(item[col.key], col, item)}</td>`).join('')}
           <td style="text-align:center;width:80px"><a href="#" class="detail-link crud-edit" data-idx="${i}">編集</a></td>
@@ -220,10 +258,16 @@
           else if (col.type === 'status') newItem[col.key] = fd.get(col.key) === 'true';
           else newItem[col.key] = fd.get(col.key) || '';
         });
+        // 画面に出していない項目 (id など) は残す
+        const merged = item._isNew ? newItem : Object.assign({}, data[idx], newItem);
+        // サーバーの一覧 (app_collections) は行を id で識別するため、id 列の無い一覧にも付ける
+        if (merged.id == null || merged.id === '') {
+          merged.id = (!item._isNew && data[idx] && data[idx].id) || generateId(idPrefix, data, 'id');
+        }
         if (item._isNew) {
-          data.push(newItem);
+          data.push(merged);
         } else {
-          data[idx] = newItem;
+          data[idx] = merged;
         }
         save(storageKey, data);
         closeModal();
@@ -255,7 +299,8 @@
     return {
       reload: render,
       getData: () => data.slice(),
-      reset: () => { data = defaults.slice(); save(storageKey, data); render(); }
+      // 本番ではサーバーのデータをデモの初期行で上書きしない
+      reset: () => { if (!isLive()) { data = defaults.slice(); save(storageKey, data); } render(); }
     };
   }
 

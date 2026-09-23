@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>売上集計 | グロースレンタカー 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
 </head>
 <body>
   <div data-include="topbar"></div>
@@ -44,11 +44,15 @@
   <div id="loading" class="loading" hidden><div class="spinner"></div></div>
 
   <script src="partials.js"></script>
-  <script src="../js/config.js"></script>
-  <script src="../js/store.js?v=20260916-1"></script>
-  <script src="../js/pricing.js"></script>
-  <script src="../js/api.js"></script>
-  <script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/api.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
   (function () {
     document.addEventListener('DOMContentLoaded', async () => {
       document.querySelector('#loading').hidden = false;

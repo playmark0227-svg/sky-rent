@@ -4,11 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>特定商取引法に基づく表記 | グロースレンタカー</title>
-<meta name="description" content="グロースレンタカー (株式会社Skyward Growth) の特定商取引法に基づく表記です。事業者情報・販売価格・商品代金以外の必要料金・支払方法・引渡し時期・キャンセル料 (通常期/繁忙期) を記載しています。">
+<meta name="description" content="グロースレンタカー (株式会社Skyward Growth) の特定商取引法に基づく表記です。事業者情報・販売価格・商品代金以外の必要料金・支払方法・予約の成立時期・引渡し時期・キャンセルの方法とキャンセル料 (通常期/繁忙期) を記載しています。">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/public.css">
 <style>
   /* このページ固有の微調整 */
+  .doc-body h2 { scroll-margin-top: calc(var(--header-h) + 20px); }
+  .doc-body a:not(.btn):not(.g-inline-link) { color: var(--color-primary); text-decoration: underline; text-underline-offset: 3px; }
+  .doc-body .toc a { color: inherit; text-decoration: none; }
   .dl-table th { width: 30%; white-space: normal; vertical-align: top; }
   .dl-table td { vertical-align: top; }
   .tbl-scroll { overflow-x: auto; margin: 14px 0 22px; }
@@ -43,6 +46,7 @@
           <li><a href="#terms">販売条件について</a></li>
           <li><a href="#price">販売価格 (車両の基本料金)</a></li>
           <li><a href="#extra">商品代金以外の必要料金</a></li>
+          <li><a href="#cancel">キャンセルの方法</a></li>
           <li><a href="#cancel-normal">キャンセル料 (通常期)</a></li>
           <li><a href="#cancel-peak">キャンセル料 (繁忙期)</a></li>
           <li><a href="#contact">お問い合わせ</a></li>
@@ -122,22 +126,30 @@
           <tr>
             <th>申込方法</th>
             <td>
-              本サイトの<a href="search.html">空き検索</a>から拠点・日時・車両を選択し、お申し込みください。<a href="contact.html">お問い合わせフォーム</a>および<a href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener">公式LINE</a>でもご相談を承ります。<br>
-              会員登録をされますと、予約履歴の確認とポイントのご利用が可能です。
+              本サイトの<a href="search.html">空き検索</a>から拠点・日時・車両を選択し、最終確認画面で内容をご確認のうえお申し込みください。<a href="contact.html">お問い合わせフォーム</a>および<a href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener">公式LINE</a>でもご相談を承ります。<br>
+              ご予約の際に運転免許証の番号を入力していただく必要はありません (免許証は貸出手続きの際に店頭で確認します)。会員登録をされますと、予約履歴の確認とポイントのご利用が可能です。
+            </td>
+          </tr>
+          <tr>
+            <th>予約の成立時期</th>
+            <td>
+              Webでのご予約は、最終確認画面で「上記の内容で予約を確定する」ボタンを押し、当社のシステムがお申し込みを受け付けた時点で成立します (受け付けると、予約番号を記載した予約完了の画面が表示されます)。ご予約の内容と、ご予約の確認・キャンセルに使う照会URLを記載した予約確定メールをお送りします。<br>
+              貸渡契約は、ご利用当日に店頭で貸渡証を交付し、車両をお引渡しした時点で成立します (<a href="clause.html">貸渡約款</a>第2条・第9条)。
             </td>
           </tr>
           <tr>
             <th>引渡し方法および時期</th>
             <td>
               ご予約いただいた拠点 (北見本店 / 釧路店) の店頭にて、ご予約開始日時に車両をお引渡しします。<br>
-              お引渡しの際に、運転される方の運転免許証を確認させていただきます。
+              お引渡しの際に、運転される方全員の運転免許証の原本を確認させていただきます。
             </td>
           </tr>
           <tr>
             <th>予約の変更・キャンセル</th>
             <td>
-              ご予約の変更・キャンセルは<a href="contact.html">お問い合わせフォーム</a>または<a href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener">公式LINE</a>にて承ります。<br>
-              キャンセルの時期に応じてキャンセル料が発生します。
+              キャンセルは、貸出開始日時の前まで、<a href="mypage.html">マイページ</a> (会員の方) または予約確定メールに記載の照会URLから、ご自身でお手続きいただけます。<a href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener">公式LINE</a>でも承ります。<br>
+              日時・車両などの変更は、公式LINEまたは<a href="contact.html">お問い合わせフォーム</a>にてご相談ください。<br>
+              キャンセルの時期に応じてキャンセル料が発生します。詳しくは<a href="#cancel">「キャンセルの方法」</a>をご確認ください。
             </td>
           </tr>
           <tr>
@@ -151,7 +163,7 @@
             <th>その他の販売条件</th>
             <td>
               <ul class="cell-list">
-                <li>運転される方は、有効な運転免許証をお持ちいただく必要があります。</li>
+                <li>運転される方は、有効な運転免許証をお持ちいただく必要があります。ご予約時には、運転される方全員が有効な運転免許証をお持ちであることをご確認いただき、貸出手続きの際に店頭で原本を確認します。</li>
                 <li>割引 (学生・法人・二地域居住者 各¥1,100引き / 守成クラブ会員はキッチンカーのみ¥3,000引き) は、24時間以上のご利用が対象です。基本料金にのみ適用され、オプション・超過料金・キャンセル料には適用されません。</li>
                 <li>ポイントはご利用1回につき1pt、10ptで¥1,000クーポンを自動発行します。クーポンは最終利用日から12ヶ月間有効です。</li>
                 <li>貸渡しの詳細な条件は<a href="clause.html">貸渡約款</a>を、個人情報の取扱いは<a href="privacy.html">プライバシーポリシー</a>をご確認ください。</li>
@@ -235,6 +247,27 @@
         </table>
       </div>
 
+      <h2 id="cancel">キャンセルの方法</h2>
+      <p>ご予約のキャンセルは、次のいずれかの方法でお手続きください。</p>
+      <div class="tbl-scroll">
+        <table>
+          <thead>
+            <tr><th>方法</th><th>対象</th><th>受付</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><a href="mypage.html">マイページ</a></td><td>会員登録をしてご予約された方</td><td>貸出開始日時の前まで、24時間</td></tr>
+            <tr><td>予約確定メールの照会URL</td><td>すべてのご予約 (会員登録なしでご予約された方も)</td><td>貸出開始日時の前まで、24時間</td></tr>
+            <tr><td><a href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener">公式LINE</a></td><td>すべてのご予約</td><td>受付時間 9:00〜19:00 (年中無休)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li>マイページ・照会URLでは、キャンセルを確定する前に、その時点のキャンセル料を画面に表示します。確定すると、キャンセル受付のメールをお送りします。</li>
+        <li>キャンセル料は、貸出日と、キャンセルのお手続きが完了した日 (公式LINEの場合は当社がご連絡を受け付けた日) の差によって決まります。日付は日本時間で数えます (例: 貸出日の前日 23:59 までのお手続きは「前日」)。</li>
+        <li>貸出開始日時を過ぎたご予約は、Webではキャンセルできません。公式LINEまたは<a href="contact.html">お問い合わせフォーム</a>からご連絡ください。</li>
+        <li>ご連絡なく貸出開始日時を過ぎ、当社からもご連絡がつかない場合は、無断キャンセルとして下表の「無断キャンセル」の額を申し受けます。</li>
+      </ul>
+
       <h2 id="cancel-normal">キャンセル料 (通常期)</h2>
       <div class="tbl-scroll">
         <table>
@@ -282,7 +315,7 @@
       <p class="doc-note">表中の金額は24時間ご利用の場合の例です。括弧内は基本料金に対する割合で、実際のキャンセル料はご予約内容の基本料金に応じて計算いたします。料金およびキャンセル規定は「レンタカー 総合料金表 (2026年6月改定版)」に基づきます。</p>
 
       <h2 id="contact">お問い合わせ</h2>
-      <p>本表記の内容、ご予約の変更・キャンセル、電話番号の開示請求などは、お問い合わせフォームまたは公式LINEにてご連絡ください。受付時間は 9:00〜19:00 (年中無休) です。</p>
+      <p>本表記の内容、ご予約の変更、電話番号の開示請求などは、お問い合わせフォームまたは公式LINEにてご連絡ください。受付時間は 9:00〜19:00 (年中無休) です。キャンセルは<a href="#cancel">「キャンセルの方法」</a>のとおり、マイページまたは照会URLからもお手続きいただけます。</p>
       <div class="law-actions">
         <a class="btn btn-primary" href="contact.html">お問い合わせフォーム</a>
         <a class="btn btn-secondary" href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener">公式LINEで相談する</a>
@@ -295,10 +328,14 @@
   <div data-inc="footer"></div>
   <div data-inc="cta"></div>
 
-  <script src="js/config.js"></script>
-  <script src="js/store.js?v=20260916-1"></script>
-  <script src="js/pricing.js"></script>
-  <script src="js/api.js"></script>
   <script src="js/partials-public.js"></script>
+
+  <script src="js/config.js?v=20260923"></script>
+  <script src="js/store.js?v=20260923"></script>
+  <script src="js/pricing-core.js?v=20260923"></script>
+  <script src="js/pricing.js?v=20260923"></script>
+  <script src="js/api.js?v=20260923"></script>
+  <script src="js/backend.js?v=20260923"></script>
+  <script src="js/boot.js?v=20260923"></script>
 </body>
 </html>

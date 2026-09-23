@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>お問い合わせ | グロースレンタカー 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+  <style>
+    .iq-box { border-radius: 4px; padding: 10px 14px; font-size: 13px; line-height: 1.7; margin-bottom: 12px; background: #eef4fa; border: 1px solid #d4e2ef; color: #1c4a7a; }
+    .iq-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 10px 14px; margin-bottom: 12px; }
+    .iq-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+    .iq-tab { border: 1px solid var(--border); background: #fff; border-radius: 99px; padding: 6px 16px; font: inherit; font-size: 13px; cursor: pointer; color: #444; }
+    .iq-tab[aria-selected="true"] { background: var(--topbar); border-color: var(--topbar); color: #fff; font-weight: 700; }
+    .iq-tab .iq-n { display: inline-block; min-width: 20px; margin-left: 4px; padding: 0 6px; border-radius: 99px; background: rgba(0,0,0,.08); font-size: 11.5px; }
+    .iq-tab[aria-selected="true"] .iq-n { background: rgba(255,255,255,.25); }
+    .iq-tab.has-new .iq-n { background: #e54848; color: #fff; }
+    .iq-bar input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 3px; font: inherit; min-width: 220px; }
+    .iq-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+    .iq-list tbody tr { cursor: pointer; }
+    .iq-list tbody tr.is-selected td { background: #eef4fa; }
+    .iq-list tbody tr:hover td { background: #f6f9fc; }
+    .iq-st { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+    .iq-st--new { background: #fde8e6; color: #c0392b; }
+    .iq-st--in_progress { background: #fff4e0; color: #b56b00; }
+    .iq-st--closed { background: #ececec; color: #555; }
+    .iq-detail { padding: 16px 18px; position: sticky; top: 76px; }
+    .iq-detail h2 { font-size: 15px; color: var(--primary); margin-bottom: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .iq-grid { display: grid; grid-template-columns: 96px 1fr; gap: 7px 10px; font-size: 13px; margin-bottom: 12px; }
+    .iq-grid dt { color: #777; font-weight: 600; }
+    .iq-grid dd { margin: 0; word-break: break-word; }
+    .iq-grid a { color: var(--link); text-decoration: underline; }
+    .iq-body { white-space: pre-wrap; word-break: break-word; background: #fafbfc; border: 1px solid #eceff2; border-radius: 4px; padding: 10px 12px; font-size: 13.5px; line-height: 1.75; max-height: 320px; overflow: auto; margin-bottom: 14px; }
+    .iq-form label { display: block; font-weight: 600; font-size: 12.5px; color: #555; margin: 8px 0 4px; }
+    .iq-form select, .iq-form textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 3px; font: inherit; font-size: 13.5px; }
+    .iq-form textarea { min-height: 110px; resize: vertical; }
+    .iq-actions { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+    .iq-msg { font-size: 12.5px; }
+    .iq-msg.is-error { color: #c0392b; }
+    .iq-msg.is-ok { color: #1e8a4a; }
+    .iq-sub { color: #888; font-size: 11.5px; }
+    .iq-empty { color: #888; padding: 30px 10px; text-align: center; font-size: 13px; }
+    @media (max-width: 960px) {
+      .iq-layout { grid-template-columns: 1fr; }
+      .iq-detail { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">お問い合わせ</h1>
+    <p class="page-note">公開サイトのお問い合わせフォームから届いた内容です。対応状況とスタッフ用のメモを記録できます (お客様には表示されません)。
+      返信はメール・電話で行い、対応したら状態を「完了」にしてください。</p>
+
+    <div id="mode-note"></div>
+
+    <section class="card iq-bar">
+      <div class="iq-tabs" role="tablist" aria-label="対応状況">
+        <button type="button" class="iq-tab" role="tab" data-tab="new" aria-selected="true">未対応<span class="iq-n" id="n-new">0</span></button>
+        <button type="button" class="iq-tab" role="tab" data-tab="in_progress" aria-selected="false">対応中<span class="iq-n" id="n-in_progress">0</span></button>
+        <button type="button" class="iq-tab" role="tab" data-tab="closed" aria-selected="false">完了<span class="iq-n" id="n-closed">0</span></button>
+      </div>
+      <input type="search" id="kw" placeholder="お名前・会社・メール・本文・予約番号で絞り込み" aria-label="キーワード">
+      <span style="flex:1"></span>
+      <button type="button" class="btn btn-gray" id="btn-refresh" style="padding:7px 16px">最新の情報に更新</button>
+    </section>
+
+    <div class="iq-layout">
+      <section class="card">
+        <table class="data-table list iq-list">
+          <thead><tr><th>受付日時</th><th>番号</th><th>種類</th><th>お名前</th><th>関連予約</th><th>状態</th></tr></thead>
+          <tbody id="tbl"><tr class="empty"><td colspan="6">読み込み中...</td></tr></tbody>
+        </table>
+      </section>
+      <section class="card iq-detail" id="detail" aria-live="polite">
+        <p class="iq-empty">左の一覧からお問い合わせを選んでください。</p>
+      </section>
+    </div>
+  </main>
+
+  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
+
+  <script src="partials.js"></script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
+  (function () {
+    'use strict';
+    const S = window.SkyRentStore;
+    const B = window.SkyRentBackend;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+    const LABELS = { new: '未対応', in_progress: '対応中', closed: '完了' };
+    const LIVE = !!B.live;
+    const canWrite = B.admin.can('inquiries.write');
+    const state = { tab: 'new', selected: null };
+
+    function all() {
+      return S.list('inquiries').slice().sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    }
+    function find(id) { return S.findById('inquiries', 'inquiryId', id); }
+    function fmt(v) { return v ? B.jst.format(v, { weekday: false }) : ''; }
+    function statusOf(q) { return LABELS[q.status] ? q.status : 'new'; }
+
+    function matches(q, kw) {
+      if (!kw) return true;
+      return [q.inquiryId, q.name, q.company, q.email, q.tel, q.topic, q.body, q.reservationId, q.staffNote]
+        .some(x => String(x || '').toLowerCase().indexOf(kw) >= 0);
+    }
+
+    function renderCounts() {
+      const list = all();
+      Object.keys(LABELS).forEach(k => {
+        const n = list.filter(q => statusOf(q) === k).length;
+        $('#n-' + k).textContent = n;
+        if (k === 'new') document.querySelector('[data-tab="new"]').classList.toggle('has-new', n > 0);
+      });
+      document.querySelectorAll('[data-tab]').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === state.tab)));
+    }
+
+    function reservationCell(q) {
+      if (!q.reservationId) return '<span class="iq-sub">-</span>';
+      const r = S.findById('reservations', 'reservationId', q.reservationId);
+      return r ? '<a class="detail-link" href="reservation-list.html#' + esc(q.reservationId) + '"><code>' + esc(q.reservationId) + '</code></a>'
+               : '<code>' + esc(q.reservationId) + '</code>';
+    }
+
+    function renderList() {
+      renderCounts();
+      const kw = String($('#kw').value || '').trim().toLowerCase();
+      const list = all().filter(q => statusOf(q) === state.tab && matches(q, kw));
+      if (!list.length) {
+        $('#tbl').innerHTML = '<tr class="empty"><td colspan="6">' + (kw ? '該当するお問い合わせはありません' : LABELS[state.tab] + 'のお問い合わせはありません') + '</td></tr>';
+        return;
+      }
+      $('#tbl').innerHTML = list.map(q => '<tr data-id="' + esc(q.inquiryId) + '"' + (q.inquiryId === state.selected ? ' class="is-selected"' : '') + ' tabindex="0">' +
+        '<td style="white-space:nowrap">' + esc(fmt(q.createdAt)) + '</td>' +
+        '<td><code>' + esc(q.inquiryId) + '</code></td>' +
+        '<td>' + esc(q.topic) + '</td>' +
+        '<td><strong>' + esc(q.name) + '</strong>' + (q.company ? '<div class="iq-sub">' + esc(q.company) + '</div>' : '') + '</td>' +
+        '<td>' + reservationCell(q) + '</td>' +
+        '<td><span class="iq-st iq-st--' + statusOf(q) + '">' + LABELS[statusOf(q)] + '</span></td>' +
+        '</tr>').join('');
+    }
+
+    function renderDetail() {
+      const box = $('#detail');
+      const q = state.selected ? find(state.selected) : null;
+      if (!q) { box.innerHTML = '<p class="iq-empty">左の一覧からお問い合わせを選んでください。</p>'; return; }
+      const r = q.reservationId ? S.findById('reservations', 'reservationId', q.reservationId) : null;
+      let resv = '-';
+      if (q.reservationId) {
+        resv = r
+          ? '<a href="reservation-list.html#' + esc(q.reservationId) + '"><code>' + esc(q.reservationId) + '</code></a> ' +
+            esc(r.assetName || '') + ' / ' + esc(B.jst.format(r.start, { weekday: false })) + ' 〜 ' + esc(B.jst.format(r.end, { weekday: false })) +
+            ' <span class="status status-' + esc(r.status) + '">' + esc(S.STATUS_LABELS[r.status] || r.status) + '</span>'
+          : '<code>' + esc(q.reservationId) + '</code> <span class="iq-sub">(該当する予約が見つかりません。番号の誤りか、担当外の拠点の予約です)</span>';
+      }
+      const mail = q.email ? '<a href="mailto:' + esc(q.email) + '">' + esc(q.email) + '</a>' : '-';
+      const tel = q.tel ? '<a href="tel:' + esc(String(q.tel).replace(/[^0-9+]/g, '')) + '">' + esc(q.tel) + '</a>' : '-';
+      const st = statusOf(q);
+      box.innerHTML =
+        '<h2><code>' + esc(q.inquiryId) + '</code> <span class="iq-st iq-st--' + st + '">' + LABELS[st] + '</span></h2>' +
+        '<dl class="iq-grid">' +
+          '<dt>受付日時</dt><dd>' + esc(B.jst.format(q.createdAt)) + '</dd>' +
+          '<dt>種類</dt><dd>' + esc(q.topic) + '</dd>' +
+          '<dt>お名前</dt><dd><strong>' + esc(q.name) + '</strong> 様' + (q.company ? ' / ' + esc(q.company) : '') + (q.userId ? ' <span class="chip">会員</span>' : '') + '</dd>' +
+          '<dt>メール</dt><dd>' + mail + '</dd>' +
+          '<dt>電話</dt><dd>' + tel + '</dd>' +
+          '<dt>関連予約</dt><dd>' + resv + '</dd>' +
+        '</dl>' +
+        '<div class="iq-sub" style="margin-bottom:4px">お問い合わせ内容</div>' +
+        '<div class="iq-body" id="iq-body"></div>' +
+        '<form class="iq-form" id="iq-form">' +
+          '<label for="iq-status">対応状況</label>' +
+          '<select id="iq-status">' + Object.keys(LABELS).map(k => '<option value="' + k + '"' + (k === st ? ' selected' : '') + '>' + LABELS[k] + '</option>').join('') + '</select>' +
+          '<label for="iq-note">スタッフメモ (お客様には表示されません)</label>' +
+          '<textarea id="iq-note" maxlength="4000" placeholder="例: 9/24 電話で回答済み (担当: 山田)"></textarea>' +
+          '<div class="iq-actions">' +
+            '<button type="submit" class="btn btn-primary" id="iq-save" style="padding:8px 22px">保存</button>' +
+            (st === 'new' ? '<button type="button" class="btn btn-gray" id="iq-start" style="padding:8px 16px">対応を始める</button>' : '') +
+            (st !== 'closed' ? '<button type="button" class="btn btn-gray" id="iq-close" style="padding:8px 16px">完了にする</button>' : '') +
+            '<span class="iq-msg" id="iq-msg" role="status"></span>' +
+          '</div>' +
+          (canWrite ? '' : '<p class="iq-sub" style="margin-top:8px">対応状況とメモの変更には、お問い合わせの編集権限が必要です。</p>') +
+        '</form>';
+      // 本文・メモは textContent / value で入れる (HTML として解釈させない)
+      $('#iq-body').textContent = q.body || '';
+      $('#iq-note').value = q.staffNote || '';
+      const form = $('#iq-form');
+      if (!canWrite) form.querySelectorAll('select, textarea, button').forEach(el => { el.disabled = true; });
+      form.addEventListener('submit', e => { e.preventDefault(); save(q.inquiryId, $('#iq-status').value); });
+      const start = $('#iq-start');
+      if (start) start.addEventListener('click', () => save(q.inquiryId, 'in_progress'));
+      const close = $('#iq-close');
+      if (close) close.addEventListener('click', () => save(q.inquiryId, 'closed'));
+    }
+
+    function select(id) {
+      state.selected = id;
+      document.querySelectorAll('#tbl tr[data-id]').forEach(tr => tr.classList.toggle('is-selected', tr.dataset.id === id));
+      renderDetail();
+    }
+
+    async function save(id, status) {
+      if (!canWrite) return;
+      const msg = $('#iq-msg');
+      const note = $('#iq-note').value;
+      const buttons = document.querySelectorAll('#iq-form button');
+      buttons.forEach(b => { b.disabled = true; });
+      msg.className = 'iq-msg';
+      msg.textContent = '保存しています…';
+      try {
+        await B.admin.updateInquiry(id, { status: status, staffNote: note });
+        // 状態が変わったら、その状態のタブへ移って選んだままにする
+        const q = find(id);
+        if (q) state.tab = statusOf(q);
+        renderList();
+        renderDetail();
+        const m = $('#iq-msg');
+        if (m) { m.className = 'iq-msg is-ok'; m.textContent = '保存しました。'; }
+        B.toast('お問い合わせ ' + id + ' を保存しました (' + LABELS[status] + ')。', 'success');
+      } catch (e) {
+        buttons.forEach(b => { b.disabled = false; });
+        msg.className = 'iq-msg is-error';
+        msg.textContent = '保存できませんでした。' + ((e && e.message) || B.errorMessage('INTERNAL'));
+      }
+    }
+
+    // 本番: サーバーの最新の問い合わせを読み直す
+    async function refresh() {
+      if (!LIVE) { renderList(); renderDetail(); return; }
+      const c = B.client;
+      if (!c) return;
+      $('#loading').hidden = false;
+      try {
+        const res = await c.from('inquiries').select('*').order('created_at', { ascending: false }).range(0, 999);
+        if (res.error) throw res.error;
+        S._hydrate({ inquiries: (res.data || []).map(B.fromDb.inquiry) });
+        renderList();
+        renderDetail();
+      } catch (e) {
+        B.toast('最新の情報を読み込めませんでした。通信環境をご確認のうえ、もう一度お試しください。', 'error');
+      } finally {
+        $('#loading').hidden = true;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!LIVE) {
+        $('#mode-note').innerHTML = '<div class="iq-box"><strong>デモ環境です。</strong> このブラウザで公開サイトのお問い合わせフォームから送信した内容だけが表示されます。' +
+          '本番接続時は、サーバーに届いたお問い合わせを表示・更新でき、受付のメールもお客様と店舗に送られます。</div>';
+      }
+      document.querySelectorAll('[data-tab]').forEach(t => t.addEventListener('click', () => { state.tab = t.dataset.tab; renderList(); }));
+      $('#kw').addEventListener('input', renderList);
+      $('#btn-refresh').addEventListener('click', refresh);
+      $('#tbl').addEventListener('click', e => {
+        if (e.target.closest('a')) return;
+        const tr = e.target.closest('tr[data-id]');
+        if (tr) select(tr.dataset.id);
+      });
+      $('#tbl').addEventListener('keydown', e => {
+        const tr = e.target.closest && e.target.closest('tr[data-id]');
+        if (tr && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(tr.dataset.id); }
+      });
+      // inquiries.html#C00012 で直接開く
+      let hash = '';
+      try { hash = decodeURIComponent(location.hash.slice(1)); } catch (e) { hash = ''; }
+      const q = hash ? find(hash) : null;
+      if (q) { state.tab = statusOf(q); state.selected = q.inquiryId; }
+      renderList();
+      renderDetail();
+    });
+  })();
+  </script>
+</body>
+</html>

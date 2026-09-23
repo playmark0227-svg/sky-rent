@@ -6,3 +6,19 @@ node_modules/
 .vscode/
 .idea/
 .claude/
+
+# Supabase CLI の作業ファイル
+supabase/.temp/
+supabase/.branches/
+
+# 秘密情報 (API キー・サービスアカウント鍵・WORKER_SECRET など) を書いたファイル
+#   見本の .env.example だけは共有する
+supabase/functions/.env.local
+.env*
+!.env.example
+service-account*.json
+*.p12
+
+# ローカル検証用のダミー鍵 (scripts/make-test-fixtures.mjs で生成)
+tests/fixtures/*.pem
+tests/fixtures/test-service-account.json

@@ -5,7 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ダッシュボード | グロースレンタカー 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
+  <style>
+    .dash-todo { padding: 14px 16px; margin-bottom: 12px; }
+    .dash-todo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .dash-todo-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 4px; background: #fafbfc; }
+    .dash-todo-item:hover { border-color: var(--primary); }
+    .dash-todo-n { font-size: 26px; font-weight: 700; color: #1e8a4a; min-width: 36px; text-align: center; }
+    .dash-todo-item.is-alert { border-color: #f3c4bf; background: #fdf5f4; }
+    .dash-todo-item.is-alert .dash-todo-n { color: #c0392b; }
+    .dash-todo-item span:last-child { font-size: 13px; font-weight: 600; color: #444; }
+    .dash-todo-note { font-size: 12px; color: #777; margin-top: 8px; }
+    .dash-todo-note:empty { display: none; }
+    @media (max-width: 760px) { .dash-todo-grid { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
   <div data-include="topbar"></div>
@@ -41,6 +54,17 @@
       <a class="kpi kpi-1" href="revenue.html" style="background:#2e7d5b"><div class="kpi-label">今月の売上</div><div class="kpi-value" style="font-size:38px">¥<span id="kpi-sales">0</span></div></a>
     </section>
 
+    <!-- 対応が必要なこと -->
+    <section class="card dash-todo" id="todo-card">
+      <strong class="card-section-title">対応が必要なこと</strong>
+      <div class="dash-todo-grid">
+        <a class="dash-todo-item" href="inquiries.html" id="todo-inquiries"><span class="dash-todo-n" id="n-inquiries">-</span><span>未対応のお問い合わせ</span></a>
+        <a class="dash-todo-item" href="mail-log.html?status=failed&amp;kind=mail" id="todo-mail"><span class="dash-todo-n" id="n-mail-failed">-</span><span>メール送信の失敗</span></a>
+        <a class="dash-todo-item" href="mail-log.html?status=failed&amp;kind=gcal" id="todo-gcal"><span class="dash-todo-n" id="n-gcal-failed">-</span><span>カレンダー同期の失敗</span></a>
+      </div>
+      <p class="dash-todo-note" id="todo-note"></p>
+    </section>
+
     <!-- 拠点別サマリー -->
     <section class="card" style="padding:14px 16px;margin-bottom:12px">
       <strong class="card-section-title">拠点別サマリー (本日)</strong>
@@ -70,7 +94,7 @@
     <!-- 下段 -->
     <section class="bottom-row">
       <div class="bottom-card">
-        <h3 class="bottom-title">自動通知ログ (メール送信)</h3>
+        <h3 class="bottom-title">最近の動き</h3>
         <ul class="news-list" id="notif-list"><li>-</li></ul>
       </div>
       <div class="bottom-card">
@@ -88,10 +112,14 @@
   <div id="loading" class="loading" hidden><div class="spinner"></div></div>
 
   <script src="partials.js"></script>
-  <script src="../js/config.js"></script>
-  <script src="../js/store.js?v=20260916-1"></script>
-  <script src="../js/pricing.js"></script>
-  <script src="../js/api.js"></script>
-  <script src="js/manage.js"></script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/api.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred" data-src="js/manage.js"></script>
 </body>
 </html>

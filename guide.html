@@ -27,6 +27,7 @@
   }
   .g-step h3 { font-size: 18px; font-weight: 900; color: #fff; margin: 0 0 10px; }
   .g-step > div > *:last-child { margin-bottom: 0; }
+  .doc-body li a:not(.btn):not(.g-inline-link), .faq .a a { color: var(--color-primary); text-decoration: underline; text-underline-offset: 3px; }
   .g-inline-link { display: inline-flex; align-items: center; gap: 6px; color: var(--color-primary); font-size: 13.5px; font-weight: 700; margin-top: 4px; }
   .g-inline-link:hover { text-decoration: underline; }
 
@@ -94,6 +95,9 @@
               <li>出発日時と返却日時、ご利用の拠点 (北見本店 / 釧路店) を選択します</li>
               <li>コンパクトカー・SUV・ミニバン・軽トラック・キッチンカーからお選びいただけます</li>
               <li>ご利用は1時間単位の時間貸しと、24時間貸しの2種類からお選びいただけます (キッチンカーは24時間貸しのみ)</li>
+              <li>ご予約の際に運転免許証の番号を入力する必要はありません。「運転される方全員が有効な運転免許証を持っている」ことをご確認のうえチェックしてください (免許証は当日店頭で確認します)</li>
+              <li>最終確認画面で、料金の内訳と合計、お支払い方法、キャンセル料の規定をご確認のうえ「上記の内容で予約を確定する」を押すと、ご予約が成立します</li>
+              <li>ご予約が成立すると、予約番号が画面に表示され、予約確定メール (ご予約の確認・キャンセルに使える照会URL付き) をお送りします</li>
               <li>お支払いは現地決済です。オンラインでの事前決済は行っておりません</li>
             </ul>
             <a class="g-inline-link" href="search.html">空き状況を検索してご予約 →</a>
@@ -106,10 +110,11 @@
           <div>
             <span class="lbl">Step 2</span>
             <h3>公式LINEの友だち追加</h3>
-            <p>ご予約後のご連絡は、公式LINEにて承っております。受付のご案内、当日の待ち合わせ、ご予約内容の変更やキャンセルのご相談も、LINEからお気軽にご連絡ください。</p>
+            <p>ご予約後のご連絡は、公式LINEにて承っております。受付のご案内、当日の待ち合わせ、ご予約内容の変更のご相談も、LINEからお気軽にご連絡ください。</p>
             <ul>
               <li>ご予約が完了しましたら、お早めに友だち追加をお願いいたします</li>
               <li>ご返却時刻の延長をご希望の場合も、こちらからご連絡いただけます</li>
+              <li>キャンセルは、貸出開始日時の前まで、<a href="mypage.html">マイページ</a> (会員の方) または予約確定メールの照会URLから24時間お手続きいただけます。公式LINEでも承ります</li>
             </ul>
             <a class="g-inline-link" href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener">公式LINEを友だち追加する ↗</a>
           </div>
@@ -122,8 +127,8 @@
             <h3>ご来店・受付</h3>
             <p>ご予約いただいた日時に、拠点までお越しください。受付では、次のものをご提示いただきます。</p>
             <ul>
-              <li>運転免許証 (運転される方全員分)</li>
-              <li>ご予約時のお名前がわかるもの</li>
+              <li>運転免許証の原本 (運転される方全員分)</li>
+              <li>ご予約時のお名前がわかるもの (予約番号をお控えいただくとスムーズです)</li>
               <li>法人としてご利用の場合は、社員証など所属が確認できるもの</li>
               <li>学割をご利用の場合は、学生証</li>
               <li>二地域居住者割引をご利用の場合は、二地域居住者チラシ</li>
@@ -254,7 +259,7 @@
       <p>免責補償制度 (CDW) は¥1,650/日、安心保証コース (PAP) は¥3,300/日です (キッチンカーは¥3,300/日・¥6,600/日)。万一の事故の際にお客様にご負担いただくノンオペレーションチャージ (NOC) や、キャンセル料の詳細は、下記のページに掲載しています。</p>
       <a class="g-inline-link" href="fleet.html">車両ごとの料金を見る →</a><br>
       <a class="g-inline-link" href="insurance.html">保険・補償プラン →</a><br>
-      <a class="g-inline-link" href="law.html">キャンセル料など、特定商取引法に基づく表記 →</a>
+      <a class="g-inline-link" href="law.html#cancel">キャンセルの方法とキャンセル料 (特定商取引法に基づく表記) →</a>
 
       <h2 id="faq">よくあるご質問</h2>
       <p>ご利用にあたって、よくいただくご質問を抜粋しました。</p>
@@ -266,7 +271,11 @@
         </details>
         <details class="faq">
           <summary><span class="q">Q</span>受付には何を持っていけばよいですか？<span class="tg"></span></summary>
-          <div class="a">運転される方全員分の運転免許証と、ご予約時のお名前がわかるものをお持ちください。法人としてご利用の場合は社員証など、学割をご利用の場合は学生証もあわせてご提示ください。</div>
+          <div class="a">運転される方全員分の運転免許証 (原本) と、ご予約時のお名前がわかるものをお持ちください。法人としてご利用の場合は社員証など、学割をご利用の場合は学生証もあわせてご提示ください。</div>
+        </details>
+        <details class="faq">
+          <summary><span class="q">Q</span>予約をキャンセルしたいときは？<span class="tg"></span></summary>
+          <div class="a">貸出開始日時の前であれば、<a href="mypage.html">マイページ</a> (会員の方) または予約確定メールに記載の照会URLから、24時間いつでもキャンセルいただけます。確定する前に、その時点のキャンセル料が画面に表示されます。公式LINEでも承ります。キャンセル料の規定は<a href="law.html#cancel">特定商取引法に基づく表記</a>をご覧ください。</div>
         </details>
         <details class="faq">
           <summary><span class="q">Q</span>返却時刻を延長したいときは？<span class="tg"></span></summary>
@@ -290,10 +299,14 @@
   <div data-inc="footer"></div>
   <div data-inc="cta"></div>
 
-  <script src="js/config.js"></script>
-  <script src="js/store.js?v=20260916-1"></script>
-  <script src="js/pricing.js"></script>
-  <script src="js/api.js"></script>
   <script src="js/partials-public.js"></script>
+
+  <script src="js/config.js?v=20260923"></script>
+  <script src="js/store.js?v=20260923"></script>
+  <script src="js/pricing-core.js?v=20260923"></script>
+  <script src="js/pricing.js?v=20260923"></script>
+  <script src="js/api.js?v=20260923"></script>
+  <script src="js/backend.js?v=20260923"></script>
+  <script src="js/boot.js?v=20260923"></script>
 </body>
 </html>

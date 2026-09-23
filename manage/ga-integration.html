@@ -11,7 +11,7 @@
 
   <main class="main">
     <h1 class="page-title">GoogleAnalytics連携設定</h1>
-    <p class="page-note">予約サイトへのアクセス解析を有効化。GA4 のトラッキングID (G-XXXXXXX) を入力してください。</p>
+    <p class="page-note" id="page-note">予約サイトへのアクセス解析を有効化。GA4 のトラッキングID (G-XXXXXXX) を入力してください。</p>
 
     <section class="card" style="padding:24px">
       <div class="form-row">
@@ -22,11 +22,15 @@
         <label>Universal Analytics ID</label>
         <input type="text" class="form-input" data-setting="uaId" placeholder="UA-XXXXXXXXX-X (旧版・任意)">
       </div>
+      <div class="form-row" style="border-bottom:0;padding-top:0">
+        <label></label>
+        <small style="flex:1;color:#777;font-size:12px">Universal Analytics (UA-) は Google 側で計測が終了しています。新しく設定する場合は GA4 の測定ID (G-) を使ってください。</small>
+      </div>
       <div class="form-row">
         <label>イベント計測</label>
         <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-          <label class="chk"><input type="checkbox" data-setting="event.purchase"> 予約完了 (purchase)</label>
-          <label class="chk"><input type="checkbox" data-setting="event.viewItem"> 車種ページ閲覧 (view_item)</label>
+          <label class="chk"><input type="checkbox" data-setting="event.purchase" checked> 予約完了 (purchase)</label>
+          <label class="chk"><input type="checkbox" data-setting="event.viewItem" checked> 車種ページ閲覧 (view_item)</label>
           <label class="chk"><input type="checkbox" data-setting="event.search"> 検索イベント (search)</label>
         </div>
       </div>
@@ -54,14 +58,27 @@
   <style>.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer}</style>
   <script src="partials.js"></script>
   <script src="js/settings.js"></script>
-  <script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
+  (function () {
+    'use strict';
+    const B = window.SkyRentBackend;
+    // 保存されている値 (本番はサーバー、デモはこのブラウザ) をフォームに出す。
+    // 既定値 (予約完了・車種ページ閲覧の計測 = ON) は HTML の初期値で持ち、保存済みの値は上書きしない
     SkyRentSettings.init('ga');
-    if (!localStorage.getItem('sky-rent.settings.ga')) {
-      ['event.purchase','event.viewItem'].forEach(k => {
-        const el = document.querySelector(`[data-setting="${k}"]`);
-        if (el) el.checked = true;
-      });
+    const id = document.querySelector('[data-setting="ga4Id"]');
+    if (id) id.addEventListener('blur', () => { id.value = id.value.trim(); });
+    if (!B.admin.can('settings.write')) {
+      document.querySelectorAll('[data-setting], [data-save]').forEach(el => { el.disabled = true; });
+      document.getElementById('page-note').textContent = '予約サイトへのアクセス解析の設定です (変更は管理者だけが行えます)。';
     }
+  })();
   </script>
 </body>
 </html>

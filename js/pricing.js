@@ -1,145 +1,158 @@
 /**
- * グロースレンタカー - 料金計算エンジン
+ * グロースレンタカー - 料金計算 (画面向けアダプタ)
  *
- * 要件定義書 7章「料金計算ロジックの拡張性」準拠。
- * 対応する料金体系:
- *   - 時間貸し (priceHour) : 24時間未満の利用で、日貸しより安くなる場合に自動適用
- *   - 日貸し   (priceDay)  : 基本 (1日単位・切り上げ)
- *   - 週割引   (priceWeek) : 7日以上で自動適用 (端数は日割り。ただし週料金を超えない)
- *   - 月割引   (priceMonth): 30日以上で自動適用 (同上)
- *   - ハイシーズン料金     : sky-rent.high-season の期間に重なる日数分だけ加算 (%)
- *   - オプション           : per_day (日数×単価) / per_rental (1回固定)
- *   - クーポン割引         : 合計から額面を控除 (下限 0)
+ * 計算そのものは js/pricing-core.js (SkyRentPricingCore) が行う。サーバー (Edge Function) と同じコード。
+ * このファイルは、既存画面が使ってきた SkyRentPricing.calculate() の形を保つための薄い変換層
+ * (実装契約書 docs/production/implementation-v1.md §1「js/pricing.js」)。
  *
- * 新しい料金体系 (長期割引・会員ランク別など) は rules 配列に関数を追加するだけで拡張可能。
+ *   calculate({asset, start, end, quantity, options, coupon, discountType})
+ *       → {lines:[{label, amount, code, optionId?}], days, hours, plan, subtotal, discount, total,
+ *          ok, errors, quote}
+ *         discount = 割引 + クーポン (total = subtotal − discount)。quote は SkyRentPricingCore の Quote。
+ *   quote(p)            … SkyRentPricingCore.quote に料金ルールを補って呼ぶ (Quote をそのまま返す)。
+ *                         p.options の代わりに p.optionIds、p.asset の代わりに p.assetId でも可 (store から引く)。
+ *   cancellationFee(p)  … キャンセル料 {cls, busy, daysBefore, pct, fee, label}。
+ *                         p = {reservation | asset/assetId + start (+ end), cancelAt?, base?, noShow?, category?, rules?}
+ *                         cancelAt 省略時は現在時刻、base 省略時は予約の料金内訳 → 期間から再計算 → 24時間料金。
+ *   rules()             … 現在の料金ルール (SkyRentStore の settings.pricing_rules → 無ければ DEFAULT_RULES の複製)。
+ *   yen(n)              … '¥1,100' 形式の表示
+ *
+ * 料金ルールは SkyRentStore.read('settings.pricing_rules') (本番は backend が app_settings から読み込む)。
+ * 取り扱いは車両のみのため数量は常に1台として計算する (quantity は互換のために受け取るだけ)。
  */
 (function () {
   'use strict';
-  const DAY = 86400000;
-  const HOUR = 3600000;
 
-  function yen(n) { return '¥' + Math.round(n).toLocaleString(); }
+  function core() {
+    const c = window.SkyRentPricingCore;
+    if (!c) throw new Error('js/pricing-core.js が読み込まれていません (pricing.js より先に読み込んでください)');
+    return c;
+  }
+  function store() { return window.SkyRentStore || null; }
 
-  // 期間 → {hours, days} (最低 1時間 / 1日)
-  function duration(start, end) {
-    const ms = Math.max(0, new Date(end) - new Date(start));
-    const hours = Math.max(1, Math.ceil(ms / HOUR));
-    const days = Math.max(1, Math.ceil(ms / DAY));
-    return { ms: ms, hours: hours, days: days };
+  function yen(n) {
+    const v = Math.round(Number(n) || 0);
+    return (v < 0 ? '-¥' : '¥') + String(Math.abs(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
-  // ===== 基本料金 (1台/1点あたり) =====
-  function baseCharge(asset, start, end) {
-    const d = duration(start, end);
-    const pH = Number(asset.priceHour) || 0;
-    const pD = Number(asset.priceDay) || 0;
-    const pW = Number(asset.priceWeek) || 0;
-    const pM = Number(asset.priceMonth) || 0;
-
-    // 月貸し
-    if (d.days >= 30 && pM) {
-      const months = Math.floor(d.days / 30);
-      const rest = d.days % 30;
-      const amount = Math.min(pM * months + rest * pD, pM * (months + 1));
-      return { amount: amount, label: '基本料金 (月割 ' + d.days + '日)', days: d.days, hours: d.hours, plan: 'monthly' };
-    }
-    // 週貸し
-    if (d.days >= 7 && pW) {
-      const weeks = Math.floor(d.days / 7);
-      const rest = d.days % 7;
-      const amount = Math.min(pW * weeks + rest * pD, pW * (weeks + 1));
-      return { amount: amount, label: '基本料金 (週割 ' + d.days + '日)', days: d.days, hours: d.hours, plan: 'weekly' };
-    }
-    // 時間貸し (24h未満のみ・日貸しより安い場合)
-    if (d.hours < 24 && pH) {
-      const hourly = pH * d.hours;
-      if (hourly < pD || !pD) {
-        return { amount: hourly, label: '基本料金 (時間貸し ' + d.hours + '時間)', days: d.days, hours: d.hours, plan: 'hourly' };
-      }
-    }
-    // 日貸し
-    return { amount: pD * d.days, label: '基本料金 (' + d.days + '日)', days: d.days, hours: d.hours, plan: 'daily' };
+  // 計算に使うルール (読み取り専用で使う)
+  function currentRules() {
+    const S = store();
+    try {
+      const r = S && typeof S.read === 'function' ? S.read('settings.pricing_rules', null) : null;
+      if (r && typeof r === 'object' && !Array.isArray(r)) return r;
+    } catch (e) { /* 読めなければ既定値 */ }
+    return core().DEFAULT_RULES;
+  }
+  // 画面へ渡す用 (既定値は凍結されているので複製して返す)
+  function rules() {
+    const r = currentRules();
+    return r === core().DEFAULT_RULES ? JSON.parse(JSON.stringify(r)) : r;
   }
 
-  // ===== ハイシーズン加算 =====
-  // seasons: [{name, start, end, rate}] rate=% (例 20)。期間に重なる日数割合で基本料金に加算。
-  function seasonSurcharge(base, start, end, seasons) {
-    if (!seasons || !seasons.length || !base.amount) return null;
-    const s = new Date(start), e = new Date(end);
-    let surcharge = 0;
-    const names = [];
-    seasons.forEach(season => {
-      if (!season.start || !season.end) return;
-      const ss = new Date(season.start + (String(season.start).length <= 10 ? 'T00:00:00' : ''));
-      const se = new Date(season.end + (String(season.end).length <= 10 ? 'T23:59:59' : ''));
-      const from = Math.max(s.getTime(), ss.getTime());
-      const to = Math.min(e.getTime(), se.getTime());
-      if (to <= from) return;
-      const overlapDays = Math.ceil((to - from) / DAY);
-      const rate = Number(season.rate) || 20;
-      surcharge += Math.round(base.amount / base.days * overlapDays * rate / 100);
-      names.push(season.name || 'ハイシーズン');
-    });
-    if (!surcharge) return null;
-    return { amount: surcharge, label: 'ハイシーズン加算 (' + names.join('・') + ')' };
+  function findAsset(id) {
+    const S = store();
+    return id != null && S && typeof S.getAsset === 'function' ? (S.getAsset(id) || null) : null;
+  }
+  function findOptions(ids) {
+    const S = store();
+    if (!Array.isArray(ids) || !S || typeof S.list !== 'function') return [];
+    const all = S.list('options') || [];
+    return ids.map(function (id) {
+      return all.find(function (o) { return String(o.optionId) === String(id); });
+    }).filter(Boolean);
   }
 
-  // ===== オプション料金 =====
-  function optionCharges(options, days) {
-    return (options || []).map(o => {
-      const isPerDay = o.priceType !== 'per_rental';
-      const amount = isPerDay ? (Number(o.price) || 0) * days : (Number(o.price) || 0);
-      return {
-        amount: amount,
-        label: o.name + (isPerDay ? ' (' + yen(o.price) + ' × ' + days + '日)' : ' (1回)'),
-        optionId: o.optionId
-      };
-    });
-  }
-
-  /**
-   * 総合計算
-   * @param {object} p {asset, start, end, quantity, options: [option objects], coupon: {amount}|null, seasons: []}
-   * @returns {object} {lines: [{label, amount}], days, hours, plan, subtotal, discount, total}
-   */
-  function calculate(p) {
-    const qty = Number(p.quantity) || 1;
-    const base = baseCharge(p.asset, p.start, p.end);
-    const lines = [];
-
-    lines.push({
-      label: base.label + (qty > 1 ? ' × ' + qty + '点' : ''),
-      amount: base.amount * qty
-    });
-
-    const season = seasonSurcharge(base, p.start, p.end, p.seasons || readSeasons());
-    if (season) lines.push({ label: season.label, amount: season.amount * qty });
-
-    optionCharges(p.options, base.days).forEach(l => lines.push(l));
-
-    const subtotal = lines.reduce((s, l) => s + l.amount, 0);
-    let discount = 0;
-    if (p.coupon && p.coupon.amount) {
-      discount = Math.min(Number(p.coupon.amount) || 0, subtotal);
-      lines.push({ label: 'クーポン割引', amount: -discount });
-    }
-    const total = subtotal - discount;
-
+  function coreInput(p) {
+    p = p || {};
+    const c = p.coupon;
+    const couponAmount = c ? Number(c.amount) : 0;
     return {
-      lines: lines,
-      days: base.days, hours: base.hours, plan: base.plan,
-      subtotal: subtotal, discount: discount, total: total
+      asset: p.asset || findAsset(p.assetId),
+      start: p.start,
+      end: p.end,
+      options: Array.isArray(p.options) ? p.options : findOptions(p.optionIds),
+      discountType: p.discountType || null,
+      coupon: couponAmount > 0 ? { id: c.id != null ? c.id : (c.couponId != null ? c.couponId : null), amount: couponAmount } : null,
+      rules: p.rules || currentRules()
     };
   }
 
-  // 管理画面のハイシーズン管理 (sky-rent.high-season) を自動参照
-  function readSeasons() {
-    try {
-      const raw = localStorage.getItem('sky-rent.high-season');
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    } catch (e) { return []; }
+  function quote(p) { return core().quote(coreInput(p)); }
+
+  /** 旧形式の料金計算 (detail.html / booking.html など既存画面用) */
+  function calculate(p) {
+    const q = quote(p);
+    return {
+      lines: q.lines.map(function (l) {
+        const o = { label: l.label, amount: l.amount, code: l.code };
+        if (l.optionId != null) o.optionId = l.optionId;
+        return o;
+      }),
+      days: q.days, hours: q.hours, plan: q.plan,
+      subtotal: q.subtotal,
+      discount: q.discount + q.couponDiscount,
+      total: q.total,
+      ok: q.ok, errors: q.errors.slice(),
+      quote: q
+    };
   }
 
-  window.SkyRentPricing = { calculate: calculate, baseCharge: baseCharge, duration: duration, yen: yen };
+  /** キャンセル料 (予約データから足りない値を補って SkyRentPricingCore.cancellationFee を呼ぶ) */
+  function cancellationFee(p) {
+    p = p || {};
+    const r = p.reservation || null;
+    const asset = p.asset || findAsset(p.assetId != null ? p.assetId : (r ? r.assetId : null));
+    const start = p.start != null ? p.start : (r ? r.start : null);
+    const end = p.end != null ? p.end : (r ? r.end : null);
+    const R = p.rules || currentRules();
+
+    let category = p.category || null;
+    if (category && category.id == null && category.categoryId != null) category = { id: category.categoryId };
+    if (!category) {
+      const catId = asset && asset.categoryId != null ? asset.categoryId : (r ? r.categoryId : null);
+      if (catId != null) category = { id: catId };
+    }
+
+    let base = p.base != null && p.base !== '' ? Number(p.base) : NaN;
+    if (!isFinite(base)) {
+      const snap = r && r.price && typeof r.price === 'object' ? Number(r.price.base) : NaN;
+      if (isFinite(snap) && snap >= 0) base = snap;
+      else if (asset && start != null && end != null) {
+        const q = core().quote({ asset: asset, start: start, end: end, rules: R });
+        base = q.ok ? q.base : (Number(asset.priceDay) || 0);
+      } else base = asset ? (Number(asset.priceDay) || 0) : 0;
+    }
+
+    return core().cancellationFee({
+      asset: asset || {},
+      category: category,
+      start: start,
+      cancelAt: p.cancelAt != null ? p.cancelAt : new Date(),
+      base: base,
+      noShow: !!p.noShow,
+      rules: R
+    });
+  }
+
+  // ===== 互換用 (旧 API) =====
+  function duration(start, end) {
+    const hours = core().hoursBetween(start, end);
+    return { hours: hours, days: Math.ceil(hours / 24) };
+  }
+  function baseCharge(asset, start, end) {
+    const q = quote({ asset: asset, start: start, end: end });
+    const first = q.lines[0];
+    return { amount: q.base, label: first ? first.label : '基本料金', days: q.days, hours: q.hours, plan: q.plan };
+  }
+
+  window.SkyRentPricing = {
+    calculate: calculate,
+    quote: quote,
+    cancellationFee: cancellationFee,
+    rules: rules,
+    yen: yen,
+    duration: duration,
+    baseCharge: baseCharge
+  };
 })();

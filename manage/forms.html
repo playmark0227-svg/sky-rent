@@ -55,11 +55,15 @@
   <div id="print-area"></div>
 
   <script src="partials.js"></script>
-  <script src="../js/config.js"></script>
-  <script src="../js/store.js?v=20260916-1"></script>
-  <script src="../js/pricing.js"></script>
-  <script src="../js/api.js"></script>
-  <script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/api.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
   (function () {
     const S = window.SkyRentStore;
     const $ = s => document.querySelector(s);
@@ -83,15 +87,15 @@
         const cat = S.getCategory(r.categoryId);
         const isItem = cat && cat.type === 'item';
         const btns = isItem
-          ? '<button class="btn btn-primary btnf" data-doc="itemloan" data-id="' + r.reservationId + '" style="padding:5px 10px;font-size:12px">物品貸出書</button> <button class="btn btn-gray btnf" data-doc="receipt" data-id="' + r.reservationId + '" style="padding:5px 10px;font-size:12px">領収書</button>'
-          : '<button class="btn btn-primary btnf" data-doc="loan" data-id="' + r.reservationId + '" style="padding:5px 10px;font-size:12px">貸渡証</button> <button class="btn btn-gray btnf" data-doc="check" data-id="' + r.reservationId + '" style="padding:5px 10px;font-size:12px">チェックシート</button> <button class="btn btn-gray btnf" data-doc="receipt" data-id="' + r.reservationId + '" style="padding:5px 10px;font-size:12px">領収書</button>';
+          ? '<button class="btn btn-primary btnf" data-doc="itemloan" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">物品貸出書</button> <button class="btn btn-gray btnf" data-doc="receipt" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">領収書</button>'
+          : '<button class="btn btn-primary btnf" data-doc="loan" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">貸渡証</button> <button class="btn btn-gray btnf" data-doc="check" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">チェックシート</button> <button class="btn btn-gray btnf" data-doc="receipt" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">領収書</button>';
         return '<tr>' +
           '<td><code>' + esc(r.reservationId) + '</code></td>' +
           '<td>' + esc(r.assetName || r.vehicleName) + (r.quantity > 1 ? ' ×' + r.quantity : '') + '</td>' +
           '<td>' + esc(cat ? cat.name : '') + '</td>' +
           '<td>' + esc(r.customerName) + '</td>' +
           '<td style="white-space:nowrap">' + fmtD(r.start) + '〜' + fmtD(r.end) + '</td>' +
-          '<td><span class="status status-' + r.status + '">' + (S.STATUS_LABELS[r.status] || r.status) + '</span></td>' +
+          '<td><span class="status status-' + esc(r.status) + '">' + esc(S.STATUS_LABELS[r.status] || r.status) + '</span></td>' +
           '<td style="white-space:nowrap">' + btns + '</td></tr>';
       }).join('');
       $('#tbl').querySelectorAll('.btnf').forEach(b => b.addEventListener('click', () => openDoc(b.dataset.doc, b.dataset.id)));

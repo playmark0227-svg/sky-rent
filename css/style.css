@@ -293,3 +293,46 @@ html.js .rv-scale.in { opacity: 1; transform: none; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .rv, .rv-l, .rv-r, .rv-scale { opacity: 1 !important; transform: none !important; }
 }
+
+/* =====================================================================
+   起動中の非表示・通知 (トースト)・読み込みエラーのバナー (js/boot.js / js/backend.js)
+   ===================================================================== */
+html.skyrent-booting body { visibility: hidden; }
+
+.skyrent-toasts {
+  position: fixed; right: 16px; bottom: 16px; z-index: 10000;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  max-width: min(420px, calc(100vw - 32px));
+  pointer-events: none; visibility: visible;
+}
+.skyrent-toast {
+  pointer-events: auto;
+  background: #161616; color: #fff;
+  border: 1px solid #2a2a2a; border-left: 4px solid var(--color-primary, #ff6a00);
+  border-radius: 6px; padding: 12px 16px;
+  font-size: 14px; line-height: 1.6;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+  transition: opacity .3s, transform .3s;
+}
+.skyrent-toast--success { border-left-color: var(--color-success, #3ecf8e); }
+.skyrent-toast--warn { border-left-color: #f5b301; }
+.skyrent-toast--error { border-left-color: var(--color-error, #ff5c47); background: #2a1210; }
+.skyrent-toast.is-leaving { opacity: 0; transform: translateY(8px); }
+
+.skyrent-error-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10001;
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px 16px;
+  padding: 12px 48px 12px 16px;
+  background: #2a1210; color: #fff; border-bottom: 2px solid var(--color-error, #ff5c47);
+  font-size: 14px; line-height: 1.6; visibility: visible;
+}
+.skyrent-error-banner--slow { background: #1e1e1e; border-bottom-color: var(--color-primary, #ff6a00); }
+.skyrent-error-banner__msg { margin: 0; }
+.skyrent-error-banner__btn {
+  background: var(--color-primary, #ff6a00); color: #fff; border: 0; border-radius: 4px;
+  padding: 6px 16px; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.skyrent-error-banner__close {
+  position: absolute; top: 50%; right: 12px; transform: translateY(-50%);
+  background: transparent; color: #fff; border: 0; font-size: 20px; line-height: 1; cursor: pointer; padding: 4px 8px;
+}

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>貸渡実績報告書 (国交省様式) | グロースレンタカー 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
-  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz" crossorigin="anonymous"></script>
 </head>
 <body>
   <div data-include="topbar"></div>
@@ -146,11 +146,15 @@
   </style>
 
   <script src="partials.js"></script>
-  <script src="../js/config.js"></script>
-  <script src="../js/store.js?v=20260916-1"></script>
-  <script src="../js/pricing.js"></script>
-  <script src="../js/api.js"></script>
-  <script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/api.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
   (function () {
     const $ = (s) => document.querySelector(s);
 

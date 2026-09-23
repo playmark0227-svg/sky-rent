@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Googleカレンダー連携 | グロースレンタカー 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+  <style>
+    .gc-card { padding: 20px 24px; margin-bottom: 14px; }
+    .gc-card h2 { font-size: 15px; color: var(--primary); margin-bottom: 10px; }
+    .gc-card h2 small { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 6px; }
+    .gc-note { font-size: 12.5px; color: #555; line-height: 1.7; }
+    .gc-note + .gc-note { margin-top: 6px; }
+    .gc-box { border-radius: 4px; padding: 10px 14px; font-size: 13px; line-height: 1.7; margin: 8px 0; }
+    .gc-box--info { background: #eef4fa; border: 1px solid #d4e2ef; color: #1c4a7a; }
+    .gc-box--ok { background: #e9f6ef; border: 1px solid #bfe3cd; color: #1b5e37; }
+    .gc-box--warn { background: #fff7e0; border: 1px solid #f0dc9c; color: #6b5100; }
+    .gc-box--error { background: #fdf0ef; border: 1px solid #f3c4bf; color: #8a2419; }
+    .gc-steps { list-style: decimal; padding-left: 22px; font-size: 13px; line-height: 1.8; }
+    .gc-steps li + li { margin-top: 2px; }
+    .gc-sa { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0 10px; }
+    .gc-sa input { flex: 1; min-width: 240px; font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+    .gc-table { font-size: 12.5px; margin-top: 6px; }
+    .gc-table th, .gc-table td { border: 1px solid #e4e8ec; padding: 6px 9px; text-align: left; vertical-align: top; }
+    .gc-table th { background: #f4f7fa; font-weight: 600; }
+    .gc-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; font-family: ui-monospace, Menlo, monospace; }
+    .gc-badge--events { background: #e3f5ec; color: #1e8a4a; }
+    .gc-badge--freeBusyOnly { background: #fff1d6; color: #9a6400; }
+    .gc-badge--none { background: #fde8e6; color: #c0392b; }
+    .gc-opt { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .gc-opt .chk { font-weight: 600; color: #333; font-size: 13.5px; }
+    .gc-opt small { color: #666; font-size: 12px; line-height: 1.6; }
+    .gc-radio { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .gc-radio label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 13px; width: auto; padding: 0; color: #333; font-weight: 400; }
+    .gc-radio label strong { display: block; }
+    .gc-radio small { color: #666; font-size: 12px; }
+    .chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    .gc-num { width: 110px; flex: none; }
+    .gc-loc { border: 1px solid #e4e8ec; border-radius: 4px; padding: 12px 14px; margin-top: 12px; background: #fbfcfd; }
+    .gc-loc h3 { font-size: 14px; margin-bottom: 8px; }
+    .gc-loc h3 small { color: var(--muted); font-weight: 400; margin-left: 6px; font-size: 12px; }
+    .gc-row { display: grid; grid-template-columns: 92px 1fr auto auto auto; gap: 6px 8px; align-items: center; padding: 6px 0; border-top: 1px dashed #e6e6e6; }
+    .gc-row:first-of-type { border-top: 0; }
+    .gc-row .btn { padding: 7px 12px; font-size: 12.5px; }
+    .gc-order { font-size: 11.5px; color: #555; }
+    .gc-order b { display: inline-block; background: #1c4a7a; color: #fff; border-radius: 3px; padding: 1px 6px; font-size: 11px; font-weight: 600; }
+    .gc-result { grid-column: 2 / -1; font-size: 12.5px; line-height: 1.6; }
+    .gc-result:empty { display: none; }
+    .gc-row.is-invalid .gc-id { border-color: #c0392b; background: #fff7f6; }
+    .gc-empty { font-size: 12.5px; color: #8a6d00; background: #fffaf0; border-radius: 3px; padding: 6px 10px; }
+    .gc-actions { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; padding: 6px 0 20px; }
+    .gc-dirty { color: #b35c00; font-size: 12.5px; }
+    .gc-err { color: #c0392b; font-size: 13px; }
+    fieldset[disabled] { opacity: .75; }
+    fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+    @media (max-width: 760px) {
+      .gc-card { padding: 16px 14px; }
+      .gc-row { grid-template-columns: 1fr auto auto auto; }
+      .gc-order { grid-column: 1 / -1; }
+      .gc-result { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">Googleカレンダー連携</h1>
+    <p class="page-note">受け渡し担当者の Google カレンダーを見て、担当者の予定が入っている時間はお客様が予約できないようにします。
+      予約が入ると、担当者のカレンダーに「【貸出】」「【返却】」の予定を自動で書き込みます (キャンセルされると自動で消えます)。</p>
+
+    <div id="mode-note"></div>
+
+    <!-- 1. 接続の状態 -->
+    <section class="card gc-card" id="status-card">
+      <h2>1. Google との接続と共有の状態</h2>
+      <div id="status-body"><p class="gc-note">読み込み中…</p></div>
+    </section>
+
+    <form id="cal-form" novalidate>
+      <fieldset id="cal-fieldset">
+        <!-- 2. 連携の設定 -->
+        <section class="card gc-card">
+          <h2>2. 連携の設定</h2>
+          <div class="form-row">
+            <label for="f-enabled">連携を使う</label>
+            <div class="gc-opt">
+              <label class="chk"><input type="checkbox" id="f-enabled"> 連携を使う</label>
+              <small>ON にすると、予約のときに担当者の予定を確認し、予約をカレンダーに書き込みます。拠点ごとのカレンダー (下の 3.) を登録して接続テストをしてから ON にしてください。</small>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>判定の方法</label>
+            <div class="gc-radio" role="radiogroup" aria-label="判定の方法">
+              <label><input type="radio" name="mode" value="handover" id="f-mode-handover">
+                <span><strong>受け渡し時刻</strong><small>貸出時刻から「受け渡しにかかる時間」と、返却時刻から同じ時間のそれぞれで、登録した担当者のうち誰か1人の予定が空いていれば予約できます。担当者が会議・外出を時間単位で入れている場合に向いています。</small></span></label>
+              <label><input type="radio" name="mode" value="day" id="f-mode-day">
+                <span><strong>1日単位</strong><small>貸出日と返却日のそれぞれで、登録した担当者のうち誰か1人の予定が「その日1件も無い」ときだけ予約できます。担当者が「休み」だけを入れている場合に向いています (1時間の予定でもその日は受け渡し不可になります)。</small></span></label>
+            </div>
+          </div>
+          <div class="form-row">
+            <label for="f-minutes">受け渡しにかかる時間</label>
+            <div class="gc-opt">
+              <span><input type="number" class="form-input gc-num" id="f-minutes" min="0" max="1440" step="5" inputmode="numeric"> 分</span>
+              <small>貸出・返却の手続きに担当者が拘束される時間です (既定 30 分)。カレンダーに書き込む【貸出】【返却】の予定の長さにも使います。</small>
+            </div>
+          </div>
+          <div class="form-row">
+            <label for="f-one">受け渡しを重ねない</label>
+            <div class="gc-opt">
+              <label class="chk"><input type="checkbox" id="f-one"> 同じ拠点で受け渡し時刻が近い予約を重ねない</label>
+              <small>別の予約の貸出・返却時刻から「受け渡しにかかる時間」以内の時刻は選べなくします。</small>
+            </div>
+          </div>
+          <div class="form-row">
+            <label for="f-write">予約をカレンダーに書き込む</label>
+            <div class="gc-opt">
+              <label class="chk"><input type="checkbox" id="f-write"> 予約をカレンダーに書き込む</label>
+              <small>拠点の <strong>先頭のカレンダー</strong> に【貸出】【返却】の予定を書き込みます。予定は「予定なし」扱いなので空き判定には影響しません。お客様の電話番号・メールアドレスは書き込みません。</small>
+            </div>
+          </div>
+          <div class="form-row">
+            <label for="f-failopen">Google に接続できないとき予約を受ける</label>
+            <div class="gc-opt">
+              <label class="chk"><input type="checkbox" id="f-failopen"> Google に接続できないときも予約を受ける</label>
+              <small>OFF (推奨): 接続できないときは「担当者の予定を確認できません」として Web 予約を止めます。ON: 担当者の予定を確認せずに予約を受けます (Google の障害が長引くときだけ一時的に ON にしてください)。</small>
+              <div id="failopen-warn" class="gc-box gc-box--warn" hidden>ON の間は、担当者が不在の時間にも予約が入る可能性があります。障害が解消したら OFF に戻してください。</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. 拠点ごとのカレンダー -->
+        <section class="card gc-card">
+          <h2>3. 拠点ごとの担当者カレンダー</h2>
+          <p class="gc-note">・1拠点に複数の担当者を登録できます。<strong>誰か1人でも空いていれば、その時間は予約できます。</strong></p>
+          <p class="gc-note">・予約の予定は、その拠点の <strong>先頭</strong> のカレンダーに書き込まれます。主担当の方を先頭にしてください (「↑」で並べ替え)。</p>
+          <p class="gc-note">・受け渡しを担当しない人のカレンダーや、予定を入れていない共用カレンダーは登録しないでください (いつも空いているカレンダーがあると、全時間が予約可能になります)。</p>
+          <p class="gc-note">・カレンダーを登録していない拠点は、担当者の予定を確認しません (いつでも予約できます)。</p>
+          <div id="locations"></div>
+        </section>
+      </fieldset>
+
+      <div class="gc-actions">
+        <span class="gc-dirty" id="dirty-note" hidden>未保存の変更があります</span>
+        <button type="submit" class="btn btn-primary" id="btn-save" style="padding:12px 50px;font-size:15px">設定を保存</button>
+      </div>
+      <p class="gc-err" id="save-error" role="alert" hidden style="text-align:center;margin-top:-10px;margin-bottom:16px"></p>
+    </form>
+  </main>
+
+  <script src="partials.js"></script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
+  (function () {
+    'use strict';
+    const S = window.SkyRentStore;
+    const B = window.SkyRentBackend;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+    const SETUP_URL = 'https://github.com/playmark0227-svg/sky-rent/blob/main/docs/production/setup.md';
+    const MAX_PER_LOCATION = 10;   // supabase/functions/_shared/staff-calendar.ts と同じ
+    const ID_RE = /^[^\s<>"'(),;:\\]+@[^\s<>"'(),;:\\]+$/;
+    const LIVE = !!B.live;
+    const canEdit = B.admin.can('settings.write');
+
+    // app_settings.calendar を既定値込みの形に (サーバーの normalizeCalendarSettings と同じ規則)
+    function normalize(v) {
+      const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+      const locs = {};
+      const raw = o.locations && typeof o.locations === 'object' && !Array.isArray(o.locations) ? o.locations : {};
+      Object.keys(raw).forEach(id => {
+        const l = raw[id];
+        const list = l && typeof l === 'object' ? l.calendarIds : null;
+        const arr = Array.isArray(list) ? list : (typeof list === 'string' ? list.split(/[\s,]+/) : []);
+        const out = [];
+        arr.forEach(x => { const s = typeof x === 'string' ? x.trim() : ''; if (s && out.indexOf(s) < 0) out.push(s); });
+        locs[id] = out;
+      });
+      const n = Number(o.handoverMinutes);
+      return {
+        enabled: o.enabled === true,
+        mode: o.mode === 'day' ? 'day' : 'handover',
+        handoverMinutes: isFinite(n) && String(o.handoverMinutes).trim() !== '' ? Math.min(1440, Math.max(0, Math.round(n))) : 30,
+        oneHandoverAtATime: o.oneHandoverAtATime !== false,
+        writeEvents: o.writeEvents !== false,
+        failOpen: o.failOpen === true,
+        locations: locs
+      };
+    }
+
+    let saved = S.read('settings.calendar', null);   // サーバー (デモはこのブラウザ) に保存されている値
+    let cfg = normalize(saved);
+    let status = null;                                 // admin.calendarStatus() の結果
+    let dirty = false;
+
+    // ---------------------------------------------------------------
+    // 表示する拠点 (拠点一覧 + 設定にだけある ID)
+    // ---------------------------------------------------------------
+    function locationList() {
+      const out = S.locations().map(l => ({ id: l.locationId, name: l.name, known: true, active: l.active !== false }));
+      Object.keys(cfg.locations).forEach(id => {
+        if (!out.some(l => l.id === id)) out.push({ id: id, name: id, known: false, active: true });
+      });
+      return out;
+    }
+    function locName(id) { const l = S.getLocation(id); return l ? l.name : id; }
+
+    // ---------------------------------------------------------------
+    // 接続テストの結果の表示
+    // ---------------------------------------------------------------
+    function accessHtml(r, opts) {
+      opts = opts || {};
+      if (!r) return '';
+      const badge = '<span class="gc-badge gc-badge--' + esc(r.access) + '">' + esc(r.access) + '</span> ';
+      if (r.access === 'events') {
+        let s = badge + '予定の確認ができます。';
+        if (r.busyCount != null) s += ' 今後7日間の「予定あり」: <strong>' + Number(r.busyCount) + '</strong> 件。';
+        s += ' <small style="color:#666">予約の書き込みには、共有の権限が「予定の変更」である必要があります。</small>';
+        return s;
+      }
+      if (r.access === 'freeBusyOnly') {
+        return badge + '<strong>空き時間 (時間枠) しか見えません。</strong>終日の「休み」が反映されず、予約の書き込みもできません。' +
+          '担当者に、共有の権限を「予定の変更」に変えてもらってください。' +
+          (opts.first ? ' <strong>このカレンダーは先頭 (書き込み先) なので、予約が書き込まれません。</strong>' : '');
+      }
+      return badge + '<strong>接続できません。</strong>' + (r.error ? esc(r.error) + '。' : '') +
+        'カレンダーが共有されていないか、カレンダー ID が違います (前後の空白にも注意してください)。';
+    }
+
+    // ---------------------------------------------------------------
+    // 1. 接続の状態
+    // ---------------------------------------------------------------
+    function shareSteps(email) {
+      const sa = email ? '<code>' + esc(email) + '</code>' : 'サービスアカウントのメールアドレス';
+      return '<p class="gc-note" style="margin-top:10px"><strong>担当者にお願いすること</strong> (パソコンのブラウザで行います。スマホのアプリではできません)</p>' +
+        '<ol class="gc-steps">' +
+        '<li><a href="https://calendar.google.com/" target="_blank" rel="noopener">Google カレンダー</a> を開き、左の「マイカレンダー」で自分のカレンダーにマウスを乗せて <strong>︙ → 設定と共有</strong>。</li>' +
+        '<li><strong>「特定のユーザーまたはグループと共有する」→「+ ユーザーやグループを追加」</strong> で ' + sa + ' を入力し、権限は <strong>「予定の変更」</strong> を選んで送信。</li>' +
+        '<li>同じ画面の <strong>「カレンダーの統合」→「カレンダー ID」</strong> をコピーして、管理者に伝える (メインのカレンダーなら Gmail のアドレスと同じです)。</li>' +
+        '<li>同じ画面の「タイムゾーン」が <strong>(GMT+09:00) 日本標準時</strong> になっていることを確認。</li>' +
+        '</ol>' +
+        '<table class="gc-table"><thead><tr><th>共有の権限</th><th>連携でできること</th></tr></thead><tbody>' +
+        '<tr><td><strong>予定の変更</strong> (推奨)</td><td>予定の確認 (終日の「休み」も反映) + 予約の書き込み</td></tr>' +
+        '<tr><td>予定の表示 (すべての予定の詳細)</td><td>予定の確認のみ。予約はカレンダーに書き込まれません</td></tr>' +
+        '<tr><td>予定の表示 (時間枠のみ)</td><td>空き時間だけ確認。<strong>終日の「休み」が反映されません</strong>・書き込みもできません (接続テストで <code>freeBusyOnly</code>)</td></tr>' +
+        '</tbody></table>' +
+        '<p class="gc-note" style="margin-top:8px">詳しい手順: <a href="' + SETUP_URL + '" target="_blank" rel="noopener">運用手順書 (docs/production/setup.md) の 6章「Google カレンダー連携」</a></p>';
+    }
+
+    function renderStatus() {
+      const box = $('#status-body');
+      if (!LIVE) {
+        box.innerHTML = '<div class="gc-box gc-box--info"><strong>本番接続時に使えます。</strong> デモ環境では Google に接続しないため、接続の状態の確認と接続テストはできません。' +
+          '下の設定はこのブラウザの中だけに保存されます。</div>' + shareSteps('');
+        return;
+      }
+      if (!canEdit) {
+        box.innerHTML = '<div class="gc-box gc-box--info">接続の状態の確認・接続テスト・設定の変更は、設定の変更権限を持つスタッフ (管理者) だけが行えます。</div>';
+        return;
+      }
+      if (!status) { box.innerHTML = '<p class="gc-note">Google との接続を確認しています…</p>'; return; }
+      if (status.error && !status.serviceAccountEmail && status.configured === undefined) {
+        box.innerHTML = '<div class="gc-box gc-box--error">接続の状態を確認できませんでした。' + esc(status.error) +
+          '</div><button type="button" class="btn btn-gray" id="btn-status">もう一度確認する</button>';
+        bindStatusButton();
+        return;
+      }
+      let html = '';
+      if (status.configured) {
+        html += '<div class="gc-box gc-box--ok">✓ Google 連携の鍵 (サービスアカウント) が登録されています。</div>';
+      } else {
+        html += '<div class="gc-box gc-box--error"><strong>Google 連携の鍵 (サービスアカウント) が未設定か、読み込めません。</strong>' +
+          (status.error ? '<br>' + esc(status.error) : '') +
+          '<br>技術担当者に、運用手順書の 6-3〜6-4 (サービスアカウントの作成と鍵の登録 <code>GOOGLE_SERVICE_ACCOUNT_JSON</code>) を依頼してください。</div>';
+      }
+      if (status.serviceAccountEmail) {
+        html += '<div class="gc-note">サービスアカウントのメールアドレス (担当者がカレンダーを共有する相手):</div>' +
+          '<div class="gc-sa"><input type="text" class="form-input" id="sa-email" readonly value="' + esc(status.serviceAccountEmail) + '" aria-label="サービスアカウントのメールアドレス">' +
+          '<button type="button" class="btn btn-gray" id="btn-copy">コピー</button></div>';
+      }
+      html += savedStatusTable();
+      html += '<div style="margin-top:8px"><button type="button" class="btn btn-gray" id="btn-status">状態を再確認</button></div>';
+      html += shareSteps(status.serviceAccountEmail || '');
+      box.innerHTML = html;
+      bindStatusButton();
+      const copy = $('#btn-copy');
+      if (copy) copy.addEventListener('click', () => {
+        const input = $('#sa-email');
+        const done = () => B.toast('メールアドレスをコピーしました。', 'success');
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(input.value).then(done, () => { input.select(); }); return; }
+        } catch (e) { /* 下で選択 */ }
+        input.focus(); input.select();
+        try { if (document.execCommand && document.execCommand('copy')) done(); } catch (e) { /* 選択だけ */ }
+      });
+    }
+
+    // 保存済みの設定の確認結果 (拠点ごと)
+    function savedStatusTable() {
+      const locs = status && status.locations ? status.locations : {};
+      const ids = Object.keys(locs);
+      const rows = [];
+      ids.forEach(id => {
+        (locs[id] || []).forEach((c, i) => {
+          rows.push('<tr data-status-cal="' + esc(c.calendarId) + '"><td>' + esc(locName(id)) + '</td><td>' + (i === 0 ? '<b style="font-size:11px">書き込み先</b> ' : '') +
+            '<code>' + esc(c.calendarId) + '</code></td><td>' + accessHtml(c, { first: i === 0 }) + '</td></tr>');
+        });
+      });
+      const problems = ids.reduce((n, id) => n + (locs[id] || []).filter(c => c.access !== 'events').length, 0);
+      let head = '<p class="gc-note" style="margin-top:10px"><strong>保存済みの設定の確認結果</strong>' +
+        (status.enabled ? ' (連携: <strong style="color:#1e8a4a">ON</strong>)' : ' (連携: OFF)') + '</p>';
+      if (!rows.length) return head + '<p class="gc-note">まだカレンダーが登録されていません。下の 3. で拠点ごとに登録してください。</p>';
+      if (problems) head += '<div class="gc-box gc-box--warn">確認が必要なカレンダーが ' + problems + ' 件あります。</div>';
+      return head + '<table class="gc-table" id="status-table"><thead><tr><th>拠点</th><th>カレンダー ID</th><th>状態</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>';
+    }
+
+    function bindStatusButton() {
+      const b = $('#btn-status');
+      if (b) b.addEventListener('click', loadStatus);
+    }
+
+    async function loadStatus() {
+      if (!LIVE || !canEdit) { renderStatus(); return; }
+      status = null;
+      renderStatus();
+      try {
+        status = await B.admin.calendarStatus();
+      } catch (e) {
+        status = { error: (e && e.message) || B.errorMessage('INTERNAL') };
+      }
+      renderStatus();
+    }
+
+    // ---------------------------------------------------------------
+    // 2. 設定のフォーム
+    // ---------------------------------------------------------------
+    function fillForm() {
+      $('#f-enabled').checked = cfg.enabled;
+      $('#f-mode-handover').checked = cfg.mode !== 'day';
+      $('#f-mode-day').checked = cfg.mode === 'day';
+      $('#f-minutes').value = String(cfg.handoverMinutes);
+      $('#f-one').checked = cfg.oneHandoverAtATime;
+      $('#f-write').checked = cfg.writeEvents;
+      $('#f-failopen').checked = cfg.failOpen;
+      $('#failopen-warn').hidden = !cfg.failOpen;
+      renderLocations();
+    }
+
+    // ---------------------------------------------------------------
+    // 3. 拠点ごとのカレンダー
+    // ---------------------------------------------------------------
+    function rowHtml(id) {
+      return '<div class="gc-row" data-row>' +
+        '<span class="gc-order"></span>' +
+        '<input type="text" class="form-input gc-id" value="' + esc(id || '') + '" placeholder="例: yamada@gmail.com" maxlength="254" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="カレンダー ID">' +
+        '<button type="button" class="btn btn-gray gc-test">接続テスト</button>' +
+        '<button type="button" class="btn btn-gray gc-up" title="上へ (先頭のカレンダーに予約を書き込みます)" aria-label="上へ">↑</button>' +
+        '<button type="button" class="btn btn-gray gc-del">削除</button>' +
+        '<div class="gc-result" aria-live="polite"></div>' +
+        '</div>';
+    }
+
+    function renderLocations() {
+      const html = locationList().map(l => {
+        const ids = cfg.locations[l.id] || [];
+        return '<div class="gc-loc" data-loc="' + esc(l.id) + '">' +
+          '<h3>' + esc(l.name) + '<small>' + esc(l.id) + (l.known ? (l.active ? '' : ' / 非公開の拠点') : ' / 拠点一覧に無い ID') + '</small></h3>' +
+          '<div class="gc-rows">' + ids.map(rowHtml).join('') + '</div>' +
+          '<p class="gc-empty" data-empty' + (ids.length ? ' hidden' : '') + '>カレンダー未登録: この拠点は担当者の予定を確認しません (いつでも予約できます)。</p>' +
+          '<button type="button" class="btn btn-gray gc-add" style="margin-top:8px;padding:7px 14px;font-size:12.5px">+ カレンダーを追加</button>' +
+          '</div>';
+      }).join('');
+      $('#locations').innerHTML = html || '<p class="gc-note">拠点が登録されていません。先に「店舗管理」で拠点を登録してください。</p>';
+      document.querySelectorAll('.gc-loc').forEach(renumber);
+    }
+
+    function renumber(block) {
+      const rows = block.querySelectorAll('[data-row]');
+      rows.forEach((row, i) => {
+        row.querySelector('.gc-order').innerHTML = i === 0 ? '<b>書き込み先</b>' : (i + 1) + '番目';
+        row.querySelector('.gc-up').disabled = i === 0;
+      });
+      block.querySelector('[data-empty]').hidden = rows.length > 0;
+      block.querySelector('.gc-add').disabled = rows.length >= MAX_PER_LOCATION;
+    }
+
+    function markDirty() {
+      dirty = true;
+      $('#dirty-note').hidden = false;
+    }
+
+    function setRowResult(row, html) { row.querySelector('.gc-result').innerHTML = html || ''; }
+
+    async function testRow(row, btn) {
+      const input = row.querySelector('.gc-id');
+      const id = input.value.trim();
+      input.value = id;
+      row.classList.remove('is-invalid');
+      if (!id) { setRowResult(row, '<span class="gc-err">カレンダー ID を入力してください。</span>'); return; }
+      if (!ID_RE.test(id) || id.length > 254) {
+        row.classList.add('is-invalid');
+        setRowResult(row, '<span class="gc-err">カレンダー ID の形式が正しくありません (例: yamada@gmail.com / xxxx@group.calendar.google.com)。</span>');
+        return;
+      }
+      if (!LIVE) { setRowResult(row, '<span class="gc-note">接続テストは本番接続時に使えます。</span>'); return; }
+      if (!canEdit) { setRowResult(row, '<span class="gc-note">接続テストは管理者だけが行えます。</span>'); return; }
+      btn.disabled = true;
+      setRowResult(row, '<span class="gc-note">Google に問い合わせています…</span>');
+      try {
+        const r = await B.admin.calendarTest(id);
+        const first = row.parentNode.firstElementChild === row;
+        let html = accessHtml(r, { first: first });
+        if (r && r.configured === false) html += '<br><span class="gc-err">Google 連携の鍵が未設定です (上の 1. を参照)。</span>';
+        setRowResult(row, html);
+      } catch (e) {
+        setRowResult(row, '<span class="gc-err">' + esc((e && e.message) || B.errorMessage('INTERNAL')) + '</span>');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function onLocationsClick(e) {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const block = btn.closest('.gc-loc');
+      if (!block) return;
+      const row = btn.closest('[data-row]');
+      if (btn.classList.contains('gc-add')) {
+        const rows = block.querySelector('.gc-rows');
+        if (rows.children.length >= MAX_PER_LOCATION) return;
+        rows.insertAdjacentHTML('beforeend', rowHtml(''));
+        renumber(block);
+        markDirty();
+        const last = rows.lastElementChild.querySelector('.gc-id');
+        try { last.focus(); } catch (err) { /* 無視 */ }
+      } else if (btn.classList.contains('gc-del') && row) {
+        row.parentNode.removeChild(row);
+        renumber(block);
+        markDirty();
+      } else if (btn.classList.contains('gc-up') && row && row.previousElementSibling) {
+        row.parentNode.insertBefore(row, row.previousElementSibling);
+        renumber(block);
+        markDirty();
+      } else if (btn.classList.contains('gc-test') && row) {
+        testRow(row, btn);
+      }
+    }
+
+    // ---------------------------------------------------------------
+    // 保存
+    // ---------------------------------------------------------------
+    function collect() {
+      const errors = [];
+      const minutesRaw = String($('#f-minutes').value).trim();
+      const minutes = Number(minutesRaw);
+      if (minutesRaw === '' || !isFinite(minutes) || Math.round(minutes) !== minutes || minutes < 0 || minutes > 1440) {
+        errors.push('受け渡しにかかる時間は 0〜1440 の整数 (分) で入力してください。');
+      }
+      const locations = {};
+      document.querySelectorAll('.gc-loc').forEach(block => {
+        const locId = block.dataset.loc;
+        const ids = [];
+        block.querySelectorAll('[data-row]').forEach(row => {
+          const input = row.querySelector('.gc-id');
+          const v = input.value.trim();
+          input.value = v;
+          row.classList.remove('is-invalid');
+          if (!v) return;  // 空の行は保存しない
+          if (!ID_RE.test(v) || v.length > 254) {
+            row.classList.add('is-invalid');
+            setRowResult(row, '<span class="gc-err">カレンダー ID の形式が正しくありません。</span>');
+            errors.push(locName(locId) + ': カレンダー ID「' + v + '」の形式が正しくありません。');
+            return;
+          }
+          if (ids.indexOf(v) >= 0) {
+            row.classList.add('is-invalid');
+            errors.push(locName(locId) + ': 同じカレンダー ID が2回登録されています (' + v + ')。');
+            return;
+          }
+          ids.push(v);
+        });
+        if (ids.length > MAX_PER_LOCATION) errors.push(locName(locId) + ': カレンダーは1拠点につき ' + MAX_PER_LOCATION + ' 件までです。');
+        locations[locId] = ids;
+      });
+      const modeEl = document.querySelector('input[name="mode"]:checked');
+      return {
+        errors: errors,
+        form: {
+          enabled: $('#f-enabled').checked,
+          mode: modeEl && modeEl.value === 'day' ? 'day' : 'handover',
+          handoverMinutes: Math.round(minutes),
+          oneHandoverAtATime: $('#f-one').checked,
+          writeEvents: $('#f-write').checked,
+          failOpen: $('#f-failopen').checked,
+          locations: locations
+        }
+      };
+    }
+
+    // 保存する値: サーバーの値に画面の項目を上書き (画面に無い項目・拠点ごとの他の項目は残す)
+    function buildValue(form) {
+      const base = saved && typeof saved === 'object' && !Array.isArray(saved) ? JSON.parse(JSON.stringify(saved)) : {};
+      const baseLocs = base.locations && typeof base.locations === 'object' && !Array.isArray(base.locations) ? base.locations : {};
+      const locs = {};
+      Object.keys(baseLocs).forEach(id => { locs[id] = baseLocs[id]; });
+      Object.keys(form.locations).forEach(id => {
+        const prev = baseLocs[id] && typeof baseLocs[id] === 'object' && !Array.isArray(baseLocs[id]) ? baseLocs[id] : {};
+        locs[id] = Object.assign({}, prev, { calendarIds: form.locations[id] });
+      });
+      return Object.assign(base, {
+        enabled: form.enabled, mode: form.mode, handoverMinutes: form.handoverMinutes,
+        oneHandoverAtATime: form.oneHandoverAtATime, writeEvents: form.writeEvents, failOpen: form.failOpen,
+        locations: locs
+      });
+    }
+
+    async function save(e) {
+      if (e) e.preventDefault();
+      const err = $('#save-error');
+      err.hidden = true;
+      if (!canEdit) return;
+      const c = collect();
+      if (c.errors.length) {
+        err.textContent = c.errors.join(' ');
+        err.hidden = false;
+        return;
+      }
+      const value = buildValue(c.form);
+      const btn = $('#btn-save');
+      btn.disabled = true;
+      try {
+        await B.admin.saveSetting('calendar', value);
+        saved = value;
+        cfg = normalize(saved);
+        dirty = false;
+        $('#dirty-note').hidden = true;
+        const total = Object.keys(c.form.locations).reduce((n, id) => n + c.form.locations[id].length, 0);
+        let msg = '設定を保存しました。';
+        if (c.form.enabled && !total) msg += ' カレンダーが1つも登録されていないため、担当者の予定は確認されません。';
+        B.toast(msg, c.form.enabled && !total ? 'warn' : 'success');
+        if (LIVE) loadStatus();
+      } catch (ex) {
+        err.textContent = '保存できませんでした。' + ((ex && ex.message) || B.errorMessage('INTERNAL'));
+        err.hidden = false;
+      } finally {
+        btn.disabled = !canEdit;
+      }
+    }
+
+    // ---------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!LIVE) {
+        $('#mode-note').innerHTML = '<div class="gc-box gc-box--info" style="margin-bottom:12px"><strong>デモ環境です。</strong> Google カレンダーとの連携 (接続テスト・予定の確認・書き込み) は本番接続時に使えます。</div>';
+      } else if (!canEdit) {
+        $('#mode-note').innerHTML = '<div class="gc-box gc-box--info" style="margin-bottom:12px">設定の変更は管理者だけが行えます (閲覧のみ)。</div>';
+      }
+      fillForm();
+      $('#cal-fieldset').disabled = !canEdit;
+      $('#btn-save').disabled = !canEdit;
+      $('#locations').addEventListener('click', onLocationsClick);
+      // カレンダー ID の欄で Enter → 保存ではなく、その行の接続テスト
+      $('#locations').addEventListener('keydown', e => {
+        if (e.key !== 'Enter' || !e.target.classList || !e.target.classList.contains('gc-id')) return;
+        e.preventDefault();
+        const row = e.target.closest('[data-row]');
+        const btn = row && row.querySelector('.gc-test');
+        if (btn && !btn.disabled) testRow(row, btn);
+      });
+      $('#cal-form').addEventListener('input', markDirty);
+      $('#cal-form').addEventListener('change', e => {
+        markDirty();
+        if (e.target && e.target.id === 'f-failopen') $('#failopen-warn').hidden = !e.target.checked;
+      });
+      $('#cal-form').addEventListener('submit', save);
+      window.addEventListener('beforeunload', e => {
+        if (!dirty) return undefined;
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      });
+      loadStatus();
+    });
+  })();
+  </script>
+</body>
+</html>

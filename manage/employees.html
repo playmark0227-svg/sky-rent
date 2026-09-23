@@ -5,19 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>従業員管理 | グロースレンタカー 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
+  <style>
+    .emp-notice { background: #eef4fa; border: 1px solid #d4e2ef; color: #1c4a7a; border-radius: 4px; padding: 14px 16px; font-size: 13px; line-height: 1.8; margin-bottom: 16px; }
+    .emp-notice .btn { text-decoration: none; }
+  </style>
 </head>
 <body>
   <div data-include="topbar"></div>
 
   <main class="main">
     <h1 class="page-title">従業員管理</h1>
-    <p class="page-note">店舗スタッフのアカウント管理。権限ごとに操作範囲を制限できます。</p>
+    <p class="page-note" id="emp-note">店舗スタッフのアカウント管理。権限ごとに操作範囲を制限できます。</p>
 
-    <div style="text-align:right;margin-bottom:10px">
+    <!-- 本番: スタッフのアカウントと権限は「スタッフ・権限」(staff.html) に一本化 -->
+    <div id="emp-live-notice" class="emp-notice" role="status" hidden>
+      <strong>スタッフのアカウントと権限は「スタッフ・権限」で管理します。</strong><br>
+      <span id="emp-live-detail">管理画面を使うスタッフの招待、役割・担当拠点の変更、利用の停止、二段階認証のリセットは、「スタッフ・権限」の画面で行います。この画面の一覧 (デモ用) は本番では使いません。</span>
+      <div style="margin-top:10px"><a class="btn btn-primary" id="emp-staff-link" href="staff.html">「スタッフ・権限」を開く</a></div>
+    </div>
+
+    <div style="text-align:right;margin-bottom:10px" id="emp-add-wrap">
       <button id="btn-add" class="btn btn-primary">+ 従業員を追加</button>
     </div>
 
-    <section class="card">
+    <section class="card" id="emp-list">
       <table class="data-table list">
         <thead>
           <tr><th>従業員ID</th><th>氏名</th><th>メールアドレス</th><th>所属店舗</th><th>権限</th><th>最終ログイン</th><th>状態</th><th></th></tr>
@@ -26,7 +37,7 @@
       </table>
     </section>
 
-    <section class="card" style="margin-top:18px;padding:20px">
+    <section class="card" id="emp-roles" style="margin-top:18px;padding:20px">
       <h3 style="margin-bottom:12px;font-size:15px;color:var(--primary)">権限の説明</h3>
       <table class="info-table" style="font-size:13px">
         <tr><th>管理者</th><td>すべての操作が可能 (削除含む)</td></tr>
@@ -39,26 +50,55 @@
 
   <script src="partials.js"></script>
   <script src="js/crud.js"></script>
-  <script>
-  SkyRentCRUD.init({
-    storageKey: 'employees',
-    idPrefix: 'E',
-    columns: [
-      { key: 'id', label: '従業員ID', code: true, readonly: true },
-      { key: 'name', label: '氏名', bold: true, required: true },
-      { key: 'email', label: 'メールアドレス', type: 'email' },
-      { key: 'store', label: '所属店舗', type: 'select', options: ['本店'] },
-      { key: 'role', label: '権限', type: 'select', options: ['管理者','店舗スタッフ','整備担当','閲覧のみ'] },
-      { key: 'lastLogin', label: '最終ログイン' },
-      { key: 'active', label: '状態', type: 'status' }
-    ],
-    defaults: [
-      { id: 'E001', name: '山田 太郎', email: 'yamada@sky-rent.example.com',  store: '本店', role: '管理者',     lastLogin: '2026/04/29 09:12', active: true },
-      { id: 'E002', name: '佐藤 花子', email: 'sato@sky-rent.example.com',    store: '本店', role: '店舗スタッフ', lastLogin: '2026/04/29 08:55', active: true },
-      { id: 'E003', name: '鈴木 一郎', email: 'suzuki@sky-rent.example.com',  store: '本店', role: '整備担当',   lastLogin: '2026/04/28 17:30', active: true },
-      { id: 'E004', name: '田中 二郎', email: 'tanaka@sky-rent.example.com',  store: '本店', role: '閲覧のみ',   lastLogin: '2026/04/20 11:00', active: false }
-    ]
-  });
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
+  (function () {
+    'use strict';
+    const B = window.SkyRentBackend;
+    const $ = s => document.querySelector(s);
+
+    // 本番: スタッフのアカウントと権限は「スタッフ・権限」(staff.html) で管理する。
+    //   この画面の一覧 (app_collections の employees) は編集させず、案内とリンクだけ出す
+    if (B && B.live) {
+      $('#emp-note').textContent = '本番環境では、スタッフのアカウントと権限を「スタッフ・権限」の画面で管理します。';
+      $('#emp-live-notice').hidden = false;
+      if (!(B.admin && B.admin.can('staff.write'))) {
+        $('#emp-live-detail').textContent = 'スタッフの招待、役割・担当拠点の変更、利用の停止、二段階認証のリセットは、管理者が「スタッフ・権限」の画面で行います。必要な場合は管理者にご依頼ください。';
+        $('#emp-staff-link').hidden = true;
+      }
+      $('#emp-add-wrap').hidden = true;
+      $('#btn-add').disabled = true;
+      $('#emp-list').hidden = true;
+      $('#emp-roles').hidden = true;
+      return;
+    }
+
+    SkyRentCRUD.init({
+      storageKey: 'employees',
+      idPrefix: 'E',
+      columns: [
+        { key: 'id', label: '従業員ID', code: true, readonly: true },
+        { key: 'name', label: '氏名', bold: true, required: true },
+        { key: 'email', label: 'メールアドレス', type: 'email' },
+        { key: 'store', label: '所属店舗', type: 'select', options: ['本店'] },
+        { key: 'role', label: '権限', type: 'select', options: ['管理者','店舗スタッフ','整備担当','閲覧のみ'] },
+        { key: 'lastLogin', label: '最終ログイン' },
+        { key: 'active', label: '状態', type: 'status' }
+      ],
+      defaults: [
+        { id: 'E001', name: '山田 太郎', email: 'yamada@sky-rent.example.com',  store: '本店', role: '管理者',     lastLogin: '2026/04/29 09:12', active: true },
+        { id: 'E002', name: '佐藤 花子', email: 'sato@sky-rent.example.com',    store: '本店', role: '店舗スタッフ', lastLogin: '2026/04/29 08:55', active: true },
+        { id: 'E003', name: '鈴木 一郎', email: 'suzuki@sky-rent.example.com',  store: '本店', role: '整備担当',   lastLogin: '2026/04/28 17:30', active: true },
+        { id: 'E004', name: '田中 二郎', email: 'tanaka@sky-rent.example.com',  store: '本店', role: '閲覧のみ',   lastLogin: '2026/04/20 11:00', active: false }
+      ]
+    });
+  })();
   </script>
 </body>
 </html>

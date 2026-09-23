@@ -9,39 +9,16 @@
   <link rel="stylesheet" href="css/public.css">
   <link rel="stylesheet" href="css/lp.css">
   <script>
-    // ===== 管理画面で設定したコンテンツ・テーマカラーを反映 + favicon =====
+    // ===== favicon =====
+    // 管理画面で設定した SEO・テーマカラー・GA (settings.seo / site / ga) は、データの読み込み後
+    // (skyrent:ready) に js/lp.js が SkyRentStore から反映する (本番はサーバー、デモは localStorage の値)。
     (function () {
       try {
-        (function () {
-          const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#16181d"/><text x="32" y="46" font-size="38" text-anchor="middle" fill="#d94f22" font-family="serif" font-weight="bold">G</text></svg>';
-          const href = 'data:image/svg+xml,' + encodeURIComponent(svg);
-          const icon = document.createElement('link'); icon.rel = 'icon'; icon.href = href; document.head.appendChild(icon);
-          const apple = document.createElement('link'); apple.rel = 'apple-touch-icon'; apple.href = href; document.head.appendChild(apple);
-        })();
-        const seo = JSON.parse(localStorage.getItem('sky-rent.settings.seo') || '{}');
-        const site = JSON.parse(localStorage.getItem('sky-rent.settings.site') || '{}');
-        if (seo.title) document.title = seo.title;
-        if (seo.description) { const m = document.querySelector('meta[name="description"]'); if (m) m.setAttribute('content', seo.description); }
-        if (seo.keywords) { const kw = document.createElement('meta'); kw.name = 'keywords'; kw.content = seo.keywords; document.head.appendChild(kw); }
-        if (site.themeColor) {
-          const s = document.createElement('style');
-          s.textContent = ':root { --color-primary: ' + site.themeColor + ' !important; --color-primary-dark: ' + shade(site.themeColor, -15) + ' !important; }';
-          document.head.appendChild(s);
-        }
-        const ga = JSON.parse(localStorage.getItem('sky-rent.settings.ga') || '{}');
-        if (ga.ga4Id && /^G-/.test(ga.ga4Id)) {
-          const s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + ga.ga4Id; document.head.appendChild(s);
-          window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', ga.ga4Id); window.gtag = gtag;
-        }
-        function shade(hex, percent) {
-          const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i); if (!m) return hex;
-          let r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
-          r = Math.max(0, Math.min(255, r + Math.round(r * percent / 100)));
-          g = Math.max(0, Math.min(255, g + Math.round(g * percent / 100)));
-          b = Math.max(0, Math.min(255, b + Math.round(b * percent / 100)));
-          return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
-        }
-      } catch (e) { console.warn('settings apply failed', e); }
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#16181d"/><text x="32" y="46" font-size="38" text-anchor="middle" fill="#d94f22" font-family="serif" font-weight="bold">G</text></svg>';
+        const href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+        const icon = document.createElement('link'); icon.rel = 'icon'; icon.href = href; document.head.appendChild(icon);
+        const apple = document.createElement('link'); apple.rel = 'apple-touch-icon'; apple.href = href; document.head.appendChild(apple);
+      } catch (e) { /* favicon が無くても続行 */ }
     })();
   </script>
 </head>
@@ -313,13 +290,17 @@
   <div data-inc="footer"></div>
   <div data-inc="cta"></div>
 
-  <script src="js/config.js"></script>
-  <script src="js/store.js?v=20260916-1"></script>
-  <script src="js/pricing.js"></script>
-  <script src="js/i18n.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/photos.js"></script>
   <script src="js/partials-public.js"></script>
-  <script src="js/lp.js?v=20260916-1"></script>
+
+  <script src="js/config.js?v=20260923"></script>
+  <script src="js/store.js?v=20260923"></script>
+  <script src="js/pricing-core.js?v=20260923"></script>
+  <script src="js/pricing.js?v=20260923"></script>
+  <script src="js/i18n.js?v=20260923"></script>
+  <script src="js/api.js?v=20260923"></script>
+  <script src="js/photos.js?v=20260923"></script>
+  <script src="js/backend.js?v=20260923"></script>
+  <script src="js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred" data-src="js/lp.js?v=20260923"></script>
 </body>
 </html>

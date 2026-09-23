@@ -12,6 +12,7 @@
   <main class="main">
     <h1 class="page-title">顧客・会員管理</h1>
     <p class="page-note">会員情報・利用履歴の確認、ポイントの手動付与・調整、法人・行政アカウントへの「請求書払い許可」付与を行います。</p>
+    <div id="mode-note"></div>
 
     <section class="kpi-row" style="margin-bottom:16px">
       <div class="kpi kpi-1"><div class="kpi-label">会員数</div><div class="kpi-value"><span id="k-total">0</span><span class="kpi-unit">名</span></div></div>
@@ -38,17 +39,27 @@
   </main>
 
   <script src="partials.js"></script>
-  <script src="../js/config.js"></script>
-  <script src="../js/store.js?v=20260916-1"></script>
-  <script src="../js/pricing.js"></script>
-  <script src="../js/api.js"></script>
-  <script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/api.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
   (function () {
+    'use strict';
     const S = window.SkyRentStore;
     const $ = s => document.querySelector(s);
     function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
-    function fmtD(iso){if(!iso)return '-';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate());}
-    function fmtDT(iso){if(!iso)return '-';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
+    const B = window.SkyRentBackend;
+    const LIVE = !!B.live;
+    // 日時は日本時間で表示
+    function fmtD(iso){return iso ? (B.jst.format(iso, { time: false, weekday: false }) || '-') : '-';}
+    function fmtDT(iso){return iso ? (B.jst.format(iso, { weekday: false }) || '-') : '-';}
+    // 通知ログ (デモのメール送信の代わり)。本番はサーバーの操作履歴に残るので書かない
+    function note(type, message, refId) { if (!LIVE) S.notify(type, message, refId); }
 
     function renderKpi() {
       const ms = S.members();
@@ -71,7 +82,7 @@
         const unused = (m.coupons || []).filter(c => !c.usedAt).length;
         return '<tr>' +
           '<td><code>' + esc(m.memberId) + '</code></td>' +
-          '<td><strong>' + esc(m.name) + '</strong>' + (m.company ? '<br><small style="color:#999">' + esc(m.company) + '</small>' : '') + '</td>' +
+          '<td><strong>' + esc(m.name) + '</strong>' + (m.status === 'closed' ? ' <span class="chip">退会</span>' : '') + (m.company ? '<br><small style="color:#999">' + esc(m.company) + '</small>' : '') + '</td>' +
           '<td>' + esc(m.email) + '</td>' +
           '<td>' + esc(m.phone || '-') + '</td>' +
           '<td style="text-align:center">' + (m.points || 0) + 'pt</td>' +
@@ -162,12 +173,22 @@
       modal.querySelector('.crud-close').addEventListener('click', close);
       modal.querySelector('.crud-cancel').addEventListener('click', close);
 
+      // 権限 (本番はサーバーでも同じ権限で拒否される)
+      const canMembers = B.admin.can('members.write');
+      const canInvoice = B.admin.can('invoices.write');
+      const lock = (sel, ok, why) => {
+        const el = modal.querySelector(sel);
+        if (el && !ok) { el.disabled = true; el.title = why; }
+      };
+      lock('#inv-toggle', canInvoice && !!(m.userId || !LIVE), '請求書払いの許可には経理の権限が必要です');
+      ['#pt-apply', '#pt-delta', '#pt-reason', '#cp-issue', '#cp-amount', '#cp-reason'].forEach(sel => lock(sel, canMembers && !!(m.userId || !LIVE), '会員の編集権限が必要です'));
+
       modal.querySelector('#inv-toggle').addEventListener('click', () => {
         const to = !m.invoiceAllowed;
         if (!confirm(to ? 'この会員に「請求書払い許可」を付与しますか?' : '「請求書払い許可」を解除しますか?')) return;
         m.invoiceAllowed = to; m.isCorporate = to || m.isCorporate;
         S.upsert('members', 'memberId', m);
-        S.notify('member', m.name + ' の請求書払い許可を' + (to ? '付与' : '解除') + 'しました', m.memberId);
+        note('member', m.name + ' の請求書払い許可を' + (to ? '付与' : '解除') + 'しました', m.memberId);
         openDetail(memberId); render();
       });
       modal.querySelector('#pt-apply').addEventListener('click', () => {
@@ -179,12 +200,23 @@
       });
       modal.querySelector('#cp-issue').addEventListener('click', () => {
         const amt = parseInt(modal.querySelector('#cp-amount').value, 10);
-        if (!amt || amt <= 0) { alert('金額を入力してください'); return; }
+        if (!amt || amt <= 0 || amt > 100000) { alert('金額は 1〜100,000 円で入力してください'); return; }
         S.issueCouponManually(memberId, amt, modal.querySelector('#cp-reason').value.trim() || '管理者発行');
         openDetail(memberId); render();
       });
     }
 
+    function openModal(html) {
+      let modal = document.getElementById('crud-modal');
+      if (!modal) { modal = document.createElement('div'); modal.id = 'crud-modal'; modal.className = 'crud-modal'; document.body.appendChild(modal); }
+      modal.innerHTML = html;
+      const close = () => modal.remove();
+      modal.querySelector('.crud-modal-bg').addEventListener('click', close);
+      modal.querySelectorAll('.crud-close, .crud-cancel').forEach(b => b.addEventListener('click', close));
+      return { modal: modal, close: close };
+    }
+
+    // デモ: この画面で会員を直接登録する (パスワードはデモ用)
     function openAdd() {
       const html =
         '<div class="crud-modal-bg"></div><div class="crud-modal-card">' +
@@ -195,31 +227,102 @@
           '<div class="crud-field"><label>メール <span style="color:#c0392b">*</span></label><input type="email" id="m-email"></div>' +
           '<div class="crud-field"><label>電話</label><input type="tel" id="m-phone"></div>' +
           '<div class="crud-field"><label>会社名</label><input type="text" id="m-company" placeholder="法人の場合"></div>' +
-          '<div class="crud-field"><label>初期パスワード <span style="color:#c0392b">*</span></label><input type="text" id="m-pass" value="demo1234"></div>' +
+          '<div class="crud-field"><label>初期パスワード <span style="color:#c0392b">*</span></label><input type="text" id="m-pass" value="Demo1234"></div>' +
         '</div>' +
         '<div class="crud-modal-foot"><span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">キャンセル</button><button type="button" class="btn btn-primary" id="m-save">登録</button></div></div>';
-      let modal = document.getElementById('crud-modal');
-      if (!modal) { modal = document.createElement('div'); modal.id = 'crud-modal'; modal.className = 'crud-modal'; document.body.appendChild(modal); }
-      modal.innerHTML = html;
-      const close = () => modal.remove();
-      modal.querySelector('.crud-modal-bg').addEventListener('click', close);
-      modal.querySelector('.crud-close').addEventListener('click', close);
-      modal.querySelector('.crud-cancel').addEventListener('click', close);
+      const mm = openModal(html);
+      const modal = mm.modal;
       modal.querySelector('#m-save').addEventListener('click', () => {
         try {
           S.registerMember({
             name: modal.querySelector('#m-name').value.trim(), nameKana: modal.querySelector('#m-kana').value.trim(),
             email: modal.querySelector('#m-email').value.trim(), phone: modal.querySelector('#m-phone').value.trim(),
-            company: modal.querySelector('#m-company').value.trim(), password: modal.querySelector('#m-pass').value || 'demo1234'
+            company: modal.querySelector('#m-company').value.trim(), password: modal.querySelector('#m-pass').value || 'Demo1234'
           });
-          close(); render();
+          mm.close(); render();
         } catch (ex) { alert(ex.message); }
       });
     }
 
+    // 本番: 会員を招待する (招待メールのリンクからお客様がパスワードを設定すると登録が完了する)
+    function openInvite() {
+      const canInvoice = B.admin.can('invoices.write');
+      const html =
+        '<div class="crud-modal-bg"></div><div class="crud-modal-card" style="max-width:560px">' +
+        '<div class="crud-modal-head"><h3>会員を招待</h3><button class="crud-close" type="button" aria-label="閉じる">×</button></div>' +
+        '<form id="inv-form" novalidate><div style="padding:6px 0">' +
+          '<p style="padding:10px 20px 4px;font-size:12.5px;color:#555;line-height:1.7">入力したメールアドレスに招待メールが届きます。お客様がメールのリンクからパスワードを設定すると、会員登録が完了します (パスワードをスタッフが決めることはありません)。</p>' +
+          '<div class="crud-field"><label for="i-name">氏名 <span style="color:#c0392b">*</span></label><input type="text" id="i-name" maxlength="100" autocomplete="off"></div>' +
+          '<div class="crud-field"><label for="i-kana">フリガナ</label><input type="text" id="i-kana" maxlength="100" autocomplete="off"></div>' +
+          '<div class="crud-field"><label for="i-email">メール <span style="color:#c0392b">*</span></label><input type="email" id="i-email" maxlength="254" autocomplete="off"></div>' +
+          '<div class="crud-field"><label for="i-phone">電話</label><input type="tel" id="i-phone" maxlength="30" autocomplete="off"></div>' +
+          '<div class="crud-field"><label for="i-company">会社名</label><input type="text" id="i-company" maxlength="200" placeholder="法人の場合" autocomplete="off"></div>' +
+          '<div class="crud-field"><label class="inline"><input type="checkbox" id="i-invoice"' + (canInvoice ? '' : ' disabled') + '> 請求書払いを許可する (法人・行政)</label>' +
+            (canInvoice ? '' : '<small style="color:#888">許可には経理の権限が必要です</small>') + '</div>' +
+          '<p id="i-err" role="alert" style="color:#c0392b;font-size:12.5px;padding:8px 20px 0;line-height:1.7" hidden></p>' +
+        '</div>' +
+        '<div class="crud-modal-foot"><span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">キャンセル</button><button type="submit" class="btn btn-primary" id="i-send">招待メールを送る</button></div></form></div>';
+      const mm = openModal(html);
+      const modal = mm.modal;
+      const FIELD_IDS = { name: '#i-name', name_kana: '#i-kana', nameKana: '#i-kana', email: '#i-email', phone: '#i-phone', company: '#i-company' };
+      modal.querySelector('#inv-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const err = modal.querySelector('#i-err');
+        err.hidden = true;
+        modal.querySelectorAll('input').forEach(i => { i.style.borderColor = ''; });
+        const val = sel => modal.querySelector(sel).value.trim();
+        const p = {
+          email: val('#i-email'), name: val('#i-name'), name_kana: val('#i-kana'),
+          phone: val('#i-phone'), company: val('#i-company'), invoiceAllowed: modal.querySelector('#i-invoice').checked
+        };
+        const problems = [];
+        if (!p.name) { problems.push('氏名を入力してください'); modal.querySelector('#i-name').style.borderColor = '#c0392b'; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) { problems.push('メールアドレスを正しく入力してください'); modal.querySelector('#i-email').style.borderColor = '#c0392b'; }
+        if (problems.length) { err.textContent = problems.join(' / '); err.hidden = false; return; }
+        const btn = modal.querySelector('#i-send');
+        btn.disabled = true;
+        try {
+          const res = await B.admin.inviteMember(p);
+          mm.close();
+          B.toast((res && res.resent ? '招待メールを送り直しました。' : '招待メールを送信しました。') +
+            'お客様がメールのリンクからパスワードを設定すると登録が完了します。', 'success');
+          await addInvited(res && res.userId);
+        } catch (ex) {
+          btn.disabled = false;
+          const fields = (ex && ex.fields) || {};
+          Object.keys(fields).forEach(k => { const el = FIELD_IDS[k] && modal.querySelector(FIELD_IDS[k]); if (el) el.style.borderColor = '#c0392b'; });
+          const detail = Object.keys(fields).map(k => fields[k]).filter(Boolean);
+          err.textContent = (ex && ex.message ? ex.message : B.errorMessage('INTERNAL')) + (detail.length ? ' (' + detail.join(' / ') + ')' : '');
+          err.hidden = false;
+        }
+      });
+    }
+
+    // 招待した会員 (招待の時点で members 行ができている) を一覧に足す
+    async function addInvited(userId) {
+      if (!userId || !B.client) { render(); return; }
+      try {
+        const res = await B.client.from('members').select('*').eq('user_id', userId).maybeSingle();
+        if (res && !res.error && res.data) {
+          const m = B.fromDb.member(res.data, { points: 0, coupons: [], ledger: [] });
+          const list = S.members().filter(x => x.userId !== userId && x.memberId !== m.memberId);
+          list.push(m);
+          S._hydrate({ members: list });
+        }
+      } catch (e) { /* 一覧への反映は再読み込み後でもよい */ }
+      render();
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       ['#f-kw', '#f-type', '#f-inv'].forEach(s => { const el = $(s); el.addEventListener(s === '#f-kw' ? 'input' : 'change', render); });
-      $('#btn-add').addEventListener('click', openAdd);
+      if (LIVE) {
+        $('#btn-add').textContent = '+ 会員を招待';
+        if (B.admin.can('members.write')) $('#btn-add').addEventListener('click', openInvite);
+        else { $('#btn-add').disabled = true; $('#btn-add').title = '会員の招待には会員の編集権限が必要です'; }
+      } else {
+        $('#btn-add').addEventListener('click', openAdd);
+        $('#mode-note').innerHTML = '<p style="font-size:12.5px;color:#1c4a7a;background:#eef4fa;border:1px solid #d4e2ef;border-radius:4px;padding:8px 12px;margin-bottom:12px">デモ環境では、この画面で会員を直接登録できます。本番接続時は「会員を招待」(招待メールをお送りし、パスワードはお客様が設定) に変わります。</p>';
+      }
       render();
     });
   })();

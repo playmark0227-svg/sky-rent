@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>スタッフ・権限 | グロースレンタカー 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">スタッフ・権限</h1>
+    <p class="page-note">管理画面を使うスタッフのアカウントを管理します。スタッフの招待、役割・担当拠点の変更、利用の停止、二段階認証のリセットができます (管理者のみ)。</p>
+
+    <div id="staff-notice" class="page-notice" role="status" hidden></div>
+
+    <div id="staff-main" hidden>
+      <section class="card filter-bar">
+        <div class="filter-group">
+          <label for="f-status">表示</label>
+          <select id="f-status">
+            <option value="">すべて</option>
+            <option value="active" selected>有効なスタッフ</option>
+            <option value="inactive">無効 (利用停止) のスタッフ</option>
+          </select>
+        </div>
+        <span id="staff-count" style="font-size:12px;color:var(--muted)"></span>
+        <span style="flex:1"></span>
+        <button type="button" id="btn-reload" class="btn btn-gray">最新の情報に更新</button>
+        <button type="button" id="btn-invite" class="btn btn-primary">+ スタッフを招待</button>
+      </section>
+
+      <section class="card">
+        <table class="data-table list">
+          <thead>
+            <tr><th>名前</th><th>メールアドレス</th><th>役割</th><th>担当拠点</th><th>状態</th><th>最終ログイン</th><th>二段階認証</th><th></th></tr>
+          </thead>
+          <tbody id="tbl"><tr class="empty"><td colspan="8">読み込み中...</td></tr></tbody>
+        </table>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:18px;padding:20px">
+      <h3 class="card-section-title">役割ごとにできること</h3>
+      <div style="overflow-x:auto">
+        <table class="data-table role-table" id="role-table"></table>
+      </div>
+      <ul class="staff-notes">
+        <li>役割・担当拠点の変更や利用停止は、そのスタッフの次の操作から反映されます (ログイン中でも、以後の読み込み・保存は新しい権限で判定されます)。</li>
+        <li>担当拠点を指定したスタッフは、その拠点の予約と、その拠点で取引のあるお客様 (会員・請求書・問い合わせ・メール送信記録) だけを表示・操作できます。どの拠点とも取引のない会員・一般のお問い合わせは全員が見られます。「全拠点」はすべての拠点が対象です。</li>
+        <li>最後の管理者は、無効化や役割の変更ができません。先に別の管理者を追加してください。</li>
+        <li>管理画面の利用には二段階認証 (スマートフォンの認証アプリ) が必須です。招待されたスタッフは、メールのリンクからパスワードを決めたあと、続けて二段階認証を設定します。</li>
+        <li>スマートフォンの機種変更・紛失などで認証アプリを使えなくなったスタッフは、一覧の「二段階認証をリセット」を押してください。登録済みの認証アプリは使えなくなり、次回ログイン時に QR コードを読み取って登録し直します。ご自身の二段階認証は、別の管理者にリセットを依頼してください。</li>
+        <li>退職したスタッフは「編集」から「無効 (利用停止)」にしてください。操作履歴を残すため、アカウントは削除しません。</li>
+      </ul>
+    </section>
+  </main>
+
+  <!-- 招待・編集 -->
+  <div class="crud-modal" id="staff-modal" hidden>
+    <div class="crud-modal-bg" data-close></div>
+    <form class="crud-modal-card" id="staff-form" novalidate role="dialog" aria-modal="true" aria-labelledby="staff-modal-title">
+      <div class="crud-modal-head">
+        <h3 id="staff-modal-title">スタッフを招待</h3>
+        <button type="button" class="crud-close" data-close aria-label="閉じる">×</button>
+      </div>
+      <div id="staff-form-error" class="form-error-box" role="alert" hidden></div>
+      <div class="crud-field">
+        <label for="sf-email">メールアドレス</label>
+        <div class="field-body">
+          <input type="email" id="sf-email" name="email" autocomplete="off" maxlength="254" placeholder="例: staff@example.com">
+          <p class="field-error" data-error-for="email" hidden></p>
+        </div>
+      </div>
+      <div class="crud-field">
+        <label for="sf-name">名前</label>
+        <div class="field-body">
+          <input type="text" id="sf-name" name="name" maxlength="100" placeholder="例: 佐藤 花子">
+          <p class="field-error" data-error-for="name" hidden></p>
+        </div>
+      </div>
+      <div class="crud-field">
+        <label for="sf-role">役割</label>
+        <div class="field-body">
+          <select id="sf-role" name="role"></select>
+          <p class="field-help" id="sf-role-help"></p>
+          <p class="field-error" data-error-for="role" hidden></p>
+        </div>
+      </div>
+      <div class="crud-field">
+        <label>担当拠点</label>
+        <div class="field-body">
+          <div class="chk-group">
+            <label><input type="radio" name="locScope" value="all" checked> 全拠点</label>
+            <label><input type="radio" name="locScope" value="some"> 拠点を選ぶ</label>
+          </div>
+          <div class="chk-group" id="sf-locations" style="margin-top:8px"></div>
+          <p class="field-error" data-error-for="locationIds" hidden></p>
+        </div>
+      </div>
+      <div class="crud-field" id="sf-active-row" hidden>
+        <label>状態</label>
+        <div class="field-body">
+          <div class="chk-group">
+            <label><input type="radio" name="active" value="1"> 有効 (管理画面を使える)</label>
+            <label><input type="radio" name="active" value="0"> 無効 (利用停止)</label>
+          </div>
+        </div>
+      </div>
+      <p class="modal-note" id="staff-modal-note"></p>
+      <div class="crud-modal-foot">
+        <button type="submit" class="btn btn-primary" id="staff-submit">招待メールを送信</button>
+        <button type="button" class="btn btn-gray" data-close>キャンセル</button>
+      </div>
+    </form>
+  </div>
+
+  <style>
+    .page-notice { background: #fff8d6; border: 1px solid #f0e0a0; color: #5c4a00; border-radius: 4px; padding: 14px 16px; font-size: 13px; line-height: 1.7; margin-bottom: 16px; }
+    .page-notice.is-error { background: #fdecea; border-color: #f5c2bd; color: #7a1c12; }
+    .page-notice[hidden], #staff-main[hidden], .crud-modal[hidden] { display: none !important; }
+    .role-table { font-size: 12px; min-width: 640px; }
+    .role-table th, .role-table td { text-align: center; }
+    .role-table th:first-child, .role-table td:first-child { text-align: left; }
+    .role-table td.yes { color: #1e8a4a; font-weight: 700; }
+    .role-table td.no { color: #bbb; }
+    .role-table tbody tr.role-desc td { font-size: 11px; color: var(--muted); vertical-align: top; }
+    .staff-notes { font-size: 12px; color: #555; line-height: 1.8; margin: 14px 0 0 18px; }
+    .staff-self { font-size: 11px; color: var(--muted); font-weight: 400; }
+    .staff-mfa-off { color: #c0392b; font-weight: 700; }
+    .staff-muted { color: var(--muted); font-size: 12px; }
+    .staff-actions { white-space: nowrap; }
+    .staff-actions .btn { padding: 4px 12px; font-size: 12px; }
+    .staff-actions .btn + .btn { margin-left: 6px; }
+    .staff-actions .btn-mfa-reset { background: #fff; color: #c0392b; border: 1px solid #e3b5b0; }
+    .staff-actions .btn-mfa-reset:hover { background: #fdecea; }
+    .field-body { flex: 1; min-width: 0; }
+    .crud-modal .crud-field .chk-group input { flex: none; padding: 0; border: 0; }
+    .crud-modal .crud-field .field-body > input, .crud-modal .crud-field .field-body > select { display: block; }
+    .field-body input[type=email], .field-body input[type=text], .field-body select { width: 100%; box-sizing: border-box; }
+    .field-error { color: #c0392b; font-size: 12px; margin: 4px 0 0; }
+    .field-error[hidden], .form-error-box[hidden] { display: none; }
+    .field-help { color: var(--muted); font-size: 11px; margin: 4px 0 0; line-height: 1.6; }
+    .form-error-box { margin: 12px 20px 0; background: #fdecea; color: #7a1c12; border: 1px solid #f5c2bd; border-radius: 4px; padding: 10px 12px; font-size: 13px; line-height: 1.6; }
+    .modal-note { font-size: 12px; color: #555; line-height: 1.6; margin: 0; padding: 10px 20px 0; }
+    .modal-note:empty { display: none; }
+    #staff-submit[disabled] { opacity: .6; cursor: wait; }
+    tr.is-inactive td { color: #999; }
+  </style>
+
+  <script src="partials.js"></script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
+  (function () {
+    'use strict';
+    const B = window.SkyRentBackend;
+    const S = window.SkyRentStore;
+    const $ = s => document.querySelector(s);
+    function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
+    // 役割と権限 (DB の role_has_perm と同じ表。変更するときは両方そろえる)
+    const ROLES = [
+      { id: 'admin', label: '管理者', desc: 'すべての操作 (スタッフ管理・設定変更・操作履歴を含む)' },
+      { id: 'store_staff', label: '店舗スタッフ', desc: '予約・会員・お問い合わせの対応、お知らせの編集' },
+      { id: 'accounting', label: '経理', desc: '請求書・支払状況の管理' },
+      { id: 'maintenance', label: '整備担当', desc: '車両情報の編集、整備・車検の貸出停止枠' },
+      { id: 'viewer', label: '閲覧のみ', desc: 'データの確認だけ (変更はできません)' }
+    ];
+    const PERMS = [
+      ['read', '予約・会員・車両・売上などの閲覧'],
+      ['reservations.write', '予約の登録・変更・キャンセル'],
+      ['payments.write', '予約の支払状況 (入金済みなど) の変更'],
+      ['members.write', '会員の招待・情報の変更・ポイントやクーポンの付与'],
+      ['inquiries.write', 'お問い合わせの対応状況・メモの更新'],
+      ['content.write', 'お知らせ・FAQ・カスタムページの編集'],
+      ['blocks.write', '貸出停止枠 (整備・車検) の登録・解除'],
+      ['invoices.write', '請求書の発行・入金管理、請求書払いの許可'],
+      ['catalog.write', '車両・カテゴリ・オプション・店舗の編集'],
+      ['outbox.read', 'メール送信状況の確認'],
+      ['settings.write', 'サイト設定・料金ルール・Googleカレンダー連携の変更'],
+      ['staff.write', 'スタッフの招待・役割の変更・利用停止'],
+      ['audit.read', '操作履歴の閲覧']
+    ];
+    const ROLE_PERMS = {
+      admin: PERMS.map(p => p[0]),
+      store_staff: ['read', 'reservations.write', 'members.write', 'inquiries.write', 'content.write', 'outbox.read', 'blocks.write'],
+      accounting: ['read', 'invoices.write', 'payments.write', 'outbox.read'],
+      maintenance: ['read', 'catalog.write', 'blocks.write'],
+      viewer: ['read']
+    };
+    const roleLabel = id => (ROLES.find(r => r.id === id) || {}).label || id || '';
+
+    // ---- 役割の説明表 (デモでも表示) ----
+    function renderRoleTable() {
+      const head = '<thead><tr><th>できること</th>' + ROLES.map(r => '<th>' + esc(r.label) + '</th>').join('') + '</tr></thead>';
+      const desc = '<tr class="role-desc"><td>概要</td>' + ROLES.map(r => '<td>' + esc(r.desc) + '</td>').join('') + '</tr>';
+      const rows = PERMS.map(p => '<tr><td>' + esc(p[1]) + '</td>' + ROLES.map(r => {
+        const yes = ROLE_PERMS[r.id].indexOf(p[0]) >= 0;
+        return '<td class="' + (yes ? 'yes' : 'no') + '" aria-label="' + (yes ? 'できる' : 'できない') + '">' + (yes ? '○' : '−') + '</td>';
+      }).join('') + '</tr>').join('');
+      $('#role-table').innerHTML = head + '<tbody>' + desc + rows + '</tbody>';
+    }
+    renderRoleTable();
+
+    function notice(text, isError) {
+      const el = $('#staff-notice');
+      el.textContent = text || '';
+      el.hidden = !text;
+      el.classList.toggle('is-error', !!isError);
+    }
+
+    if (!B.live) {
+      notice('スタッフの招待・役割の変更は、本番接続時に使えます。デモ環境では、下の「役割ごとにできること」だけ確認できます。');
+      return;
+    }
+    if (!B.admin.staff) {
+      notice('ログイン情報を確認できないため、この画面を表示できません。画面を再読み込みしてください。', true);
+      return;
+    }
+    if (!B.admin.can('staff.write')) {
+      notice('この画面を使う権限がありません。スタッフの招待や役割の変更は管理者が行います。必要な場合は管理者にご依頼ください。', true);
+      return;
+    }
+    $('#staff-main').hidden = false;
+
+    const me = B.admin.staff.userId;
+    let staffList = [];
+    let loading = false;
+
+    function locationName(id) {
+      const l = S.getLocation(id);
+      return l ? l.name : id;
+    }
+    function locationsText(ids) {
+      if (ids == null) return '全拠点';
+      if (!ids.length) return '(なし)';
+      return ids.map(locationName).join('、');
+    }
+    function lastLoginText(s) {
+      if (s.lastSignInAt) return esc(B.jst.format(s.lastSignInAt));
+      if (!s.emailConfirmed) return '<span class="staff-muted">招待中 (未登録)</span>';
+      return '<span class="staff-muted">まだログインしていません</span>';
+    }
+
+    function render() {
+      const f = $('#f-status').value;
+      const order = r => ROLES.findIndex(x => x.id === r);
+      const rows = staffList
+        .filter(s => !f || (f === 'active' ? s.active : !s.active))
+        .sort((a, b) => (b.active - a.active) || (order(a.role) - order(b.role)) || String(a.name).localeCompare(String(b.name), 'ja'));
+      const active = staffList.filter(s => s.active).length;
+      $('#staff-count').textContent = '有効 ' + active + ' 名 / 全 ' + staffList.length + ' 名';
+      if (!rows.length) {
+        $('#tbl').innerHTML = '<tr class="empty"><td colspan="8">該当するスタッフはいません。</td></tr>';
+        return;
+      }
+      $('#tbl').innerHTML = rows.map(s =>
+        '<tr class="' + (s.active ? '' : 'is-inactive') + '" data-user="' + esc(s.userId) + '">' +
+          '<td><strong>' + esc(s.name || '(名前なし)') + '</strong>' + (s.userId === me ? ' <span class="staff-self">(あなた)</span>' : '') + '</td>' +
+          '<td>' + esc(s.email) + '</td>' +
+          '<td>' + esc(roleLabel(s.role)) + '</td>' +
+          '<td>' + esc(locationsText(s.locationIds)) + '</td>' +
+          '<td>' + (s.active ? '<span class="status status-confirmed">有効</span>' : '<span class="status status-cancelled">無効</span>') + '</td>' +
+          '<td>' + lastLoginText(s) + '</td>' +
+          '<td>' + mfaText(s) + '</td>' +
+          '<td class="staff-actions"><button type="button" class="btn btn-gray btn-edit" data-user="' + esc(s.userId) + '">編集</button>' +
+            (canResetMfa(s) ? '<button type="button" class="btn btn-gray btn-mfa-reset" data-user="' + esc(s.userId) + '">二段階認証をリセット</button>' : '') + '</td>' +
+        '</tr>').join('');
+    }
+
+    // ---- 二段階認証のリセット (認証アプリの機種変更・紛失。自分以外・登録済みのスタッフ) ----
+    const mfaResetDone = {};   // この画面でリセットしたスタッフ (userId → true)
+    function canResetMfa(s) {
+      return typeof B.admin.resetStaffMfa === 'function' && s.userId !== me && !!s.mfaEnabled;
+    }
+    function mfaText(s) {
+      if (s.mfaEnabled) return '設定済み';
+      return '<span class="staff-mfa-off">未設定</span>' +
+        (mfaResetDone[s.userId] ? '<div class="staff-muted staff-mfa-reset">リセット済み。次回ログイン時に再登録が必要です</div>' : '');
+    }
+    let resetting = false;
+    async function resetMfa(s, btn) {
+      if (resetting || !canResetMfa(s)) return;
+      const who = s.name || s.email || 'このスタッフ';
+      if (!confirm(who + ' さんの二段階認証をリセットします。\n\n' +
+        '登録済みの認証アプリの確認コードは使えなくなり、次回ログイン時に QR コードを読み取って登録し直す必要があります。' +
+        'スマートフォンの機種変更・紛失などで、ご本人から依頼があったときだけ行ってください。\n\nリセットしますか?')) return;
+      resetting = true;
+      btn.disabled = true;
+      btn.textContent = 'リセットしています…';
+      try {
+        await B.admin.resetStaffMfa(s.userId);
+        mfaResetDone[s.userId] = true;
+        s.mfaEnabled = false;   // 一覧の読み直しを待たずに表示を変える
+        B.toast(who + ' さんの二段階認証をリセットしました。次回ログイン時に再登録が必要です。', 'success');
+        render();
+        await load();
+      } catch (e) {
+        B.toast('二段階認証をリセットできませんでした。' + ((e && e.message) || B.errorMessage('INTERNAL')), 'error');
+        btn.disabled = false;
+        btn.textContent = '二段階認証をリセット';
+      } finally {
+        resetting = false;
+      }
+    }
+
+    async function load() {
+      if (loading) return;
+      loading = true;
+      $('#btn-reload').disabled = true;
+      try {
+        const res = await B.admin.listStaff();
+        staffList = (res && res.staff) || [];
+        render();
+      } catch (e) {
+        $('#tbl').innerHTML = '<tr class="empty"><td colspan="8">スタッフ一覧を読み込めませんでした。' + esc(e && e.message) + '</td></tr>';
+      } finally {
+        loading = false;
+        $('#btn-reload').disabled = false;
+      }
+    }
+
+    // ---- 招待・編集のフォーム ----
+    const modal = $('#staff-modal');
+    const form = $('#staff-form');
+    let editing = null;   // null = 招待 / スタッフ = 編集
+
+    $('#sf-role').innerHTML = ROLES.map(r => '<option value="' + esc(r.id) + '">' + esc(r.label) + '</option>').join('');
+    function updateRoleHelp() {
+      const r = ROLES.find(x => x.id === $('#sf-role').value);
+      $('#sf-role-help').textContent = r ? r.desc : '';
+    }
+    $('#sf-role').addEventListener('change', updateRoleHelp);
+
+    function renderLocationChecks(selected) {
+      const locs = S.locations();
+      $('#sf-locations').innerHTML = locs.length
+        ? locs.map(l => '<label><input type="checkbox" name="loc" value="' + esc(l.locationId) + '"' +
+            (selected && selected.indexOf(l.locationId) >= 0 ? ' checked' : '') + '> ' + esc(l.name) + (l.active === false ? ' (停止中)' : '') + '</label>').join('')
+        : '<span class="staff-muted">拠点が登録されていません。</span>';
+    }
+    function syncLocScope() {
+      const some = form.querySelector('input[name=locScope]:checked').value === 'some';
+      form.querySelectorAll('input[name=loc]').forEach(c => { c.disabled = !some; });
+      $('#sf-locations').style.opacity = some ? '1' : '.5';
+    }
+    form.querySelectorAll('input[name=locScope]').forEach(r => r.addEventListener('change', syncLocScope));
+
+    function clearErrors() {
+      $('#staff-form-error').hidden = true;
+      $('#staff-form-error').textContent = '';
+      form.querySelectorAll('.field-error').forEach(p => { p.hidden = true; p.textContent = ''; });
+    }
+    function showError(e) {
+      const fields = (e && e.fields) || {};
+      let shown = false;
+      Object.keys(fields).forEach(k => {
+        const p = form.querySelector('[data-error-for="' + k + '"]') || (k === 'location_ids' ? form.querySelector('[data-error-for="locationIds"]') : null);
+        if (p) { p.textContent = fields[k]; p.hidden = false; shown = true; }
+      });
+      const box = $('#staff-form-error');
+      box.textContent = e && e.code === 'LAST_ADMIN' ? B.errorMessage('LAST_ADMIN') : ((e && e.message) || B.errorMessage('INTERNAL'));
+      box.hidden = false;
+      if (shown && e.code === 'VALIDATION') box.textContent = '入力内容をご確認ください。';
+    }
+
+    function openModal(staff) {
+      editing = staff || null;
+      clearErrors();
+      form.reset();
+      const inv = !editing;
+      $('#staff-modal-title').textContent = inv ? 'スタッフを招待' : 'スタッフの編集';
+      $('#staff-submit').textContent = inv ? '招待メールを送信' : '保存';
+      $('#sf-email').value = inv ? '' : (editing.email || '');
+      $('#sf-email').readOnly = !inv;
+      $('#sf-name').value = inv ? '' : (editing.name || '');
+      $('#sf-role').value = inv ? 'store_staff' : editing.role;
+      updateRoleHelp();
+      const ids = inv ? null : editing.locationIds;
+      form.querySelector('input[name=locScope][value="' + (ids == null ? 'all' : 'some') + '"]').checked = true;
+      renderLocationChecks(ids || []);
+      syncLocScope();
+      $('#sf-active-row').hidden = inv;
+      if (!inv) form.querySelector('input[name=active][value="' + (editing.active ? '1' : '0') + '"]').checked = true;
+      $('#staff-modal-note').textContent = inv
+        ? '招待メールが届きます。スタッフはメールのリンクからパスワードを決め、続けて二段階認証 (認証アプリ) を設定すると管理画面を使えるようになります。既に会員などでアカウントがあるメールアドレスは、招待メールは送らず、いまのパスワードでログインできるようになります。'
+        : (editing.userId === me ? 'ご自身のアカウントです。役割を管理者以外にしたり無効にしたりすると、この画面を使えなくなります。' : '');
+      modal.hidden = false;
+      const first = inv ? $('#sf-email') : $('#sf-name');
+      try { first.focus(); } catch (e) { /* 続行 */ }
+    }
+    function closeModal() {
+      modal.hidden = true;
+      editing = null;
+    }
+    modal.addEventListener('click', e => { if (e.target.closest('[data-close]')) { e.preventDefault(); closeModal(); } });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+
+    function selectedLocations() {
+      if (form.querySelector('input[name=locScope]:checked').value === 'all') return null;
+      return Array.prototype.map.call(form.querySelectorAll('input[name=loc]:checked'), c => c.value);
+    }
+
+    let submitting = false;
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      if (submitting) return;
+      clearErrors();
+      const name = $('#sf-name').value.trim();
+      const role = $('#sf-role').value;
+      const locationIds = selectedLocations();
+      const fieldErrors = {};
+      if (!name) fieldErrors.name = '名前を入力してください';
+      if (locationIds && !locationIds.length) fieldErrors.locationIds = '担当拠点を1つ以上選ぶか、「全拠点」を選んでください';
+      let email = '';
+      if (!editing) {
+        email = $('#sf-email').value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fieldErrors.email = 'メールアドレスを正しく入力してください';
+      }
+      if (Object.keys(fieldErrors).length) { showError({ code: 'VALIDATION', fields: fieldErrors, message: '入力内容をご確認ください。' }); return; }
+
+      let patch = null;
+      if (editing) {
+        patch = {};
+        const active = form.querySelector('input[name=active]:checked').value === '1';
+        if (name !== (editing.name || '')) patch.name = name;
+        if (role !== editing.role) patch.role = role;
+        if (active !== editing.active) patch.active = active;
+        const before = editing.locationIds == null ? null : editing.locationIds.slice().sort().join(',');
+        const after = locationIds == null ? null : locationIds.slice().sort().join(',');
+        if (before !== after) patch.locationIds = locationIds;
+        if (!Object.keys(patch).length) { closeModal(); return; }
+        if (editing.userId === me && ((patch.role && patch.role !== 'admin') || patch.active === false) &&
+            !confirm('ご自身の役割を管理者以外にする、または無効にすると、この画面 (スタッフ・権限) を使えなくなります。よろしいですか?')) return;
+        if (patch.active === false && editing.userId !== me &&
+            !confirm((editing.name || editing.email) + ' さんを無効 (利用停止) にします。以後、管理画面にログインできなくなります。よろしいですか?')) return;
+      }
+
+      submitting = true;
+      const btn = $('#staff-submit');
+      const label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '処理中…';
+      try {
+        if (!editing) {
+          const res = await B.admin.inviteStaff({ email: email, name: name, role: role, locationIds: locationIds });
+          B.toast(res && res.invited === false
+            ? '既に登録されているアカウントをスタッフに追加しました。いまのパスワードでログインし、二段階認証を設定すると管理画面を使えます。'
+            : email + ' に招待メールを送信しました。メールのリンクから登録が済むと、管理画面を使えるようになります。', 'success');
+        } else {
+          await B.admin.updateStaff(editing.userId, patch);
+          B.toast('スタッフ「' + name + '」の設定を保存しました。', 'success');
+        }
+        closeModal();
+        await load();
+      } catch (err) {
+        showError(err);
+      } finally {
+        submitting = false;
+        btn.disabled = false;
+        btn.textContent = label;
+      }
+    });
+
+    $('#btn-invite').addEventListener('click', () => openModal(null));
+    $('#btn-reload').addEventListener('click', () => load());
+    $('#f-status').addEventListener('change', render);
+    $('#tbl').addEventListener('click', e => {
+      const b = e.target.closest('.btn-edit, .btn-mfa-reset');
+      if (!b) return;
+      const s = staffList.find(x => x.userId === b.getAttribute('data-user'));
+      if (!s) return;
+      if (b.classList.contains('btn-mfa-reset')) resetMfa(s, b);
+      else openModal(s);
+    });
+
+    window.SkyRentStaffPage = { reload: load, list: () => staffList.slice() };
+    load();
+  })();
+  </script>
+</body>
+</html>

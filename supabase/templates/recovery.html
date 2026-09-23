@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>パスワード再設定のご案内 | グロースレンタカー</title>
+<!--
+  グロースレンタカー 認証メール: パスワード再設定のご案内
+  二重波かっこで囲んだ部分は Supabase Auth のテンプレート変数 (確認用URL・サイトURL・メールアドレス)。
+  本番ではダッシュボード Authentication → Emails → Templates にこのファイルの内容を貼り付ける。
+-->
+</head>
+<body style="margin:0;padding:0;background:#f2f2f2;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f2f2f2;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#ffffff;border-radius:6px;font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic','Noto Sans JP',Meiryo,sans-serif;color:#1a1a1a;">
+          <tr>
+            <td style="background:#0a0a0a;padding:18px 24px;border-bottom:4px solid #ff6a00;border-radius:6px 6px 0 0;">
+              <span style="color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:0.05em;">グロースレンタカー</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 24px 6px;font-size:15px;line-height:1.8;">
+              <h1 style="margin:0 0 18px;font-size:19px;line-height:1.5;">パスワード再設定のご案内</h1>
+              <p style="margin:0 0 14px;">パスワード再設定のお申し込みを受け付けました。</p>
+              <p style="margin:0 0 14px;">下のボタンを押して、新しいパスワードを設定してください。パスワードは 8 文字以上で、英大文字・英小文字・数字をそれぞれ 1 文字以上含めてください。</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:8px 24px 26px;">
+              <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#c85000;color:#ffffff;text-decoration:none;font-weight:bold;font-size:16px;line-height:1.4;padding:14px 32px;border-radius:6px;">新しいパスワードを設定する</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 24px 22px;font-size:13px;line-height:1.7;color:#444444;">
+              <p style="margin:0 0 6px;">ボタンが押せない場合は、次の URL をコピーしてブラウザのアドレス欄に貼り付けてください。</p>
+              <p style="margin:0 0 16px;word-break:break-all;"><a href="{{ .ConfirmationURL }}" style="color:#b34700;">{{ .ConfirmationURL }}</a></p>
+              <p style="margin:0 0 10px;">このリンクは一度だけ使えます。有効期限が切れた場合は、ログイン画面の「パスワードを忘れた方」からもう一度お手続きください。</p>
+              <p style="margin:0 0 10px;">お心当たりがない場合は、このメールを破棄してください。パスワードは変更されません。</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#f7f7f7;padding:18px 24px;font-size:12px;line-height:1.8;color:#555555;border-top:1px solid #e3e3e3;border-radius:0 0 6px 6px;">
+              このメールは送信専用のアドレスからお送りしています。ご返信いただいてもお答えできませんので、お問い合わせは公式LINEからお願いいたします。<br>
+              公式LINE: <a href="https://lin.ee/PuLt0Ig" style="color:#b34700;">https://lin.ee/PuLt0Ig</a><br>
+              ウェブサイト: <a href="{{ .SiteURL }}" style="color:#b34700;">{{ .SiteURL }}</a><br>
+              グロースレンタカー (株式会社Skyward Growth)
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

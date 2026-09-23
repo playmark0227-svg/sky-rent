@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>メール送信状況 | グロースレンタカー 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+  <style>
+    .ml-box { border-radius: 4px; padding: 10px 14px; font-size: 13px; line-height: 1.7; margin-bottom: 12px; }
+    .ml-box--info { background: #eef4fa; border: 1px solid #d4e2ef; color: #1c4a7a; }
+    .ml-box--warn { background: #fff7e0; border: 1px solid #f0dc9c; color: #6b5100; }
+    .ml-box--error { background: #fdf0ef; border: 1px solid #f3c4bf; color: #8a2419; }
+    .ml-box a { color: var(--link); text-decoration: underline; }
+    .ml-counts { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .ml-count { background: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 8px 14px; min-width: 120px; cursor: pointer; text-align: left; font: inherit; }
+    .ml-count strong { display: block; font-size: 22px; line-height: 1.2; }
+    .ml-count span { font-size: 12px; color: #666; }
+    .ml-count.is-failed strong { color: #c0392b; }
+    .ml-count.is-pending strong { color: #b56b00; }
+    .ml-count[aria-pressed="true"] { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(25,118,197,.15); }
+    .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 12px 16px; margin-bottom: 12px; }
+    .filter-group { display: flex; gap: 6px; align-items: center; }
+    .filter-group label { font-weight: 600; }
+    .filter-group select, .filter-group input { padding: 6px 9px; border: 1px solid var(--border); border-radius: 3px; font: inherit; }
+    .ml-st { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+    .ml-st--pending, .ml-st--sending { background: #fff4e0; color: #b56b00; }
+    .ml-st--sent { background: #e3f5ec; color: #1e8a4a; }
+    .ml-st--failed { background: #fde8e6; color: #c0392b; }
+    .ml-st--skipped { background: #ececec; color: #555; }
+    .ml-kind { font-size: 11px; color: #1c4a7a; background: #eef4fa; border-radius: 3px; padding: 1px 6px; white-space: nowrap; }
+    .ml-kind--gcal { color: #5b4a9e; background: #f0eef9; }
+    .ml-err { color: #8a2419; font-size: 12px; max-width: 320px; word-break: break-word; }
+    .ml-sub { color: #777; font-size: 11.5px; }
+    .ml-table td { vertical-align: top; }
+    .ml-table .btn { padding: 5px 12px; font-size: 12px; white-space: nowrap; }
+    .ml-more { text-align: center; padding: 12px; }
+    @media (max-width: 760px) {
+      .filter-bar { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">メール送信状況</h1>
+    <p class="page-note">予約確認・キャンセル・お問い合わせ受付などのメールと、担当者の Google カレンダーへの予約の書き込み (カレンダー同期) の処理状況です。
+      失敗したものは再送できます (再送すると試行回数を 0 に戻し、最初から送り直します)。宛先のメールアドレスは一部を伏せて表示します。</p>
+
+    <div id="alerts"></div>
+
+    <div class="ml-counts" id="counts" hidden></div>
+
+    <section class="card filter-bar" id="filters">
+      <div class="filter-group"><label for="f-status">状態</label>
+        <select id="f-status">
+          <option value="">すべて</option>
+          <option value="failed">失敗</option>
+          <option value="pending">未送信 (送信待ち)</option>
+          <option value="sent">送信済み</option>
+          <option value="skipped">送信せず (スキップ)</option>
+        </select>
+      </div>
+      <div class="filter-group"><label for="f-kind">種類</label>
+        <select id="f-kind">
+          <option value="">すべて</option>
+          <option value="mail">メール</option>
+          <option value="gcal">カレンダー同期</option>
+        </select>
+      </div>
+      <div class="filter-group"><label for="f-ref">関連番号</label>
+        <input type="text" id="f-ref" placeholder="予約番号・受付番号 (例: R00012)" maxlength="40" autocomplete="off">
+      </div>
+      <button type="button" class="btn btn-primary" id="btn-search">表示</button>
+      <span style="flex:1"></span>
+      <button type="button" class="btn btn-gray" id="btn-process" title="送信待ちのメール・カレンダー同期を今すぐ処理します">送信待ちを今すぐ処理</button>
+    </section>
+
+    <section class="card">
+      <table class="data-table list ml-table">
+        <thead>
+          <tr><th>登録日時</th><th>種類</th><th>宛先</th><th>件名・内容</th><th>状態</th><th style="text-align:center">試行</th><th>エラー・次回の再送</th><th>関連</th><th></th></tr>
+        </thead>
+        <tbody id="tbl"><tr class="empty"><td colspan="9">読み込み中...</td></tr></tbody>
+      </table>
+      <div class="ml-more" id="more" hidden><button type="button" class="btn btn-gray" id="btn-more">さらに表示</button></div>
+    </section>
+  </main>
+
+  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
+
+  <script src="partials.js"></script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
+  (function () {
+    'use strict';
+    const B = window.SkyRentBackend;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+    const SETUP_URL = 'https://github.com/playmark0227-svg/sky-rent/blob/main/docs/production/setup.md';
+    const PAGE = 100;
+    const MAX_ATTEMPTS = 8;       // supabase/functions/_shared/worker-core.ts と同じ
+    const COLS = 'id,template,to_email,subject,status,attempts,last_error,ref_type,ref_id,created_at,sent_at,next_attempt_at';
+    const LIVE = !!B.live;
+    const canRead = B.admin.can('outbox.read');
+    const canRetry = canRead && (B.admin.can('reservations.write') || B.admin.can('settings.write'));
+
+    const TEMPLATES = {
+      reservation_confirmed: '予約確認 (お客様)',
+      reservation_new_shop: '新規予約の通知 (店舗)',
+      reservation_cancelled: 'キャンセルのお知らせ (お客様)',
+      reservation_cancelled_shop: 'キャンセルの通知 (店舗)',
+      inquiry_received: 'お問い合わせ受付 (お客様)',
+      inquiry_new_shop: 'お問い合わせの通知 (店舗)',
+      coupon_issued: 'クーポン発行のお知らせ',
+      gcal_sync: 'カレンダー同期'
+    };
+    const STATUS = { pending: '未送信', sending: '送信中', sent: '送信済み', failed: '失敗', skipped: '送信せず' };
+    const GCAL_STATUS = { pending: '同期待ち', sending: '同期中', sent: '反映済み', failed: '失敗', skipped: '対象外' };
+
+    let rows = [];
+    let offset = 0;
+    let hasMore = false;
+    let loadSeq = 0;   // 条件を続けて変えたとき、古い読み込みの結果で上書きしない
+
+    // 宛先の一部を伏せる (例: yamada@example.com → ya****@example.com)
+    function maskEmail(v) {
+      const s = String(v || '');
+      const at = s.lastIndexOf('@');
+      if (at < 1) return s ? s.slice(0, 2) + '****' : '';
+      const local = s.slice(0, at), domain = s.slice(at + 1);
+      const keep = local.length <= 3 ? 1 : 2;
+      return local.slice(0, keep) + '****@' + domain;
+    }
+    function fmt(v) { return v ? B.jst.format(v, { weekday: false }) : ''; }
+    function refLink(r) {
+      if (!r.ref_id) return '';
+      const id = esc(r.ref_id);
+      if (r.ref_type === 'reservation') return '<a class="detail-link" href="reservation-list.html#' + id + '"><code>' + id + '</code></a>';
+      if (r.ref_type === 'inquiry') return '<a class="detail-link" href="inquiries.html#' + id + '"><code>' + id + '</code></a>';
+      if (r.ref_type === 'coupon') return '<span class="ml-sub">クーポン</span>';
+      return '<code>' + id + '</code>';
+    }
+    // 自動の再送の予定と、手動の「再送」の案内 (再送すると試行回数が 0 に戻り、最初から送り直す)
+    function nextAttempt(r) {
+      if (r.status !== 'failed') return '';
+      const again = canRetry ? '「再送」を押すと、最初から送り直します。' : '';
+      if (Number(r.attempts) >= MAX_ATTEMPTS) return '自動の再送は上限 (' + MAX_ATTEMPTS + '回) に達したため止まっています。' + again;
+      const t = Date.parse(r.next_attempt_at);
+      if (!isFinite(t) || new Date(t).getUTCFullYear() >= 2999) return '自動では再送しません (宛先の誤りなど)。' + (canRetry ? '原因を確かめてから「再送」を押すと、最初から送り直します。' : '');
+      return '次回の自動再送: ' + esc(fmt(r.next_attempt_at));
+    }
+
+    // ---------------------------------------------------------------
+    // 読み込み (本番: outbox を直接読む。RLS で outbox.read の権限が必要)
+    // ---------------------------------------------------------------
+    function refFilter() {
+      return String($('#f-ref').value || '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
+    }
+    function query(c, from) {
+      const st = $('#f-status').value, kind = $('#f-kind').value, ref = refFilter();
+      let q = c.from('outbox').select(COLS).order('id', { ascending: false });
+      if (st === 'pending') q = q.in('status', ['pending', 'sending']);
+      else if (st) q = q.eq('status', st);
+      if (kind === 'gcal') q = q.eq('template', 'gcal_sync');
+      else if (kind === 'mail') q = q.neq('template', 'gcal_sync');
+      if (ref) q = q.ilike('ref_id', '%' + ref + '%');
+      return q.range(from, from + PAGE - 1);
+    }
+
+    async function load(append) {
+      if (!LIVE || !canRead) return;
+      const c = B.client;
+      if (!c) return;
+      const seq = ++loadSeq;
+      $('#loading').hidden = false;
+      try {
+        const from = append ? offset : 0;
+        const res = await query(c, from);
+        if (seq !== loadSeq) return;
+        if (res.error) throw res.error;
+        const got = res.data || [];
+        rows = append ? rows.concat(got) : got;
+        offset = from + got.length;
+        hasMore = got.length === PAGE;
+        render();
+      } catch (e) {
+        if (seq !== loadSeq) return;
+        $('#tbl').innerHTML = '<tr class="empty"><td colspan="9">読み込めませんでした。' + esc(describe(e)) + '</td></tr>';
+        $('#more').hidden = true;
+      } finally {
+        if (seq === loadSeq) $('#loading').hidden = true;
+      }
+      if (seq !== loadSeq) return;
+      loadCounts();
+      checkSetup();
+    }
+
+    function describe(e) {
+      const msg = String((e && e.message) || '');
+      if (/^[A-Z][A-Z0-9_]{2,}$/.test(msg)) return B.errorMessage(msg);
+      if (/[^\x00-\x7F]/.test(msg)) return msg;
+      if (e && (e.code === '42501' || /permission denied|row-level security/i.test(msg))) return B.errorMessage('FORBIDDEN');
+      if (/fetch|network|Load failed/i.test(msg)) return B.errorMessage('NETWORK');
+      return B.errorMessage('INTERNAL');
+    }
+
+    // 状態ごとの件数
+    async function loadCounts() {
+      const c = B.client;
+      if (!c) return;
+      const kinds = [['failed', '失敗', 'is-failed'], ['pending', '未送信・送信中', 'is-pending'], ['skipped', '送信せず', '']];
+      try {
+        const counts = await Promise.all(kinds.map(k => {
+          let q = c.from('outbox').select('id', { count: 'exact', head: true });
+          q = k[0] === 'pending' ? q.in('status', ['pending', 'sending']) : q.eq('status', k[0]);
+          return q.then(r => (r && !r.error && typeof r.count === 'number' ? r.count : null));
+        }));
+        if (counts.every(n => n == null)) return;
+        const cur = $('#f-status').value;
+        $('#counts').innerHTML = kinds.map((k, i) => '<button type="button" class="ml-count ' + k[2] + '" data-count="' + k[0] + '" aria-pressed="' + (cur === k[0]) + '">' +
+          '<strong>' + (counts[i] == null ? '-' : counts[i]) + '</strong><span>' + k[1] + '</span></button>').join('');
+        $('#counts').hidden = false;
+        $('#counts').querySelectorAll('[data-count]').forEach(b => b.addEventListener('click', () => {
+          $('#f-status').value = $('#f-status').value === b.dataset.count ? '' : b.dataset.count;
+          load(false);
+        }));
+      } catch (e) { /* 件数は補助的な表示なので出さない */ }
+    }
+
+    // 「メール送信サービス未設定」: 最新のメールが「送信せず (未設定)」なら手順書へ案内する
+    async function checkSetup() {
+      const c = B.client;
+      if (!c) return;
+      let html = '';
+      try {
+        const res = await c.from('outbox').select('id,status,last_error,template')
+          .neq('template', 'gcal_sync').in('status', ['sent', 'skipped', 'failed'])
+          .order('id', { ascending: false }).range(0, 0);
+        const last = res && !res.error && res.data && res.data[0];
+        if (last && last.status === 'skipped' && /メール送信サービス未設定/.test(last.last_error || '')) {
+          html += '<div class="ml-box ml-box--warn" id="setup-alert"><strong>メール送信サービスが未設定です。</strong> 予約確認などのメールはお客様に届いていません (「送信せず」と記録されています)。<br>' +
+            '技術担当者に、<a href="' + SETUP_URL + '" target="_blank" rel="noopener">運用手順書 (docs/production/setup.md)</a> の 5章「メール送信サービス Resend の登録と DNS 設定」と 3章 (secrets の <code>RESEND_API_KEY</code>・<code>MAIL_FROM</code>) の設定を依頼してください。' +
+            '設定が済んだら、下の一覧の「送信せず」を再送できます。</div>';
+        }
+        const g = await c.from('outbox').select('id,status,last_error').eq('template', 'gcal_sync')
+          .in('status', ['sent', 'skipped', 'failed']).order('id', { ascending: false }).range(0, 0);
+        const lg = g && !g.error && g.data && g.data[0];
+        if (lg && lg.status === 'skipped' && /Google 連携が未設定/.test(lg.last_error || '')) {
+          html += '<div class="ml-box ml-box--info">Google カレンダーへの書き込みは、Google 連携の鍵が未設定のため行われていません。<a href="calendar.html">Googleカレンダー連携</a> の画面で状態を確認してください。</div>';
+        }
+      } catch (e) { /* 案内は補助的な表示 */ }
+      const box = $('#alerts');
+      const keep = box.querySelector('[data-static]');
+      box.innerHTML = (keep ? keep.outerHTML : '') + html;
+    }
+
+    // ---------------------------------------------------------------
+    // 表示
+    // ---------------------------------------------------------------
+    function render() {
+      if (!rows.length) {
+        $('#tbl').innerHTML = '<tr class="empty"><td colspan="9">該当する記録はありません</td></tr>';
+        $('#more').hidden = true;
+        return;
+      }
+      $('#tbl').innerHTML = rows.map(r => {
+        const gcal = r.template === 'gcal_sync';
+        const st = String(r.status || '');
+        const label = (gcal ? GCAL_STATUS[st] : STATUS[st]) || st;
+        const kind = gcal ? '<span class="ml-kind ml-kind--gcal">カレンダー同期</span>' : '<span class="ml-kind">メール</span>';
+        const to = gcal ? '<span class="ml-sub">担当者のカレンダー</span>' : esc(maskEmail(r.to_email));
+        const title = r.subject ? esc(r.subject) : esc(TEMPLATES[r.template] || r.template);
+        const sub = r.subject && TEMPLATES[r.template] ? '<div class="ml-sub">' + esc(TEMPLATES[r.template]) + '</div>' : '';
+        const err = r.last_error ? '<div class="ml-err">' + esc(r.last_error) + '</div>' : '';
+        const next = nextAttempt(r) ? '<div class="ml-sub">' + nextAttempt(r) + '</div>' : '';
+        const sent = st === 'sent' && r.sent_at ? '<div class="ml-sub">' + esc(fmt(r.sent_at)) + '</div>' : '';
+        let action = '';
+        if (canRetry && (st === 'failed' || st === 'skipped')) action = '<button type="button" class="btn btn-primary" data-retry="' + esc(r.id) + '">再送</button>';
+        else if (canRead && st === 'pending') action = '<button type="button" class="btn btn-gray" data-send="' + esc(r.id) + '">今すぐ送信</button>';
+        return '<tr data-id="' + esc(r.id) + '">' +
+          '<td style="white-space:nowrap">' + esc(fmt(r.created_at)) + '<div class="ml-sub">#' + esc(r.id) + '</div></td>' +
+          '<td>' + kind + '</td>' +
+          '<td>' + to + '</td>' +
+          '<td>' + title + sub + '</td>' +
+          '<td><span class="ml-st ml-st--' + esc(st) + '">' + esc(label) + '</span>' + sent + '</td>' +
+          '<td style="text-align:center">' + esc(r.attempts) + '</td>' +
+          '<td>' + err + next + '</td>' +
+          '<td>' + refLink(r) + '</td>' +
+          '<td style="text-align:center">' + action + '</td>' +
+          '</tr>';
+      }).join('');
+      $('#more').hidden = !hasMore;
+    }
+
+    // ---------------------------------------------------------------
+    // 再送・送信
+    // ---------------------------------------------------------------
+    // ワーカーを 1 回実行する。refIds を渡すと、その予約番号などのジョブだけを処理する
+    function processNow(refIds) {
+      const ids = (refIds || []).filter(Boolean);
+      if (ids.length) return B.call('admin', '/outbox/process', { body: { refIds: ids } });
+      return B.admin.processOutbox();
+    }
+
+    function summarize(result, ids) {
+      const list = (result && result.results) || [];
+      const mine = ids ? list.filter(x => ids.indexOf(String(x.id)) >= 0) : list;
+      if (!mine.length) return { type: 'info', text: '処理を依頼しました。結果は一覧でご確認ください (別の処理が先に実行した可能性があります)。' };
+      const n = k => mine.filter(x => x.status === k).length;
+      const parts = [];
+      if (n('sent')) parts.push('送信 ' + n('sent') + '件');
+      if (n('failed')) parts.push('失敗 ' + n('failed') + '件');
+      if (n('skipped')) parts.push('送信せず ' + n('skipped') + '件');
+      return { type: n('failed') ? 'warn' : 'success', text: '処理しました: ' + parts.join(' / ') + '。' };
+    }
+
+    async function retry(id, btn) {
+      const r = rows.find(x => String(x.id) === String(id));
+      if (!r) return;
+      btn.disabled = true;
+      try {
+        await B.admin.retryOutbox(r.id);
+        const result = await processNow(r.ref_id ? [r.ref_id] : null);
+        const s = summarize(result, [String(r.id)]);
+        B.toast(s.text, s.type);
+      } catch (e) {
+        B.toast('再送できませんでした。' + describe(e), 'error');
+      } finally {
+        btn.disabled = false;
+      }
+      await load(false);
+    }
+
+    async function sendNow(id, btn) {
+      const r = rows.find(x => String(x.id) === String(id));
+      if (!r) return;
+      btn.disabled = true;
+      try {
+        const result = await processNow(r.ref_id ? [r.ref_id] : null);
+        const s = summarize(result, [String(r.id)]);
+        B.toast(s.text, s.type);
+      } catch (e) {
+        B.toast('送信できませんでした。' + describe(e), 'error');
+      } finally {
+        btn.disabled = false;
+      }
+      await load(false);
+    }
+
+    async function processAll() {
+      const btn = $('#btn-process');
+      btn.disabled = true;
+      try {
+        const result = await B.admin.processOutbox();
+        const count = (result && result.processed) || 0;
+        if (!count) B.toast('送信待ちはありませんでした。', 'info');
+        else { const s = summarize(result, null); B.toast(s.text, s.type); }
+      } catch (e) {
+        B.toast('処理できませんでした。' + describe(e), 'error');
+      } finally {
+        btn.disabled = false;
+      }
+      await load(false);
+    }
+
+    // ---------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(location.search);
+      if (params.get('status')) $('#f-status').value = params.get('status');
+      if (params.get('kind')) $('#f-kind').value = params.get('kind');
+      if (params.get('q')) $('#f-ref').value = params.get('q');
+
+      if (!LIVE) {
+        $('#alerts').innerHTML = '<div class="ml-box ml-box--info" data-static><strong>本番接続時に使えます。</strong> デモ環境ではメールを送信しないため、送信の記録はありません。' +
+          '本番では、予約・キャンセル・お問い合わせのたびに送信の記録がここに表示され、失敗したメールを再送できます。' +
+          'メール送信の準備は <a href="' + SETUP_URL + '" target="_blank" rel="noopener">運用手順書 (docs/production/setup.md)</a> の 5章・7章をご覧ください。</div>';
+        $('#tbl').innerHTML = '<tr class="empty"><td colspan="9">本番接続時に表示されます</td></tr>';
+        ['#btn-search', '#btn-process', '#f-status', '#f-kind', '#f-ref'].forEach(s => { $(s).disabled = true; });
+        return;
+      }
+      if (!canRead) {
+        $('#alerts').innerHTML = '<div class="ml-box ml-box--info" data-static>この画面を見る権限がありません。必要な場合は管理者にお問い合わせください。</div>';
+        $('#tbl').innerHTML = '<tr class="empty"><td colspan="9">表示できません</td></tr>';
+        $('#filters').hidden = true;
+        return;
+      }
+      $('#btn-search').addEventListener('click', () => load(false));
+      $('#f-status').addEventListener('change', () => load(false));
+      $('#f-kind').addEventListener('change', () => load(false));
+      $('#f-ref').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); load(false); } });
+      $('#btn-more').addEventListener('click', () => load(true));
+      $('#btn-process').addEventListener('click', processAll);
+      $('#tbl').addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (!b) return;
+        if (b.dataset.retry) retry(b.dataset.retry, b);
+        else if (b.dataset.send) sendNow(b.dataset.send, b);
+      });
+      load(false);
+    });
+  })();
+  </script>
+</body>
+</html>

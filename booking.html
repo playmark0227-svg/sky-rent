@@ -6,6 +6,50 @@
   <title>ご予約手続き | グロースレンタカー</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/public.css">
+  <style>
+    /* 予約手続き (このページだけで使う部品) */
+    .bk-sec { border-top: 1px solid var(--line); padding: 18px 0 4px; }
+    .bk-sec:first-child { border-top: 0; padding-top: 0; }
+    .bk-sec > h4 { font-size: 15px; font-weight: 900; color: #fff; margin-bottom: 10px; display: flex; gap: 10px; align-items: baseline; }
+    .bk-sec > h4 .no { font-family: var(--font-num); color: var(--color-primary); font-size: 13px; letter-spacing: .08em; }
+    .bk-sec p, .bk-sec li { font-size: 13.5px; line-height: 1.9; color: #d6d6d6; }
+    .bk-sec ul { margin: 6px 0 0 1.2em; padding: 0; }
+    .bk-sec li { list-style: disc; }
+    .bk-sec a { color: var(--color-primary); font-weight: 700; border-bottom: 1px solid rgba(255,106,0,.45); }
+    .bk-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0 10px; }
+    .bk-table th, .bk-table td { padding: 9px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .bk-table th { background: var(--ink-4); color: #fff; font-weight: 700; white-space: nowrap; }
+    .bk-table td { background: var(--ink-3); color: #dcdcdc; }
+    .bk-table td.num { text-align: right; font-family: var(--font-num); white-space: nowrap; }
+    .bk-table tr.now td { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+    .bk-note { background: var(--ink-4); border-left: 3px solid var(--color-primary); border-radius: 4px; padding: 12px 16px; font-size: 13px; color: #cfcfcf; line-height: 1.9; margin: 10px 0; }
+    .bk-note.warn { border-left-color: #f0c14b; }
+    .bk-note.err { border-left-color: var(--color-error); background: #2a1210; color: #fff; }
+    .bk-note strong { color: #fff; }
+    .bk-field-err { display: block; color: var(--color-error); font-size: 12.5px; margin-top: 6px; }
+    .bk-check { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--ink-4); font-size: 13.5px; line-height: 1.8; color: #fff; cursor: pointer; margin-top: 16px; }
+    .bk-check input { width: 18px; height: 18px; flex-shrink: 0; margin-top: 4px; accent-color: var(--color-primary); }
+    .bk-check small { display: block; color: var(--color-muted); font-size: 12px; }
+    .bk-opt small { display: block; font-size: 12px; color: var(--color-muted); line-height: 1.7; }
+    .bk-opt small.ng { color: var(--color-error); }
+    .bk-opt.is-disabled { opacity: .55; cursor: not-allowed; }
+    .bk-consent { margin-top: 20px; padding: 16px 20px; background: var(--color-primary-soft); border: 1px solid rgba(255,106,0,.35); border-radius: 8px; }
+    .bk-consent h4 { font-size: 14px; color: #fff; margin-bottom: 6px; }
+    .bk-consent label { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 13.5px; line-height: 1.8; color: #fff; cursor: pointer; }
+    .bk-consent label + label { border-top: 1px dashed rgba(255,255,255,.12); }
+    .bk-consent input { width: 18px; height: 18px; flex-shrink: 0; margin-top: 4px; accent-color: var(--color-primary); }
+    .bk-consent a { color: var(--color-primary); font-weight: 700; border-bottom: 1px solid rgba(255,106,0,.45); }
+    .bk-consent .ver { color: var(--color-muted); font-size: 12px; }
+    .bk-consent .upd { color: #f0c14b; font-size: 12px; font-weight: 700; }
+    .bk-url { display: flex; gap: 8px; margin-top: 8px; }
+    .bk-url input { flex: 1; min-width: 0; padding: 10px 12px; border: 1.5px solid var(--line-2); border-radius: 4px; background: var(--ink); color: #fff; font-size: 12.5px; font-family: var(--font-num); }
+    .bk-actions { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+    .bk-inline-actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .bk-inline-actions .btn { padding: 8px 14px; font-size: 13px; }
+    @media print {
+      .site-header, .site-footer, .steps, .bk-noprint { display: none !important; }
+    }
+  </style>
 </head>
 <body>
   <header class="site-header solid">
@@ -42,23 +86,26 @@
       <div class="p-card" id="member-banner" style="margin-bottom:16px;display:none"></div>
       <div class="p-card">
         <h3 data-i18n="booking.customer">お客様情報</h3>
-        <form id="cust-form" style="margin-top:8px">
+        <form id="cust-form" style="margin-top:8px" novalidate>
           <div class="form-grid">
-            <div class="form-group"><label data-i18n="booking.name">お名前</label><input type="text" id="f-name" required maxlength="60"></div>
-            <div class="form-group"><label data-i18n="booking.kana">フリガナ</label><input type="text" id="f-kana" maxlength="60"></div>
-            <div class="form-group"><label data-i18n="booking.email">メールアドレス</label><input type="email" id="f-email" required></div>
-            <div class="form-group"><label data-i18n="booking.phone">電話番号</label><input type="tel" id="f-phone" placeholder="090-1234-5678"></div>
-            <div class="form-group full"><label data-i18n="booking.company">会社名 (法人の場合)</label><input type="text" id="f-company"></div>
-            <div class="form-group full" id="license-field">
-              <label data-i18n="booking.license">運転免許証番号</label>
-              <input type="text" id="f-license" placeholder="000000000000">
-              <small class="muted" data-i18n="booking.licenseNote">車両レンタルのため免許証情報の入力が必要です</small>
-            </div>
+            <div class="form-group"><label for="f-name" data-i18n="booking.name">お名前</label><input type="text" id="f-name" required maxlength="100" autocomplete="name"></div>
+            <div class="form-group"><label for="f-kana" data-i18n="booking.kana">フリガナ</label><input type="text" id="f-kana" maxlength="100"></div>
+            <div class="form-group"><label for="f-email" data-i18n="booking.email">メールアドレス</label><input type="email" id="f-email" required maxlength="254" autocomplete="email"></div>
+            <div class="form-group"><label for="f-phone" data-i18n="booking.phone">電話番号</label><input type="tel" id="f-phone" required placeholder="090-1234-5678" maxlength="20" autocomplete="tel"></div>
+            <div class="form-group full"><label for="f-company" data-i18n="booking.company">会社名 (法人の場合)</label><input type="text" id="f-company" maxlength="200" autocomplete="organization"></div>
           </div>
-          <div id="license-confirm-wrap" style="display:none;margin-top:8px"></div>
+
+          <!-- 運転免許証の確認 (番号はWebでは受け取らない。当日店頭で確認) -->
+          <label class="bk-check" id="license-wrap">
+            <input type="checkbox" id="f-licconf">
+            <span><span id="license-text">運転される方全員が、有効な運転免許証を持っています。</span>
+              <small id="license-note">ご来店時に、運転される方全員の運転免許証を店頭で確認します (Webでは免許証番号をお預かりしません)。</small></span>
+          </label>
+
+          <div id="discount-wrap" style="display:none;margin-top:20px"></div>
 
           <div id="coupon-wrap" style="display:none;margin-top:16px">
-            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px" data-i18n="booking.coupon">クーポンを利用する</label>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px" for="f-coupon" data-i18n="booking.coupon">クーポンを利用する</label>
             <select id="f-coupon" style="padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-family:inherit;width:100%"></select>
           </div>
 
@@ -67,25 +114,23 @@
             <div id="pay-options"></div>
           </div>
 
-          <div class="form-group full" style="margin-top:12px"><label data-i18n="booking.note">備考・ご要望</label><textarea id="f-note" rows="3"></textarea></div>
+          <div class="form-group full" style="margin-top:12px"><label for="f-note" data-i18n="booking.note">備考・ご要望</label><textarea id="f-note" rows="3" maxlength="2000"></textarea></div>
 
-          <p id="input-error" class="error-text" hidden></p>
-          <div class="form-actions"><button type="submit" class="btn btn-primary btn-lg" data-i18n="booking.confirm">入力内容の確認へ</button></div>
+          <div id="input-error" hidden></div>
+          <div class="form-actions"><button type="submit" class="btn btn-primary btn-lg" id="btn-to-confirm" data-i18n="booking.confirm">入力内容の確認へ</button></div>
         </form>
       </div>
     </div>
 
-    <!-- STEP 確認 -->
+    <!-- STEP 確認 (最終確認画面) -->
     <div id="pane-confirm" hidden>
+      <div id="price-notice" hidden></div>
       <div class="p-card" id="confirm-body"></div>
-      <label class="agree-box">
-        <input type="checkbox" id="bk-agree">
-        <span><a href="clause.html" target="_blank" rel="noopener">貸渡約款</a>・<a href="law.html" target="_blank" rel="noopener">キャンセル規定</a>・<a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a>の内容を確認し、同意します。</span>
-      </label>
-      <p id="confirm-error" class="error-text" hidden></p>
-      <div class="flex-sb mt16">
-        <button class="btn btn-secondary" id="btn-fix" data-i18n="booking.fix">← 入力内容を修正する</button>
-        <button class="btn btn-primary btn-lg" id="btn-submit" data-i18n="booking.submit">この内容で予約を確定する</button>
+      <div class="bk-consent" id="consent-box"></div>
+      <div id="confirm-error" hidden></div>
+      <div class="bk-actions">
+        <button type="button" class="btn btn-secondary" id="btn-fix" data-i18n="booking.fix">← 入力内容を修正する</button>
+        <button type="button" class="btn btn-primary btn-lg" id="btn-submit">上記の内容で予約を確定する</button>
       </div>
     </div>
 
@@ -94,11 +139,18 @@
       <div class="p-card done-wrap">
         <div class="done-icon">✓</div>
         <h2 style="font-size:22px" data-i18n="booking.done.title">ご予約ありがとうございました</h2>
-        <p class="muted mt8" id="done-text"></p>
-        <div class="price-box mt16" id="done-detail" style="text-align:left;max-width:440px;margin-left:auto;margin-right:auto"></div>
-        <div class="mt24" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <p class="mt8" id="done-mail" style="font-size:14px;line-height:1.9"></p>
+        <p class="muted mt8" id="done-pay" style="font-size:13px"></p>
+        <div class="price-box mt16" id="done-detail" style="text-align:left;max-width:520px;margin-left:auto;margin-right:auto"></div>
+        <div id="done-lookup" style="text-align:left;max-width:520px;margin:16px auto 0"></div>
+        <div class="bk-note warn" style="text-align:left;max-width:520px;margin:16px auto 0">
+          <strong>この画面を保存してください。</strong><br>
+          予約番号と、下の「ご予約の確認・キャンセル用URL」は、ご予約の確認やキャンセルに使います。スクリーンショットや印刷で、この画面を保存してください。
+        </div>
+        <div class="mt24 bk-noprint" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <button type="button" class="btn btn-secondary" id="btn-print">この画面を印刷する</button>
           <a href="index.html" class="btn btn-secondary" data-i18n="booking.done.top">トップに戻る</a>
-          <a href="mypage.html" class="btn btn-primary" data-i18n="booking.done.mypage">マイページで確認</a>
+          <a href="mypage.html" class="btn btn-primary" id="done-mypage" data-i18n="booking.done.mypage">マイページで確認</a>
         </div>
       </div>
     </div>
@@ -106,103 +158,222 @@
 
   <footer class="site-footer"><div class="container"><div class="footer-bottom" style="border-top:none"><span data-i18n="footer.copyright">© 2026 グロースレンタカー</span><a href="index.html">← トップへ戻る</a></div></div></footer>
 
-  <script src="js/config.js"></script>
-  <script src="js/store.js?v=20260916-1"></script>
-  <script src="js/pricing.js"></script>
-  <script src="js/i18n.js"></script>
-  <script src="js/api.js"></script>
-  <script>
+  <script src="js/config.js?v=20260923"></script>
+  <script src="js/store.js?v=20260923"></script>
+  <script src="js/pricing-core.js?v=20260923"></script>
+  <script src="js/pricing.js?v=20260923"></script>
+  <script src="js/i18n.js?v=20260923"></script>
+  <script src="js/api.js?v=20260923"></script>
+  <script src="js/backend.js?v=20260923"></script>
+  <script src="js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
   (function () {
-    const S = window.SkyRentStore, I = window.SkyRentI18n, P = window.SkyRentPricing;
+    'use strict';
+    const S = window.SkyRentStore, I = window.SkyRentI18n, P = window.SkyRentPricing, B = window.SkyRentBackend;
+    const core = window.SkyRentPricingCore;
+    const J = B.jst;
     const $ = s => document.querySelector(s);
     function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
     const isEn = () => I.getLang() === 'en';
-    const assetName = a => isEn() && a.nameEn ? a.nameEn : a.name;
+    const assetName = a => a ? (isEn() && a.nameEn ? a.nameEn : a.name) : '';
+    const locName = l => l ? (isEn() && l.nameEn ? l.nameEn : l.name) : '';
+    const yen = n => P.yen(n);
+    const DAY = 86400000;
+    const PENDING_KEY = 'sky-rent.pendingBooking';
+    const LINE_URL = 'https://lin.ee/PuLt0Ig';   // 公式LINE (law.html#cancel と同じ)
+    // 予約に必須の同意 (貸渡約款・キャンセル規定・プライバシーポリシー)。版は public_catalog の legal (デモは既定の版)
+    const REQUIRED_DOCS = ['clause', 'cancel', 'privacy'];
+    const DEFAULT_LEGAL = [
+      { id: 'clause', version: '2026-08', title: '貸渡約款', url: 'clause.html', effectiveAt: '2026-08-01' },
+      { id: 'cancel', version: '2026-08', title: 'キャンセル規定', url: 'law.html#cancel', effectiveAt: '2026-08-01' },
+      { id: 'privacy', version: '2026-08', title: 'プライバシーポリシー', url: 'privacy.html', effectiveAt: '2026-08-01' }
+    ];
+    // 日時を選び直す必要があるエラー
+    const PERIOD_ERRORS = ['AVAILABILITY_CONFLICT', 'STAFF_UNAVAILABLE', 'HANDOVER_CONFLICT', 'CALENDAR_UNAVAILABLE',
+      'START_IN_PAST', 'INVALID_PERIOD', 'PERIOD_TOO_LONG', 'START_TOO_FAR', 'ASSET_UNAVAILABLE', 'INVALID_ASSET'];
+    // 入力画面に戻って直す必要があるエラー
+    const INPUT_ERRORS = ['COUPON_INVALID', 'INVOICE_NOT_ALLOWED', 'DISCOUNT_NOT_APPLICABLE', 'OPTION_CONFLICT', 'OPTION_INVALID', 'OPTION_NOT_APPLICABLE'];
+    // 送信の結果が分からない (通信断など) エラー。冪等キーを変えずに再送してよい
+    const RETRYABLE = ['NETWORK', 'TIMEOUT', 'INTERNAL', 'RATE_LIMITED'];
 
     const L = {
       s1:{ja:'検索',en:'Search'},s2:{ja:'選択',en:'Select'},s3:{ja:'情報入力',en:'Details'},s4:{ja:'確認',en:'Confirm'},s5:{ja:'完了',en:'Done'},
-      period:{ja:'期間',en:'Period'}, qty:{ja:'数量',en:'Qty'}, opts:{ja:'オプション',en:'Options'}, none:{ja:'なし',en:'None'},
-      days:{ja:n=>n+'日間',en:n=>n+' days'}, total:{ja:'合計 (税込)',en:'Total (tax incl.)'},
-      req:{ja:'は必須です',en:' is required'}, email:{ja:'メールアドレスの形式が正しくありません',en:'Invalid email format'},
-      needLic:{ja:'必要な免許・資格の保有確認にチェックしてください',en:'Please confirm you hold the required license'},
+      total:{ja:'合計 (税込)',en:'Total (tax incl.)'},
+      req:{ja:'を入力してください',en:' is required'}, email:{ja:'メールアドレスの形式が正しくありません。入力内容をご確認ください。',en:'Invalid email format.'},
+      phone:{ja:'電話番号を正しく入力してください (半角数字とハイフン。例: 090-1234-5678)。',en:'Please enter a valid phone number.'},
+      needLic:{ja:'運転される方全員が有効な運転免許証をお持ちであることを確認し、チェックしてください。',en:'Please confirm that every driver holds a valid driver\'s license.'},
+      past:{ja:'貸出日時を過ぎているため、このままではご予約いただけません。日時を選び直してください。',en:'The pick-up time has already passed. Please choose another date.'},
       loginAs:{ja:'ログイン中',en:'Logged in as'}, guestNote:{ja:'会員の方はログインで情報が自動入力されます。',en:'Members: log in to auto-fill your details.'},
       loginLink:{ja:'ログイン →',en:'Log in →'},
       noCoupon:{ja:'クーポンを使わない',en:'Do not use a coupon'},
-      onsite:{ja:'現地決済 (現金・カード)',en:'Pay on-site (cash / card)'},
+      onsite:{ja:'現地決済 (現金・クレジットカード)',en:'Pay on-site (cash / card)'},
       invoice:{ja:'請求書払い (法人・行政向け)',en:'Invoice billing (corporate / gov.)'},
-      doneOnsite:{ja:'ご登録のメールアドレス宛に予約確認メールをお送りしました。当日は拠点にてお支払いください。',en:'A confirmation email has been sent. Please pay on-site on the day.'},
-      doneInvoice:{ja:'ご登録のメールアドレス宛に予約確認メールをお送りしました。後日、請求書を送付いたします。',en:'A confirmation email has been sent. An invoice will be sent later.'},
-      resId:{ja:'予約ID',en:'Booking ID'}
+      discount:{ja:'割引',en:'Discount'}, noDiscount:{ja:'割引を利用しない',en:'No discount'},
+      checking:{ja:'空き状況と料金を確認しています…',en:'Checking availability…'},
+      submitting:{ja:'予約を確定しています…',en:'Submitting…'},
+      submit:{ja:'上記の内容で予約を確定する',en:'Confirm this booking'},
+      rechoose:{ja:'日時・車両を選び直す',en:'Choose another date'},
+      backInput:{ja:'入力画面に戻る',en:'Back to details'},
+      resId:{ja:'予約番号',en:'Booking No.'}
     };
-    const tt = k => L[k][isEn()?'en':'ja'];
+    const tt = k => L[k][isEn() ? 'en' : 'ja'];
 
-    // 予約内容の取り出し
-    let pending;
-    try { pending = JSON.parse(sessionStorage.getItem('sky-rent.pendingBooking') || 'null'); } catch (e) { pending = null; }
-    if (!pending || !pending.assetId) { location.href = 'search.html'; return; }
-    const asset = S.getAsset(pending.assetId);
-    const cat = asset ? S.getCategory(asset.categoryId) : null;
-    if (!asset || !cat) { location.href = 'search.html'; return; }
-    const isVehicle = cat.type === 'vehicle';
-    const allOpts = (function () { const o = S.optionsForCategory(asset.categoryId); return o.common.concat(o.specific); })();
-    const selectedOptions = allOpts.filter(o => (pending.optionIds || []).indexOf(o.optionId) >= 0);
-    let member = S.currentMember();
-    let chosenCoupon = null; // {couponId, amount}
-
-    function calc() {
-      return P.calculate({ asset: asset, start: pending.start, end: pending.end, quantity: pending.quantity, options: selectedOptions, coupon: chosenCoupon ? { amount: chosenCoupon.amount } : null });
+    // ---- sessionStorage (予約途中の内容と冪等キー。個人情報は入れない) ----
+    function readPending() { try { return JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null'); } catch (e) { return null; } }
+    function savePending(p) { try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(p)); } catch (e) { /* 保存できなくても続行 */ } }
+    function newKey() {
+      const a = new Uint8Array(18);
+      try { window.crypto.getRandomValues(a); } catch (e) { for (let i = 0; i < a.length; i++) a[i] = Math.floor(Math.random() * 256); }
+      let s = '';
+      for (let i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
+      return 'bk-' + btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
 
+    let pending = readPending();
+    const doneOnly = !!(pending && pending.done);
+    if (!doneOnly && (!pending || !pending.assetId)) { location.href = 'search.html'; return; }
+    const asset = S.getAsset(doneOnly ? pending.done.assetId : pending.assetId);
+    const cat = asset ? S.getCategory(asset.categoryId) : null;
+    if (!doneOnly && (!asset || !cat)) { location.href = 'search.html'; return; }
+    const loc = asset ? S.getLocation(asset.locationId) : null;
+
+    let selectedOptions = [];
+    let member = null;
+    let chosenCoupon = null;   // {couponId, amount}
+    let discountType = null;
+    let serverQuote = null;    // {key, quote} サーバーが計算した見積 (PRICE_CHANGED・確認時の照合)
+    let priceNotice = null;    // {from, to}
+    let submitting = false;
+
+    if (!doneOnly) {
+      // 日時は ISO (UTC) にそろえる (日本時間の 'YYYY-MM-DDTHH:MM' で来ても解釈できる)
+      pending.start = J.fromInput(pending.start) || pending.start;
+      pending.end = J.fromInput(pending.end) || pending.end;
+      // 二重送信防止の冪等キー: この予約手続きのあいだ同じキーを使う (sessionStorage の pendingBooking に保持)
+      if (!pending.idempotencyKey) { pending.idempotencyKey = newKey(); savePending(pending); }
+      const all = (function () { const o = S.optionsForCategory(asset.categoryId); return o.common.concat(o.specific); })();
+      selectedOptions = all.filter(o => (pending.optionIds || []).indexOf(o.optionId) >= 0);
+      discountType = pending.discountType || null;
+    }
+
+    function rules() { return P.rules(); }
+    function quoteKey() {
+      return JSON.stringify([asset.assetId, pending.start, pending.end, selectedOptions.map(o => o.optionId).sort(),
+        discountType || null, chosenCoupon ? chosenCoupon.couponId : null]);
+    }
+    function localQuote() {
+      return P.quote({
+        asset: asset, start: pending.start, end: pending.end, options: selectedOptions, discountType: discountType,
+        coupon: chosenCoupon ? { id: chosenCoupon.couponId, amount: chosenCoupon.amount } : null
+      });
+    }
+    // 画面に出す見積 (サーバーの見積が同じ条件で届いていればそれを優先)
+    function currentQuote() {
+      if (serverQuote && serverQuote.key === quoteKey()) return serverQuote.quote;
+      return localQuote();
+    }
+    function periodText() {
+      const h = core.hoursBetween(pending.start, pending.end);
+      return J.format(pending.start) + ' 〜 ' + J.format(pending.end) + ' (' + (isEn() ? h + ' hours' : '利用時間 ' + h + '時間') + ')';
+    }
+    function linesHtml(lines) {
+      return (lines || []).map(l => '<div class="pl' + (l.amount < 0 ? ' minus' : '') + '"><span>' + esc(l.label) + '</span><span>' + esc(yen(l.amount)) + '</span></div>').join('');
+    }
+    function detailUrl() {
+      return 'detail.html?id=' + encodeURIComponent(asset.assetId) + '&start=' + encodeURIComponent(J.toInput(pending.start)) + '&end=' + encodeURIComponent(J.toInput(pending.end));
+    }
+
+    // =================================================================
+    // 入力画面
+    // =================================================================
     function renderSummary() {
-      const c = calc();
-      const loc = S.getLocation(asset.locationId);
+      if (doneOnly) { $('#summary-card').hidden = true; return; }
+      const q = currentQuote();
       $('#summary-card').innerHTML =
         '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">' +
-        '<div style="font-size:44px">' + esc(asset.image || '📦') + '</div>' +
-        '<div style="flex:1;min-width:200px"><div class="muted" style="font-size:12px">' + esc(isEn() && cat.nameEn ? cat.nameEn : cat.name) + ' ・ ' + esc(loc ? (isEn() && loc.nameEn ? loc.nameEn : loc.name) : '') + '</div>' +
-        '<div style="font-size:17px;font-weight:700">' + esc(assetName(asset)) + (pending.quantity > 1 ? ' × ' + pending.quantity : '') + '</div>' +
-        '<div class="muted" style="font-size:13px;margin-top:4px">' + fmtDT(pending.start) + ' 〜 ' + fmtDT(pending.end) + ' (' + tt('days')(c.days) + ')</div></div>' +
-        '<div style="text-align:right"><div class="muted" style="font-size:11px">' + tt('total') + '</div><div style="font-size:22px;font-weight:700;color:var(--color-primary)">¥' + c.total.toLocaleString() + '</div></div></div>';
+        '<div style="font-size:44px">' + esc(asset.image || '🚗') + '</div>' +
+        '<div style="flex:1;min-width:200px"><div class="muted" style="font-size:12px">' + esc(isEn() && cat.nameEn ? cat.nameEn : cat.name) + ' ・ ' + esc(locName(loc)) + '</div>' +
+        '<div style="font-size:17px;font-weight:700">' + esc(assetName(asset)) + ' <small class="muted">× 1' + (isEn() ? '' : '台') + '</small></div>' +
+        '<div class="muted" style="font-size:13px;margin-top:4px">' + esc(periodText()) + '</div></div>' +
+        '<div style="text-align:right"><div class="muted" style="font-size:11px">' + tt('total') + '</div><div style="font-size:22px;font-weight:700;color:var(--color-primary)">' + esc(yen(q.total)) + '</div></div></div>';
     }
 
     function renderMemberBanner() {
       const b = $('#member-banner');
+      b.style.display = 'block';
       if (member) {
-        b.style.display = 'block';
-        b.innerHTML = '<div class="flex-sb"><span>👤 ' + tt('loginAs') + ': <strong>' + esc(member.name) + '</strong> 様' + (member.invoiceAllowed ? ' <span class="badge stock">請求書払い可</span>' : '') + '</span><a href="mypage.html" class="muted" style="font-size:12px">' + I.t('mypage.title') + ' ↗</a></div>';
+        b.innerHTML = '<div class="flex-sb"><span>👤 ' + tt('loginAs') + ': <strong>' + esc(member.name) + '</strong> 様' + (member.invoiceAllowed ? ' <span class="badge stock">請求書払い可</span>' : '') + '</span><a href="mypage.html" class="muted" style="font-size:12px">' + esc(I.t('mypage.title')) + ' ↗</a></div>';
       } else {
-        b.style.display = 'block';
         b.innerHTML = '<span class="muted" style="font-size:13px">' + tt('guestNote') + '</span> <a href="mypage.html" style="color:var(--color-primary);font-weight:600;font-size:13px">' + tt('loginLink') + '</a>';
       }
     }
 
     function prefillFromMember() {
       if (!member) return;
-      $('#f-name').value = member.name || '';
-      $('#f-kana').value = member.nameKana || '';
-      $('#f-email').value = member.email || '';
-      $('#f-phone').value = member.phone || '';
-      $('#f-company').value = member.company || '';
+      const set = (id, v) => { const el = $(id); if (el && !el.value) el.value = v || ''; };
+      set('#f-name', member.name); set('#f-kana', member.nameKana); set('#f-email', member.email);
+      set('#f-phone', member.phone); set('#f-company', member.company);
+    }
+
+    // 割引の条件 (利用時間・車両カテゴリ) を満たすか。満たさなければ理由
+    function discountStatus(d) {
+      const hours = core.hoursBetween(pending.start, pending.end);
+      const reasons = [];
+      const minH = Number(d.minHours) || 0;
+      if (hours < minH) reasons.push(minH + '時間以上のご利用が対象です (今回は' + hours + '時間)');
+      const cats = Array.isArray(d.categoryIds) && d.categoryIds.length ? d.categoryIds : null;
+      if (cats && cats.indexOf(asset.categoryId) < 0) {
+        reasons.push(cats.map(id => { const c = S.getCategory(id); return c ? c.name : id; }).join('・') + 'のご利用が対象です');
+      }
+      return { ok: !reasons.length, reason: reasons.join('。') };
+    }
+
+    function renderDiscounts() {
+      const wrap = $('#discount-wrap');
+      const ds = rules().discounts || {};
+      const keys = Object.keys(ds).filter(k => ds[k] && typeof ds[k] === 'object');
+      if (!keys.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; discountType = null; return; }
+      // 条件外になった割引は外す
+      if (discountType && (!ds[discountType] || !discountStatus(ds[discountType]).ok)) discountType = null;
+      wrap.style.display = 'block';
+      let html = '<div class="opt-group-title">' + tt('discount') + '</div>' +
+        '<p class="muted" style="font-size:12.5px;margin:4px 0 6px">割引はどれか1つだけ選べます。基本料金から差し引き、ご来店時に証明書類を確認します。</p>' +
+        '<label class="opt-row bk-opt"><input type="radio" name="discount" value=""' + (!discountType ? ' checked' : '') + '><span class="on">' + tt('noDiscount') + '</span></label>';
+      keys.forEach(k => {
+        const d = ds[k];
+        const st = discountStatus(d);
+        const amt = Math.max(0, Math.floor(Number(d.amount) || 0));
+        html += '<label class="opt-row bk-opt' + (st.ok ? '' : ' is-disabled') + '">' +
+          '<input type="radio" name="discount" value="' + esc(k) + '"' + (discountType === k ? ' checked' : '') + (st.ok ? '' : ' disabled') + '>' +
+          '<span class="on"><strong>' + esc(d.label || k) + '</strong>' +
+          (d.proof ? '<small>ご来店時に「' + esc(d.proof) + '」のご提示が必要です。</small>' : '') +
+          (st.ok ? '' : '<small class="ng">このご予約には使えません: ' + esc(st.reason) + '</small>') +
+          '</span><span class="op">-' + esc(yen(amt)) + '</span></label>';
+      });
+      wrap.innerHTML = html;
+      wrap.querySelectorAll('input[name="discount"]').forEach(r => r.addEventListener('change', () => {
+        discountType = r.value || null;
+        pending.discountType = discountType; savePending(pending);
+        renderSummary();
+      }));
     }
 
     function renderDynamicFields() {
-      // 免許欄: 車両カテゴリのみ表示
-      $('#license-field').style.display = isVehicle ? 'flex' : 'none';
-      // 必要資格の確認チェック
-      const w = $('#license-confirm-wrap');
-      if (asset.requiredLicense) {
-        w.style.display = 'block';
-        w.innerHTML = '<div class="license-box"><strong>⚠ ' + I.t('detail.license') + '</strong>' + esc(asset.requiredLicense) +
-          '<label class="opt-row" style="margin-top:8px;border:0"><input type="checkbox" id="f-licconf"><span class="on">' + I.t('booking.licenseConfirm') + '</span></label></div>';
-      } else { w.style.display = 'none'; w.innerHTML = ''; }
+      // 運転免許証の確認 (車両に必要な免許があれば添える)
+      $('#license-text').textContent = asset.requiredLicense
+        ? '運転される方全員が、有効な運転免許証 (この車両は「' + asset.requiredLicense + '」が必要です) を持っています。'
+        : '運転される方全員が、有効な運転免許証を持っています。';
 
-      // クーポン (ログイン会員のみ)
+      renderDiscounts();
+
+      // クーポン (ログイン会員の未使用・期限内のもの)
       const cw = $('#coupon-wrap');
-      const coupons = member ? S.unusedCoupons(member.memberId) : [];
+      const now = Date.now();
+      const coupons = member ? S.unusedCoupons(member.memberId).filter(c => !c.expiresAt || core.toMs(c.expiresAt) > now) : [];
       if (coupons.length) {
         cw.style.display = 'block';
         $('#f-coupon').innerHTML = '<option value="">' + tt('noCoupon') + '</option>' +
-          coupons.map(c => '<option value="' + c.couponId + '" data-amt="' + c.amount + '">¥' + c.amount.toLocaleString() + ' クーポン (' + esc(c.reason || '') + ')</option>').join('');
+          coupons.map(c => '<option value="' + esc(c.couponId) + '" data-amt="' + esc(c.amount) + '"' + (chosenCoupon && chosenCoupon.couponId === c.couponId ? ' selected' : '') + '>' + esc(yen(c.amount)) + ' クーポン' + (c.reason ? ' (' + esc(c.reason) + ')' : '') + '</option>').join('');
         $('#f-coupon').onchange = () => {
           const opt = $('#f-coupon').selectedOptions[0];
           chosenCoupon = $('#f-coupon').value ? { couponId: $('#f-coupon').value, amount: Number(opt.dataset.amt) } : null;
@@ -210,102 +381,505 @@
         };
       } else { cw.style.display = 'none'; chosenCoupon = null; }
 
-      // 支払方法: 現地決済は常時 / 請求書払いは invoiceAllowed のみ
+      // 支払方法: 現地決済は常時 / 請求書払いは許可された会員のみ
       const po = $('#pay-options');
-      let html = '<label class="opt-row" style="border:0"><input type="radio" name="pay" value="onsite" checked><span class="on">' + tt('onsite') + '</span></label>';
+      const cur = (document.querySelector('input[name="pay"]:checked') || {}).value || 'onsite';
+      let html = '<label class="opt-row" style="border:0"><input type="radio" name="pay" value="onsite"' + (cur !== 'invoice' ? ' checked' : '') + '><span class="on">' + tt('onsite') + '<small class="muted" style="display:block;font-size:12px">ご利用当日、車両のお渡し時に店舗でお支払いください。</small></span></label>';
       if (member && member.invoiceAllowed) {
-        html += '<label class="opt-row" style="border:0"><input type="radio" name="pay" value="invoice"><span class="on">' + tt('invoice') + '</span></label>';
+        html += '<label class="opt-row" style="border:0"><input type="radio" name="pay" value="invoice"' + (cur === 'invoice' ? ' checked' : '') + '><span class="on">' + tt('invoice') + '<small class="muted" style="display:block;font-size:12px">当社が発行する請求書に記載の期日までにお支払いください。</small></span></label>';
       }
       po.innerHTML = html;
     }
-
-    function fmtDT(iso) { const d = new Date(iso); const p = n => String(n).padStart(2, '0'); return d.getFullYear() + '/' + p(d.getMonth() + 1) + '/' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
-
-    // ===== 入力 → 確認 =====
-    $('#cust-form').addEventListener('submit', e => {
-      e.preventDefault();
-      const err = $('#input-error'); err.hidden = true;
-      const name = $('#f-name').value.trim(), email = $('#f-email').value.trim(), phone = $('#f-phone').value.trim();
-      function fail(msg) { err.hidden = false; err.textContent = msg; }
-      if (!name) return fail(I.t('booking.name') + tt('req'));
-      if (!email) return fail(I.t('booking.email') + tt('req'));
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(tt('email'));
-      if (!phone) return fail(I.t('booking.phone') + tt('req'));
-      if (asset.requiredLicense) { const lc = $('#f-licconf'); if (!lc || !lc.checked) return fail(tt('needLic')); }
-      renderConfirm();
-      showPane('confirm');
-    });
 
     function collect() {
       const pay = (document.querySelector('input[name="pay"]:checked') || {}).value || 'onsite';
       return {
         name: $('#f-name').value.trim(), kana: $('#f-kana').value.trim(),
-        email: $('#f-email').value.trim(), phone: $('#f-phone').value.trim(),
-        company: $('#f-company').value.trim(), license: isVehicle ? $('#f-license').value.trim() : '',
-        note: $('#f-note').value.trim(), pay: pay,
-        licenseConfirmed: asset.requiredLicense ? !!($('#f-licconf') && $('#f-licconf').checked) : false
+        email: $('#f-email').value.trim(), phone: normalizePhone($('#f-phone').value),
+        company: $('#f-company').value.trim(), note: $('#f-note').value.trim(), pay: pay,
+        licenseConfirmed: !!$('#f-licconf').checked
       };
     }
-
-    function renderConfirm() {
-      const d = collect(); const c = calc();
-      const rows = [
-        [I.t('booking.name'), d.name], [I.t('booking.kana'), d.kana || '-'],
-        [I.t('booking.email'), d.email], [I.t('booking.phone'), d.phone],
-        [I.t('booking.company'), d.company || '-']
-      ];
-      if (isVehicle) rows.push([I.t('booking.license'), d.license || '-']);
-      rows.push([I.t('booking.payment'), d.pay === 'invoice' ? tt('invoice') : tt('onsite')]);
-      rows.push([I.t('booking.note'), d.note || '-']);
-
-      $('#confirm-body').innerHTML =
-        '<h3 class="mb16">' + assetName(asset) + (pending.quantity > 1 ? ' × ' + pending.quantity : '') + '</h3>' +
-        '<div class="muted mb16" style="font-size:13px">' + fmtDT(pending.start) + ' 〜 ' + fmtDT(pending.end) + ' (' + tt('days')(c.days) + ')</div>' +
-        '<table class="spec-table mb16">' + rows.map(r => '<tr><th>' + esc(r[0]) + '</th><td>' + esc(r[1]) + '</td></tr>').join('') + '</table>' +
-        '<div class="price-box"><div class="price-lines">' + c.lines.map(l => '<div class="pl' + (l.amount < 0 ? ' minus' : '') + '"><span>' + esc(l.label) + '</span><span>' + (l.amount < 0 ? '-¥' + Math.abs(l.amount).toLocaleString() : '¥' + l.amount.toLocaleString()) + '</span></div>').join('') +
-        '</div><div class="price-total"><span>' + tt('total') + '</span><span class="amt">¥' + c.total.toLocaleString() + '</span></div></div>';
+    // 全角数字・記号を半角に (サーバーと同じ規則)
+    function normalizePhone(v) {
+      return String(v || '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+        .replace(/[‐－―ー−]/g, '-').replace(/[（]/g, '(').replace(/[）]/g, ')').replace(/[＋]/g, '+')
+        .replace(/\s+/g, ' ').trim();
+    }
+    function validPhone(p) {
+      if (!/^[0-9+\-() ]{10,20}$/.test(p)) return false;
+      const n = p.replace(/\D/g, '').length;
+      return n >= 10 && n <= 15;
+    }
+    function validate(d) {
+      const f = {};
+      if (!d.name) f.name = I.t('booking.name') + tt('req');
+      if (!d.email) f.email = I.t('booking.email') + tt('req');
+      else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) f.email = tt('email');
+      if (!d.phone) f.phone = I.t('booking.phone') + tt('req');
+      else if (!validPhone(d.phone)) f.phone = tt('phone');
+      if (!d.licenseConfirmed) f.licenseConfirmed = tt('needLic');
+      return f;
     }
 
-    $('#btn-fix').addEventListener('click', () => showPane('input'));
+    // ---- エラー表示 ----
+    const FIELD_TARGET = {
+      name: '#f-name', kana: '#f-kana', email: '#f-email', phone: '#f-phone', company: '#f-company', note: '#f-note',
+      licenseConfirmed: '#license-wrap', paymentMethod: '#pay-options', discountType: '#discount-wrap', couponId: '#coupon-wrap'
+    };
+    function clearFieldErrors() { document.querySelectorAll('.bk-field-err').forEach(el => el.remove()); }
+    // 項目ごとのメッセージを入力欄の下に出す。入力欄の無い項目のメッセージは返す
+    function showFieldErrors(fields) {
+      clearFieldErrors();
+      const rest = [];
+      let first = null;
+      Object.keys(fields || {}).forEach(k => {
+        const target = FIELD_TARGET[k] ? $(FIELD_TARGET[k]) : null;
+        if (!target) { rest.push(fields[k]); return; }
+        const m = document.createElement('small');
+        m.className = 'bk-field-err';
+        m.setAttribute('role', 'alert');
+        m.textContent = fields[k];
+        target.insertAdjacentElement('afterend', m);
+        if (!first) first = target;
+      });
+      if (first) {
+        const focusEl = first.matches('input,textarea,select') ? first : first.querySelector('input,textarea,select');
+        if (focusEl) { try { focusEl.focus(); } catch (e) { /* 続行 */ } }
+      }
+      return rest;
+    }
+    // box にメッセージと操作ボタン (日時を選び直す / 入力画面に戻る) を出す
+    function showError(box, msg, opts) {
+      opts = opts || {};
+      const el = $(box);
+      let html = '<div class="bk-note err" role="alert">' + esc(msg);
+      if (opts.list && opts.list.length) html += '<ul style="margin:6px 0 0 1.2em">' + opts.list.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+      const acts = [];
+      if (opts.rechoose) acts.push('<a class="btn btn-secondary" href="' + esc(detailUrl()) + '">' + tt('rechoose') + '</a>');
+      if (opts.backInput) acts.push('<button type="button" class="btn btn-secondary" data-act="back-input">' + tt('backInput') + '</button>');
+      if (opts.mypage) acts.push('<a class="btn btn-secondary" href="mypage.html">' + esc(I.t('mypage.title')) + '</a>');
+      if (acts.length) html += '<div class="bk-inline-actions">' + acts.join('') + '</div>';
+      html += '</div>';
+      el.innerHTML = html;
+      el.hidden = false;
+      const back = el.querySelector('[data-act="back-input"]');
+      if (back) back.addEventListener('click', () => showPane('input'));
+    }
+    function hideError(box) { const el = $(box); el.hidden = true; el.innerHTML = ''; }
+    function codeMessage(err) {
+      return err && err.code ? (err.message || B.errorMessage(err.code)) : B.errorMessage('INTERNAL');
+    }
 
-    $('#btn-submit').addEventListener('click', () => {
-      const d = collect(); const c = calc();
-      const err = $('#confirm-error'); err.hidden = true;
-      const agree = $('#bk-agree');
-      if (agree && !agree.checked) {
-        err.hidden = false;
-        err.textContent = '貸渡約款・キャンセル規定・プライバシーポリシーへの同意が必要です。';
-        agree.focus();
+    // ===== 入力 → 確認 (サーバーで空き・料金を確かめてから進む) =====
+    $('#cust-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      if (submitting) return;
+      hideError('#input-error');
+      const d = collect();
+      const fields = validate(d);
+      if (Object.keys(fields).length) {
+        showFieldErrors(fields);
+        showError('#input-error', '入力内容をご確認ください。', { list: Object.keys(fields).map(k => fields[k]) });
         return;
       }
+      clearFieldErrors();
+      if (core.toMs(pending.start) <= Date.now()) { showError('#input-error', tt('past'), { rechoose: true }); return; }
+      const btn = $('#btn-to-confirm');
+      btn.disabled = true; btn.textContent = tt('checking');
       try {
-        const r = S.createReservation({
-          assetId: asset.assetId, quantity: pending.quantity,
-          customerName: d.name, customerEmail: d.email, customerPhone: d.phone,
-          company: d.company, licenseNo: d.license, memberId: member ? member.memberId : null,
-          start: pending.start, end: pending.end,
-          optionIds: selectedOptions.map(o => o.optionId),
-          options: selectedOptions.map(o => ({ optionId: o.optionId, name: o.name, price: o.price, priceType: o.priceType })),
-          paymentMethod: d.pay,
-          price: { total: c.total, lines: c.lines, breakdown: c.lines },
-          couponId: chosenCoupon ? chosenCoupon.couponId : null,
-          licenseConfirmed: d.licenseConfirmed, note: d.note
-        });
-        sessionStorage.removeItem('sky-rent.pendingBooking');
-        renderDone(r, d.pay, c);
-        showPane('done');
-      } catch (ex) {
-        err.hidden = false; err.textContent = ex.message;
+        if (await precheck()) { renderConfirm(); showPane('confirm'); }
+      } finally {
+        btn.disabled = false; btn.textContent = I.t('booking.confirm');
       }
     });
 
-    function renderDone(r, pay, c) {
-      $('#done-text').textContent = pay === 'invoice' ? tt('doneInvoice') : tt('doneOnsite');
-      $('#done-detail').innerHTML =
-        '<div class="pl"><span>' + tt('resId') + '</span><span><strong>' + esc(r.reservationId) + '</strong></span></div>' +
-        '<div class="pl"><span>' + assetName(asset) + '</span><span>' + fmtDT(pending.start) + ' 〜</span></div>' +
-        '<div class="price-total"><span>' + tt('total') + '</span><span class="amt">¥' + c.total.toLocaleString() + '</span></div>';
+    async function precheck() {
+      const local = localQuote();
+      if (!local.ok) { showError('#input-error', B.errorMessage(local.errors[0])); return false; }
+      let res = null;
+      try {
+        res = await B.quote({
+          assetId: asset.assetId, start: pending.start, end: pending.end,
+          optionIds: selectedOptions.map(o => o.optionId), discountType: discountType,
+          couponId: chosenCoupon ? chosenCoupon.couponId : null
+        });
+      } catch (err) {
+        // 通信できないときは確認画面へ進む (確定時にサーバーがあらためて確かめる)
+        if (!err || RETRYABLE.indexOf(err.code) >= 0) res = null;
+        else { handleError('#input-error', err, local); return false; }
+      }
+      if (!res) return true;
+      const reasons = (res.availability && res.availability.reasons) || [];
+      if (reasons.length) { showError('#input-error', B.errorMessage(reasons[0]), { rechoose: true }); return false; }
+      const q = res.quote;
+      if (q && q.ok === false && q.errors && q.errors.length) { showError('#input-error', B.errorMessage(q.errors[0])); return false; }
+      if (q && typeof q.total === 'number' && q.total !== local.total) {
+        serverQuote = { key: quoteKey(), quote: q };
+        priceNotice = { from: local.total, to: q.total };
+      } else if (q && typeof q.total === 'number') {
+        serverQuote = null;
+      }
+      return true;
     }
+
+    // =================================================================
+    // 最終確認画面 (特定商取引法: 最終確認画面の表示事項)
+    // =================================================================
+    function dayLabel(d) { return d <= 0 ? '当日' : (d === 1 ? '前日' : d + '日前'); }
+    function dayDate(d) { return J.format(core.toMs(pending.start) - d * DAY, { time: false, year: false }); }
+    function classLabel(cls) {
+      const C = rules().cancellation || {};
+      const names = [];
+      Object.keys(C.categoryClass || {}).forEach(cid => { if (C.categoryClass[cid] === cls) { const c = S.getCategory(cid); names.push(c ? c.name : cid); } });
+      Object.keys(C.classOf || {}).forEach(bt => { if (C.classOf[bt] === cls) names.push(bt); });
+      return names.join('・') || cls;
+    }
+    // この車両区分・この時期のキャンセル料の段階表と、いま取り消した場合の金額
+    function cancellationInfo(q) {
+      const R = rules();
+      const C = R.cancellation || {};
+      const base = Math.max(0, Number(q.base) || 0);
+      const now = P.cancellationFee({ asset: asset, start: pending.start, end: pending.end, base: base, cancelAt: new Date(), rules: R });
+      const tiers = (((C[now.busy ? 'busy' : 'normal'] || {})[now.cls]) || []).slice()
+        .sort((a, b) => (Number(b.minDays) || 0) - (Number(a.minDays) || 0));
+      const nowDays = Math.max(0, now.daysBefore);
+      const rows = tiers.map((t, i) => {
+        const m = Number(t.minDays) || 0, pct = Number(t.pct) || 0;
+        let when, active;
+        if (i === 0) {
+          when = m > 0 ? dayLabel(m) + ' (' + dayDate(m) + ') まで' : 'いつでも';
+          active = nowDays >= m;
+        } else {
+          const hi = (Number(tiers[i - 1].minDays) || 0) - 1;
+          when = hi <= m ? dayLabel(m) + ' (' + dayDate(m) + ')' : dayLabel(hi) + '〜' + dayLabel(m) + ' (' + dayDate(hi) + '〜' + dayDate(m) + ')';
+          active = nowDays >= m && nowDays <= hi;
+        }
+        return { when: when, pct: pct, amount: Math.floor(base * pct / 100), active: active };
+      });
+      const noShowPct = C.noShowPct != null ? Number(C.noShowPct) : 100;
+      const busyNames = (R.busyPeriods || []).map(p => p && p.name).filter(Boolean).join('・');
+      return {
+        now: now, rows: rows, base: base, noShow: { pct: noShowPct, amount: Math.floor(base * noShowPct / 100) },
+        clsLabel: classLabel(now.cls), season: now.busy ? '繁忙期' + (busyNames ? ' (' + busyNames + ')' : '') : '通常期'
+      };
+    }
+
+    function section(no, title, body) {
+      return '<div class="bk-sec"><h4><span class="no">' + esc(no) + '</span>' + esc(title) + '</h4>' + body + '</div>';
+    }
+
+    function renderConfirm() {
+      const d = collect();
+      const q = currentQuote();
+      const cn = cancellationInfo(q);
+      const fields = asset.customFields || {};
+      const hours = core.hoursBetween(pending.start, pending.end);
+      const locText = loc ? locName(loc) + (loc.address ? ' (' + loc.address + ')' : '') : '';
+
+      // 料金が変わったお知らせ
+      const pn = $('#price-notice');
+      if (priceNotice && serverQuote && serverQuote.key === quoteKey()) {
+        pn.hidden = false;
+        pn.innerHTML = '<div class="bk-note warn" role="alert"><strong>料金が変わりました。</strong> ' +
+          esc(yen(priceNotice.from)) + ' → <strong>' + esc(yen(priceNotice.to)) + '</strong> (税込)。<br>' +
+          '料金の設定が更新されたため、最新の料金で計算し直しました。下の内容と金額をご確認のうえ、もう一度「' + esc(tt('submit')) + '」を押してください。</div>';
+      } else { pn.hidden = true; pn.innerHTML = ''; }
+
+      let html = '';
+      // 1. 車両・台数
+      html += section('1', 'ご予約の車両・台数',
+        '<table class="bk-table"><tr><th>車両</th><td>' + esc(assetName(asset)) + '</td></tr>' +
+        '<tr><th>区分</th><td>' + esc(cat.name) + (fields.bodyType ? ' / ' + esc(fields.bodyType) : '') + (asset.capacity ? ' / 定員' + esc(asset.capacity) + '名' : '') + '</td></tr>' +
+        '<tr><th>台数</th><td>1台</td></tr>' +
+        (selectedOptions.length ? '<tr><th>オプション</th><td>' + selectedOptions.map(o => esc(o.name)).join('<br>') + '</td></tr>' : '') +
+        (asset.requiredLicense ? '<tr><th>必要な免許</th><td>' + esc(asset.requiredLicense) + '</td></tr>' : '') +
+        '</table>');
+      // 2. 貸出・返却の日時と店舗
+      html += section('2', '貸出・返却の日時と店舗',
+        '<table class="bk-table">' +
+        '<tr><th>貸出</th><td><strong>' + esc(J.format(pending.start)) + '</strong><br>' + esc(locText) + '</td></tr>' +
+        '<tr><th>返却</th><td><strong>' + esc(J.format(pending.end)) + '</strong><br>' + esc(locText) + ' (貸出と同じ店舗)</td></tr>' +
+        '<tr><th>利用時間</th><td>' + hours + '時間' + (hours >= 24 ? ' (24時間 × ' + Math.floor(hours / 24) + (hours % 24 ? ' + ' + (hours % 24) + '時間' : '') + ')' : '') + '</td></tr>' +
+        (loc && (loc.tel || loc.hours) ? '<tr><th>店舗</th><td>' + (loc.tel ? 'TEL ' + esc(loc.tel) + '<br>' : '') + (loc.hours ? '営業時間 ' + esc(loc.hours) : '') + (loc.holiday ? ' / 定休日 ' + esc(loc.holiday) : '') + '</td></tr>' : '') +
+        '</table><p class="muted" style="font-size:12.5px">日時はすべて日本時間です。</p>');
+      // 3. 料金
+      const dsel = discountType ? (rules().discounts || {})[discountType] : null;
+      html += section('3', '料金の内訳と総額 (税込)',
+        '<div class="price-box"><div class="price-lines">' + linesHtml(q.lines) + '</div>' +
+        '<div class="price-total"><span>' + tt('total') + '</span><span class="amt" id="confirm-total">' + esc(yen(q.total)) + '</span></div></div>' +
+        '<p class="muted mt8" style="font-size:12.5px">表示の金額はすべて税込です。' +
+        (dsel && dsel.proof ? '「' + esc(dsel.label) + '」はご来店時に「' + esc(dsel.proof) + '」を確認します。ご提示いただけない場合は割引前の料金となります。' : '') +
+        '延長・燃料の補充・事故時の負担 (NOC) など、ご利用中に発生した費用は、貸渡約款と料金表に従い店舗で精算します。</p>');
+      // 4. 支払方法・時期
+      html += section('4', 'お支払いの方法と時期',
+        d.pay === 'invoice'
+          ? '<p><strong>' + esc(tt('invoice')) + '</strong><br>当社が発行する請求書に記載の期日までにお支払いください。</p>'
+          : '<p><strong>' + esc(tt('onsite')) + '</strong><br>ご利用当日、車両のお渡し時に店舗でお支払いください。</p>');
+      // 5. 予約の成立時点
+      html += section('5', '予約の成立時点',
+        '<p>この画面の「' + esc(tt('submit')) + '」ボタンを押し、次の画面に予約番号が表示された時点でご予約が成立します。</p>');
+      // 6. キャンセル規定
+      let tbl = '<table class="bk-table"><tr><th>取り消しの時期</th><th>キャンセル料</th><th>今回のご予約の場合</th></tr>';
+      cn.rows.forEach(r => {
+        tbl += '<tr' + (r.active ? ' class="now"' : '') + '><td>' + esc(r.when) + (r.active ? ' <span class="badge stock">いま</span>' : '') + '</td><td class="num">' +
+          (r.pct === 0 ? '無料' : esc(r.pct) + '%') + '</td><td class="num">' + esc(yen(r.amount)) + '</td></tr>';
+      });
+      tbl += '<tr><td>ご連絡なしのキャンセル (無断キャンセル)</td><td class="num">' + esc(cn.noShow.pct) + '%</td><td class="num">' + esc(yen(cn.noShow.amount)) + '</td></tr></table>';
+      html += section('6', 'キャンセル規定',
+        '<p>この車両の区分 (<strong>' + esc(cn.clsLabel) + '</strong>)・この時期 (<strong>' + esc(cn.season) + '</strong>) のキャンセル料です。' +
+        'キャンセル料は基本料金 (' + esc(yen(cn.base)) + ') をもとに計算し、日数は貸出日 (日本時間) を基準に数えます。</p>' + tbl +
+        '<div class="bk-note" id="cancel-now">いまご予約を取り消した場合のキャンセル料: <strong>' + esc(yen(cn.now.fee)) + '</strong>' +
+        (cn.now.label ? ' (' + esc(cn.now.label) + ')' : '') + '</div>' +
+        '<p><strong>取り消しの方法</strong></p><ul>' +
+        '<li>予約確定メールに記載の「ご予約の確認・キャンセル用URL」、または会員の方はマイページから、キャンセル料を確認して取り消せます。</li>' +
+        '<li>貸出開始後など、Webでお手続きできない場合は、<a href="' + LINE_URL + '" target="_blank" rel="noopener">公式LINE</a>または<a href="contact.html" target="_blank" rel="noopener">お問い合わせフォーム</a>からご連絡ください。キャンセル料は、当社がご連絡を受け付けた日を基準にします。</li>' +
+        '</ul>');
+      // お客様情報
+      html += section('7', 'お客様情報',
+        '<table class="bk-table">' + [
+          [I.t('booking.name'), d.name], [I.t('booking.kana'), d.kana || '-'], [I.t('booking.email'), d.email],
+          [I.t('booking.phone'), d.phone], [I.t('booking.company'), d.company || '-'],
+          ['運転免許証', '運転される方全員が有効な免許証を所持 (当日店頭で確認)'],
+          [I.t('booking.note'), d.note || '-']
+        ].map(r => '<tr><th>' + esc(r[0]) + '</th><td style="white-space:pre-wrap">' + esc(r[1]) + '</td></tr>').join('') + '</table>');
+      $('#confirm-body').innerHTML = html;
+      renderSummary();
+    }
+
+    // 同意 (文書ごとに版つき)
+    //   latestLegal: 確定時に CONSENT_REQUIRED で返ってきた最新の版 (あれば画面の文書一覧より優先する)
+    let latestLegal = null;
+    function legalDocs() {
+      if (latestLegal) return latestLegal;
+      const list = S.list('legal');
+      const src = Array.isArray(list) && list.length ? list : (B.live ? [] : DEFAULT_LEGAL);
+      return REQUIRED_DOCS.map(id => src.find(x => x && x.id === id)).filter(Boolean);
+    }
+    // サイト内のページ (例 clause.html / law.html#cancel) か https の URL だけをリンクにする
+    function docUrl(u) {
+      const s = String(u || '');
+      return /^(https:\/\/|[A-Za-z0-9._-]+\.html(#[A-Za-z0-9_-]*)?$)/.test(s) ? s : '#';
+    }
+    // opts.keep: {id: 版} チェックを残す文書 (版が変わっていないもの) / opts.updated: 版が新しくなった文書の id
+    function renderConsents(opts) {
+      opts = opts || {};
+      const keep = opts.keep || {};
+      const updated = opts.updated || [];
+      const docs = legalDocs();
+      const box = $('#consent-box');
+      box.innerHTML = '<h4>ご予約には、次の文書への同意が必要です</h4>' + docs.map(doc =>
+        '<label><input type="checkbox" data-doc="' + esc(doc.id) + '" data-ver="' + esc(doc.version) + '"' + (keep[doc.id] === String(doc.version) ? ' checked' : '') + '>' +
+        '<span><a href="' + esc(docUrl(doc.url)) + '" target="_blank" rel="noopener">' + esc(doc.title || doc.id) + '</a> の内容を確認し、同意します。' +
+        '<span class="ver"> (' + esc(doc.version) + '版' + (doc.effectiveAt ? '・' + esc(J.format(doc.effectiveAt, { time: false, weekday: false })) + '施行' : '') + ')</span>' +
+        (updated.indexOf(doc.id) >= 0 ? ' <span class="upd" data-updated>内容が更新されました</span>' : '') + '</span></label>'
+      ).join('');
+    }
+    // CONSENT_REQUIRED のエラーに載っている最新の版 (documents) で同意欄を出し直す (再読み込みはしない)。
+    //   版が同じでチェック済みの文書はチェックを残し、版が変わった・足りない文書 (missing) はチェックし直してもらう。
+    //   戻り値: 同意し直しが必要な文書の名前の一覧 (documents が無ければ null)
+    function applyLatestLegal(err) {
+      const list = (Array.isArray(err && err.documents) ? err.documents : [])
+        .filter(d => d && typeof d.id === 'string' && d.id && d.version != null && String(d.version) !== '');
+      if (!list.length) return null;
+      const missing = Array.isArray(err.missing) ? err.missing.map(String) : [];
+      const prevDocs = {};
+      legalDocs().forEach(d => { prevDocs[d.id] = d; });
+      const prevChecks = {};
+      consentState().forEach(x => { prevChecks[x.id] = x; });
+      const order = id => { const i = REQUIRED_DOCS.indexOf(id); return i < 0 ? REQUIRED_DOCS.length : i; };
+      latestLegal = list.slice().sort((a, b) => order(a.id) - order(b.id)).map(d => {
+        const old = prevDocs[d.id] || DEFAULT_LEGAL.find(x => x.id === d.id) || {};
+        const version = String(d.version);
+        const same = old.version != null && String(old.version) === version;
+        return {
+          id: d.id, version: version,
+          title: d.title || old.title || d.id,
+          url: d.url || old.url || '',
+          effectiveAt: d.effectiveAt || d.effective_at || (same ? old.effectiveAt : null) || null
+        };
+      });
+      const keep = {};
+      const updated = [];
+      latestLegal.forEach(d => {
+        const prev = prevChecks[d.id];
+        const changed = !prev || String(prev.version) !== d.version || missing.indexOf(d.id) >= 0;
+        if (changed) updated.push(d.id);
+        else if (prev.checked) keep[d.id] = d.version;
+      });
+      renderConsents({ keep: keep, updated: updated });
+      return latestLegal.filter(d => updated.indexOf(d.id) >= 0).map(d => d.title);
+    }
+    function consentState() {
+      return Array.prototype.map.call(document.querySelectorAll('#consent-box input[data-doc]'), el => ({
+        id: el.dataset.doc, version: el.dataset.ver, checked: el.checked, el: el,
+        title: (el.parentNode.querySelector('a') || {}).textContent || el.dataset.doc
+      }));
+    }
+
+    $('#btn-fix').addEventListener('click', () => { hideError('#confirm-error'); showPane('input'); });
+
+    function setSubmitting(on) {
+      submitting = on;
+      const btn = $('#btn-submit');
+      btn.disabled = on;
+      btn.setAttribute('aria-busy', on ? 'true' : 'false');
+      btn.textContent = on ? tt('submitting') : tt('submit');
+      $('#btn-fix').disabled = on;
+    }
+
+    $('#btn-submit').addEventListener('click', async () => {
+      if (submitting) return;   // 二重送信防止 (送信中はボタンも無効)
+      hideError('#confirm-error');
+      const docs = consentState();
+      const missing = docs.filter(x => !x.checked);
+      if (!docs.length) { showError('#confirm-error', B.errorMessage('CONSENT_REQUIRED') + ' 画面を再読み込みしてください。'); return; }
+      if (missing.length) {
+        showError('#confirm-error', '「' + missing.map(x => x.title).join('」「') + '」への同意が必要です。内容をご確認のうえ、チェックを入れてください。');
+        try { missing[0].el.focus(); } catch (e) { /* 続行 */ }
+        return;
+      }
+      const d = collect();
+      const q = currentQuote();
+      if (!q.ok) { showError('#confirm-error', B.errorMessage((q.errors || [])[0]), { backInput: true }); return; }
+      const payload = {
+        idempotencyKey: pending.idempotencyKey,
+        assetId: asset.assetId, start: pending.start, end: pending.end,
+        optionIds: selectedOptions.map(o => o.optionId),
+        discountType: discountType || null,
+        couponId: chosenCoupon ? chosenCoupon.couponId : null,
+        customer: { name: d.name, kana: d.kana, email: d.email, phone: d.phone, company: d.company },
+        paymentMethod: d.pay, licenseConfirmed: true, note: d.note,
+        expectedTotal: q.total,
+        consent: { documents: docs.map(x => ({ id: x.id, version: x.version })), agreedAt: new Date().toISOString() }
+      };
+      setSubmitting(true);
+      let res;
+      try {
+        res = await B.createReservation(payload);
+      } catch (err) {
+        setSubmitting(false);
+        handleError('#confirm-error', err, q);
+        return;
+      }
+      setSubmitting(false);
+      onDone(res, d, q);
+    });
+
+    function handleError(box, err, q) {
+      const code = err && err.code;
+      if (code === 'PRICE_CHANGED' && err.quote && typeof err.quote.total === 'number') {
+        serverQuote = { key: quoteKey(), quote: err.quote };
+        priceNotice = { from: q ? q.total : err.quote.total, to: err.quote.total };
+        renderConfirm();
+        showPane('confirm');
+        showError('#confirm-error', B.errorMessage('PRICE_CHANGED'));
+        return;
+      }
+      if (code === 'IDEMPOTENCY_KEY_REUSED') {
+        // 同じキーで別の内容の予約が確定済み = 前回の送信が届いていた可能性。次の送信は新しいキーで行う
+        pending.idempotencyKey = newKey(); savePending(pending);
+        showError(box, '直前のお手続きで、ご予約が既に確定している可能性があります。予約確定メールまたはマイページでご予約をご確認ください。確定していなかった場合は、もう一度「' + tt('submit') + '」を押してください。', { mypage: true });
+        return;
+      }
+      if (code === 'VALIDATION' && err.fields && Object.keys(err.fields).length) {
+        showPane('input');
+        const rest = showFieldErrors(err.fields);
+        showError('#input-error', codeMessage(err), { list: rest });
+        return;
+      }
+      if (code === 'CONSENT_REQUIRED') {
+        const titles = applyLatestLegal(err);
+        if (titles) {
+          // 最新の版で同意欄を出し直した: 内容を確認して、チェックし直してもらう
+          showPane('confirm');
+          showError('#confirm-error', (titles.length
+            ? '「' + titles.join('」「') + '」の内容が更新されました。最新の版をご確認のうえ、あらためて同意の欄にチェックを入れてから、もう一度「' + tt('submit') + '」を押してください。'
+            : codeMessage(err) + ' チェックを入れてから、もう一度「' + tt('submit') + '」を押してください。'));
+          const first = document.querySelector('#consent-box input[data-doc]:not(:checked)');
+          if (first) { try { first.focus(); } catch (e) { /* 続行 */ } }
+          return;
+        }
+        showError(box, codeMessage(err) + ' 規約が更新された場合は、画面を再読み込みすると最新の版が表示されます。');
+        return;
+      }
+      if (PERIOD_ERRORS.indexOf(code) >= 0) { showError(box, codeMessage(err), { rechoose: true }); return; }
+      if (INPUT_ERRORS.indexOf(code) >= 0) {
+        if (box === '#confirm-error') showError(box, codeMessage(err), { backInput: true });
+        else showError(box, codeMessage(err));
+        return;
+      }
+      if (code === 'UNAUTHENTICATED') { showError(box, codeMessage(err), { mypage: true }); return; }
+      showError(box, codeMessage(err));
+    }
+
+    // =================================================================
+    // 完了画面
+    // =================================================================
+    function onDone(res, d, q) {
+      const r = (res && res.reservation) || {};
+      const rec = {
+        id: r.id, assetId: r.assetId || asset.assetId, locationId: asset.locationId,
+        start: r.start || pending.start, end: r.end || pending.end,
+        total: r.total != null ? r.total : q.total,
+        lines: (r.price && Array.isArray(r.price.lines) && r.price.lines) || q.lines,
+        paymentMethod: r.paymentMethod || d.pay,
+        lookupUrl: res.lookupUrl || null,
+        emailStatus: (res.email && res.email.status) || 'skipped',
+        demo: !!res.demo || !B.live, replay: !!res.replay, member: !!member
+      };
+      // 再読み込みしても完了画面を出せるよう、個人情報を除いた結果だけ残す (タブを閉じると消える)
+      pending = { done: rec };
+      savePending(pending);
+      renderDone(rec);
+      showPane('done');
+      if (member && B.live) B.member.reload().catch(() => {});
+    }
+
+    function mailText(rec) {
+      if (rec.demo) return 'デモ環境のため、予約確認メールは送信されません。';
+      switch (rec.emailStatus) {
+        case 'sent': return 'ご入力のメールアドレス宛に、予約確認メールをお送りしました。届かない場合は、迷惑メールフォルダもご確認ください。';
+        case 'queued': return '予約確認メールは送信の準備をしています。しばらくたっても届かない場合は、下の「ご予約の確認・キャンセル用URL」からご予約内容をご確認ください。';
+        default: return 'ご予約は確定しましたが、予約確認メールをお送りできませんでした。お手数ですが、予約番号と下のURLを控えるか、この画面を保存してください。';
+      }
+    }
+
+    function renderDone(rec) {
+      const a = S.getAsset(rec.assetId) || asset;
+      const l = S.getLocation(rec.locationId || (a && a.locationId)) || loc;
+      $('#done-mail').textContent = mailText(rec);
+      $('#done-pay').textContent = rec.paymentMethod === 'invoice'
+        ? 'お支払いは請求書払いです。当社が発行する請求書に記載の期日までにお支払いください。'
+        : 'お支払いは、ご利用当日に店舗でお願いします (現金・クレジットカード)。';
+      $('#done-detail').innerHTML =
+        '<div class="price-lines">' +
+        '<div class="pl"><span>' + tt('resId') + '</span><span><strong style="color:#fff;font-size:18px" id="done-id">' + esc(rec.id) + '</strong></span></div>' +
+        '<div class="pl"><span>車両</span><span>' + esc(a ? assetName(a) : rec.assetId) + ' × 1台</span></div>' +
+        '<div class="pl"><span>貸出</span><span>' + esc(J.format(rec.start)) + '</span></div>' +
+        '<div class="pl"><span>返却</span><span>' + esc(J.format(rec.end)) + '</span></div>' +
+        (l ? '<div class="pl"><span>店舗</span><span>' + esc(locName(l)) + (l.address ? '<br><small>' + esc(l.address) + '</small>' : '') + '</span></div>' : '') +
+        '</div><div class="price-lines" style="border-top:1px solid var(--line);margin-top:8px;padding-top:6px">' + linesHtml(rec.lines) + '</div>' +
+        '<div class="price-total"><span>' + tt('total') + '</span><span class="amt">' + esc(yen(rec.total)) + '</span></div>';
+      const lk = $('#done-lookup');
+      if (rec.lookupUrl && /^https?:\/\//i.test(rec.lookupUrl)) {
+        lk.innerHTML = '<div class="p-card" style="padding:16px 18px"><strong style="font-size:14px">ご予約の確認・キャンセル用URL</strong>' +
+          '<div class="bk-url"><input type="text" readonly id="lookup-url" value="' + esc(rec.lookupUrl) + '" aria-label="ご予約の確認・キャンセル用URL">' +
+          '<button type="button" class="btn btn-secondary bk-noprint" id="btn-copy" style="padding:8px 14px;font-size:13px">コピー</button></div>' +
+          '<p class="muted mt8" style="font-size:12px;line-height:1.8">このURLを開くと、ご予約の確認とキャンセルができます。URLを知っている人は誰でも操作できるため、他の人に教えないでください。</p>' +
+          '<a class="btn btn-primary mt8 bk-noprint" href="' + esc(rec.lookupUrl) + '" style="padding:8px 14px;font-size:13px">ご予約内容を確認する</a></div>';
+        $('#btn-copy').addEventListener('click', () => {
+          const input = $('#lookup-url');
+          const done = () => { B.toast('URLをコピーしました。', 'success'); };
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(input.value).then(done, () => { input.select(); });
+            else { input.select(); document.execCommand('copy'); done(); }
+          } catch (e) { input.select(); }
+        });
+      } else { lk.innerHTML = ''; }
+      $('#done-mypage').hidden = !rec.member;
+    }
+    $('#btn-print').addEventListener('click', () => { try { window.print(); } catch (e) { /* 印刷できない環境 */ } });
 
     function showPane(name) {
       ['input', 'confirm', 'done'].forEach(p => { $('#pane-' + p).hidden = p !== name; });
@@ -314,16 +888,30 @@
         const order = { input: 0, confirm: 1, done: 2 }, cur = order[name], mine = order[s.dataset.step];
         if (mine < cur) s.classList.add('done'); else if (mine === cur) s.classList.add('active');
       });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (name === 'input') renderSummary();
+      $('#summary-card').hidden = name === 'done';
+      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { /* 続行 */ }
     }
 
+    function applyStepLabels() { document.querySelectorAll('[data-sk]').forEach(el => { el.textContent = tt(el.dataset.sk); }); $('#btn-submit').textContent = submitting ? tt('submitting') : tt('submit'); }
+
+    let booted = false;
     function boot() {
-      document.querySelectorAll('[data-sk]').forEach(el => { el.textContent = tt(el.dataset.sk); });
+      if (booted) return;
+      booted = true;
+      applyStepLabels();
+      if (doneOnly) { renderDone(pending.done); showPane('done'); return; }
       member = S.currentMember();
-      renderSummary(); renderMemberBanner(); prefillFromMember(); renderDynamicFields();
+      renderSummary(); renderMemberBanner(); prefillFromMember(); renderDynamicFields(); renderConsents();
+      if (core.toMs(pending.start) <= Date.now()) showError('#input-error', tt('past'), { rechoose: true });
     }
     document.addEventListener('DOMContentLoaded', boot);
-    document.addEventListener('sky-rent:langchange', () => { document.querySelectorAll('[data-sk]').forEach(el => { el.textContent = tt(el.dataset.sk); }); renderSummary(); renderMemberBanner(); renderDynamicFields(); });
+    document.addEventListener('sky-rent:langchange', () => {
+      applyStepLabels();
+      if (doneOnly || (pending && pending.done)) { renderDone(pending.done); return; }
+      renderSummary(); renderMemberBanner(); renderDynamicFields();
+      if (!$('#pane-confirm').hidden) renderConfirm();
+    });
     if (document.readyState !== 'loading') boot();
   })();
   </script>

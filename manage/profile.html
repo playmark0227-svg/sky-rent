@@ -10,9 +10,50 @@
   <div data-include="topbar"></div>
 
   <main class="main">
-    <h1 class="page-title">プロフィール</h1>
-    <p class="page-note">ログインユーザーの情報を編集します。</p>
+    <h1 class="page-title" id="pf-title">プロフィール</h1>
+    <p class="page-note" id="pf-note">ログインユーザーの情報を編集します。</p>
 
+    <!-- ===== 本番: ログイン中のスタッフ (パスワード変更・二段階認証の案内) ===== -->
+    <div id="pf-live" hidden>
+      <section class="card pf-card">
+        <h3 class="pf-h">ログイン中のアカウント</h3>
+        <table class="info-table pf-account" id="pf-account"><tbody><tr><td>読み込み中...</td></tr></tbody></table>
+        <p class="pf-help">名前・役割・担当拠点の変更は、管理者が「スタッフ・権限」の画面で行います。メールアドレスの変更が必要な場合も管理者にご依頼ください。</p>
+      </section>
+
+      <section class="card pf-card" style="margin-top:14px">
+        <h3 class="pf-h">パスワードの変更</h3>
+        <form id="pf-pw-form" novalidate>
+          <div class="form-row">
+            <label for="pf-pw-new">新しいパスワード</label>
+            <input type="password" class="form-input" id="pf-pw-new" autocomplete="new-password" aria-describedby="pf-pw-rule">
+          </div>
+          <p class="pf-help" id="pf-pw-rule">8文字以上で、英大文字・英小文字・数字をそれぞれ1文字以上含めてください。</p>
+          <div class="form-row">
+            <label for="pf-pw-new2">確認 (再入力)</label>
+            <input type="password" class="form-input" id="pf-pw-new2" autocomplete="new-password">
+          </div>
+          <div id="pf-pw-msg" class="pf-box" role="status" hidden></div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="pf-pw-btn">パスワードを変更</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card pf-card" style="margin-top:14px">
+        <h3 class="pf-h">二段階認証 (認証アプリ)</h3>
+        <p id="pf-mfa-state" class="pf-mfa-state"></p>
+        <ul class="pf-list">
+          <li>管理画面へのログインには、パスワードに加えて、スマートフォンの認証アプリに表示される確認コード (6桁) が必要です。</li>
+          <li>スマートフォンの機種変更・紛失などで認証アプリを使えなくなる場合は、管理者に「スタッフ・権限」の画面で<strong>二段階認証のリセット</strong>を依頼してください。リセットのあと、次回ログイン時に QR コードを読み取って登録し直します。</li>
+          <li>機種変更の前であれば、認証アプリの引き継ぎ (アカウントの移行) 機能で、新しいスマートフォンへ移すこともできます。</li>
+          <li id="pf-mfa-admin" hidden>ほかのスタッフの二段階認証は、<a href="staff.html">スタッフ・権限</a> の画面からリセットできます。ご自身の分は、別の管理者に依頼してください。</li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- ===== デモ: 従来どおり (端末内の設定・バックアップ) ===== -->
+    <div id="pf-demo">
     <section class="card" style="padding:24px">
       <h3 style="margin-bottom:14px;font-size:15px;color:var(--primary)">基本情報</h3>
       <div class="form-row">
@@ -77,11 +118,145 @@
         <button class="btn btn-gray" id="btn-reset" style="background:#c0392b">設定を初期化 (全データ削除)</button>
       </div>
     </section>
+    </div>
   </main>
+
+  <style>
+    .pf-card { padding: 24px; }
+    .pf-h { margin-bottom: 14px; font-size: 15px; color: var(--primary); }
+    .pf-help { font-size: 12px; color: var(--muted); line-height: 1.7; margin: 4px 0 12px; }
+    .pf-account { font-size: 13px; }
+    .pf-account th { width: 140px; }
+    .pf-ok { color: #1e8a4a; font-weight: 700; }
+    .pf-ng { color: #c0392b; font-weight: 700; }
+    .pf-box { border-radius: 4px; padding: 10px 14px; font-size: 13px; line-height: 1.7; margin: 10px 0; }
+    .pf-box.is-ok { background: #e3f5ec; border: 1px solid #b9e3cb; color: #1e5a36; }
+    .pf-box.is-error { background: #fdecea; border: 1px solid #f5c2bd; color: #7a1c12; }
+    .pf-mfa-state { font-size: 13px; margin-bottom: 8px; }
+    .pf-list { font-size: 12.5px; color: #555; line-height: 1.8; margin: 0 0 0 18px; }
+    .pf-list li { list-style: disc; }
+    .pf-list a { color: var(--link); text-decoration: underline; }
+  </style>
 
   <script src="partials.js"></script>
   <script src="js/settings.js"></script>
-  <script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
+  (function () {
+    'use strict';
+    const B = window.SkyRentBackend;
+    const S = window.SkyRentStore;
+    const $ = s => document.querySelector(s);
+    function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+    let pwBusy = false;   // パスワード変更の送信中 (二重送信防止)
+
+    if (B && B.live) { initLive(); return; }
+    initDemo();
+
+    // =================================================================
+    // 本番: ログイン中のスタッフの情報・パスワード変更・二段階認証の案内
+    //   (デモ用の settings.profile の保存・バックアップ・初期化は出さない)
+    // =================================================================
+    function initLive() {
+      $('#pf-demo').hidden = true;
+      $('#pf-demo').innerHTML = '';   // デモ用の入力欄 (data-setting) を残さない
+      $('#pf-live').hidden = false;
+      $('#pf-title').textContent = 'アカウント';
+      $('#pf-note').textContent = 'ログイン中のアカウントの確認と、パスワードの変更ができます。';
+      $('#pf-mfa-admin').hidden = !B.admin.can('staff.write');
+      renderAccount(null, true);
+      loadAccount();
+      $('#pf-pw-form').addEventListener('submit', onChangePassword);
+    }
+
+    function roleLabel(role) {
+      const labels = (window.SkyRentManageNav && window.SkyRentManageNav.roleLabels) || {};
+      return labels[role] || role || '-';
+    }
+    function locationsText(ids) {
+      if (ids == null) return '全拠点';
+      if (!ids.length) return '(なし)';
+      return ids.map(id => { const l = S.getLocation(id); return l ? l.name : id; }).join('、');
+    }
+
+    // st: admin.sessionState() の結果 ({email, aal, staff:{name, role, locationIds}, hasTotp}) / null = 読み込み中・失敗
+    function renderAccount(st, loading) {
+      const me = B.admin.staff || {};
+      const staff = (st && st.staff) || {};
+      const name = staff.name || me.name || '';
+      const email = (st && st.email) || me.email || '';
+      const role = staff.role || me.role || '';
+      const locs = st && st.staff ? staff.locationIds : me.locationIds;
+      let mfa;
+      if (loading) mfa = '<span style="color:var(--muted)">確認しています…</span>';
+      else if (!st) mfa = '<span style="color:var(--muted)">確認できませんでした (画面を再読み込みしてください)</span>';
+      else if (st.hasTotp) mfa = '<span class="pf-ok">設定済み</span>' + (st.aal === 'aal2' ? ' <span style="color:var(--muted);font-size:12px">(このログインは確認コードで認証済みです)</span>' : '');
+      else mfa = '<span class="pf-ng">未設定</span> <span style="color:var(--muted);font-size:12px">(次回ログイン時に認証アプリの登録が必要です)</span>';
+      $('#pf-account').innerHTML = '<tbody>' +
+        '<tr><th>名前</th><td id="pf-name">' + esc(name || '-') + '</td></tr>' +
+        '<tr><th>メールアドレス</th><td id="pf-email">' + esc(email || '-') + '</td></tr>' +
+        '<tr><th>役割</th><td id="pf-role">' + esc(roleLabel(role)) + '</td></tr>' +
+        '<tr><th>担当拠点</th><td id="pf-locations">' + esc(locationsText(locs == null ? null : locs)) + '</td></tr>' +
+        '<tr><th>二段階認証</th><td id="pf-mfa">' + mfa + '</td></tr>' +
+        '</tbody>';
+      $('#pf-mfa-state').innerHTML = loading ? '' : (!st ? '' : (st.hasTotp
+        ? '認証アプリを登録済みです。ログインのたびに確認コードを入力します。'
+        : '<span class="pf-ng">認証アプリが登録されていません。</span> 次回ログイン時に、QR コードを読み取って登録してください。'));
+    }
+
+    async function loadAccount() {
+      if (typeof B.admin.sessionState !== 'function') { renderAccount(null, false); return; }
+      try {
+        renderAccount(await B.admin.sessionState(), false);
+      } catch (e) {
+        renderAccount(null, false);
+      }
+    }
+
+    function pwMsg(type, text) {
+      const box = $('#pf-pw-msg');
+      box.textContent = text || '';
+      box.hidden = !text;
+      box.className = 'pf-box' + (type === 'ok' ? ' is-ok' : type === 'error' ? ' is-error' : '');
+    }
+
+    async function onChangePassword(e) {
+      e.preventDefault();
+      if (pwBusy) return;
+      pwMsg(null, '');
+      const pw = $('#pf-pw-new').value;
+      const pc = B.auth.checkPassword(pw);
+      if (!pc.ok) { pwMsg('error', 'パスワードは' + pc.message); try { $('#pf-pw-new').focus(); } catch (x) { /* 続行 */ } return; }
+      if (pw !== $('#pf-pw-new2').value) { pwMsg('error', '新しいパスワードと確認 (再入力) が一致しません。同じものを入力してください。'); try { $('#pf-pw-new2').focus(); } catch (x) { /* 続行 */ } return; }
+      pwBusy = true;
+      const btn = $('#pf-pw-btn');
+      const label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '変更しています…';
+      try {
+        await B.auth.updatePassword(pw);
+        $('#pf-pw-new').value = '';
+        $('#pf-pw-new2').value = '';
+        pwMsg('ok', 'パスワードを変更しました。次回からは新しいパスワードでログインしてください。');
+      } catch (err) {
+        pwMsg('error', (err && err.message) || B.errorMessage('INTERNAL'));
+      } finally {
+        pwBusy = false;
+        btn.disabled = false;
+        btn.textContent = label;
+      }
+    }
+
+    // =================================================================
+    // デモ: 従来どおり (端末内の設定・バックアップ / 復元・初期化)
+    // =================================================================
+    function initDemo() {
     SkyRentSettings.init('profile');
 
     document.querySelector('#btn-pw').addEventListener('click', () => {
@@ -183,6 +358,8 @@
       };
       reader.readAsText(file);
     });
+    }
+  })();
   </script>
 </body>
 </html>

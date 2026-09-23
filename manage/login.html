@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
   <title>ログイン | グロースレンタカー 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
 </head>
@@ -12,63 +14,615 @@
       <div class="login-brand">
         <div class="brand-mark" style="width:64px;height:64px;font-size:36px;margin:0 auto 12px">G</div>
         <h1 style="font-size:24px;margin-bottom:4px">グロースレンタカー</h1>
-        <p style="font-size:12px;color:#666">管理画面 (簡易版)</p>
+        <p style="font-size:12px;color:#666">管理画面</p>
       </div>
-      <form id="login-form" style="margin-top:24px">
-        <div class="form-row" style="border:none;padding:8px 0">
-          <input type="text" class="form-input" name="userId" placeholder="事業者コード or メールアドレス" required style="text-align:center">
+
+      <div id="login-alert" class="login-msg login-msg--error" role="alert" hidden></div>
+      <div id="login-info" class="login-msg login-msg--info" role="status" hidden></div>
+
+      <!-- 1. メールアドレス + パスワード -->
+      <form id="login-form" class="login-step" data-view="login" novalidate>
+        <div class="login-field">
+          <label for="login-email">メールアドレス</label>
+          <input type="text" class="form-input" id="login-email" name="email" autocomplete="username" inputmode="email" placeholder="例: staff@example.com" required>
         </div>
-        <div class="form-row" style="border:none;padding:8px 0">
-          <input type="password" class="form-input" name="password" placeholder="パスワード" required style="text-align:center">
+        <div class="login-field">
+          <label for="login-password">パスワード</label>
+          <input type="password" class="form-input" id="login-password" name="password" autocomplete="current-password" required>
         </div>
-        <div style="margin:14px 0">
-          <label class="chk" style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-            <input type="checkbox" name="remember" checked> ログイン状態を保持する
-          </label>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px">ログイン</button>
-        <div style="text-align:center;margin-top:14px;font-size:12px">
-          <a href="#" id="btn-forgot" style="color:var(--link)">パスワードをお忘れですか?</a>
+        <button type="submit" class="btn btn-primary login-submit">ログイン</button>
+        <div class="login-links">
+          <a href="#" data-action="forgot">パスワードをお忘れですか?</a>
         </div>
       </form>
-      <div style="margin-top:16px;padding:10px;background:#fff8d6;border:1px solid #f0e0a0;border-radius:3px;font-size:12px;color:#666">
-        💡 デモ環境: 任意の値でログインできます。
+
+      <!-- 2. 二段階認証の登録 (初回) -->
+      <form id="enroll-form" class="login-step" data-view="enroll" novalidate hidden>
+        <h2 class="login-step-title">二段階認証の設定</h2>
+        <p class="login-lead">管理画面は、パスワードに加えてスマートフォンの認証アプリで本人確認を行います。はじめに一度だけ設定してください。</p>
+        <ol class="login-steps">
+          <li>スマートフォンに認証アプリ (Google Authenticator・Microsoft Authenticator など) を入れます。</li>
+          <li>アプリで下の QR コードを読み取ります。読み取れない場合は「手入力用のキー」を入力します。</li>
+          <li>アプリに表示された 6 桁の数字を入力して「登録してログイン」を押します。</li>
+        </ol>
+        <div class="qr-box">
+          <img id="enroll-qr" alt="二段階認証の登録用 QR コード" width="180" height="180" hidden>
+          <p id="enroll-qr-missing" class="login-small" hidden>QR コードを表示できません。下のキーを認証アプリに手入力してください。</p>
+        </div>
+        <div class="secret-box">
+          <span class="login-small">手入力用のキー</span>
+          <code id="enroll-secret"></code>
+          <button type="button" class="btn btn-gray btn-sm" id="btn-copy-secret">コピー</button>
+        </div>
+        <p class="login-small">このキーは他の人に見せないでください。画面を閉じると表示されなくなります (その場合は、もう一度ログインすると新しいキーが表示されます)。</p>
+        <div class="login-field">
+          <label for="enroll-code">確認コード (6 桁)</label>
+          <input type="text" class="form-input code-input" id="enroll-code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456" required>
+        </div>
+        <button type="submit" class="btn btn-primary login-submit">登録してログイン</button>
+        <div class="login-links">
+          <a href="#" data-action="restart">最初からやり直す</a>
+        </div>
+      </form>
+
+      <!-- 3. 確認コードの入力 (登録済み) -->
+      <form id="mfa-form" class="login-step" data-view="mfa" novalidate hidden>
+        <h2 class="login-step-title">確認コードの入力</h2>
+        <p class="login-lead" id="mfa-lead">認証アプリに表示されている 6 桁の数字を入力してください。</p>
+        <div class="login-field" id="mfa-factor-row" hidden>
+          <label for="mfa-factor">使う認証アプリ</label>
+          <select class="form-input" id="mfa-factor"></select>
+        </div>
+        <div class="login-field">
+          <label for="mfa-code">確認コード (6 桁)</label>
+          <input type="text" class="form-input code-input" id="mfa-code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456" required>
+        </div>
+        <button type="submit" class="btn btn-primary login-submit">確認してログイン</button>
+        <p class="login-small" style="margin-top:12px">スマートフォンの機種変更などで認証アプリを使えなくなった場合は、管理者に二段階認証の再設定を依頼してください。</p>
+        <div class="login-links">
+          <a href="#" data-action="restart">別のアカウントでログイン</a>
+        </div>
+      </form>
+
+      <!-- 4. パスワード再設定メールの送信 -->
+      <form id="forgot-form" class="login-step" data-view="forgot" novalidate hidden>
+        <h2 class="login-step-title">パスワードの再設定</h2>
+        <p class="login-lead">スタッフとして登録しているメールアドレスを入力してください。パスワード再設定用のリンクをお送りします。</p>
+        <div class="login-field">
+          <label for="forgot-email">メールアドレス</label>
+          <input type="text" class="form-input" id="forgot-email" name="email" autocomplete="username" inputmode="email" placeholder="例: staff@example.com" required>
+        </div>
+        <button type="submit" class="btn btn-primary login-submit">再設定メールを送信</button>
+        <div class="login-links">
+          <a href="#" data-action="back">ログイン画面に戻る</a>
+        </div>
+      </form>
+
+      <!-- 5. 新しいパスワードの設定 (招待・再設定のリンクから) -->
+      <form id="newpw-form" class="login-step" data-view="newpw" novalidate hidden>
+        <h2 class="login-step-title" id="newpw-title">新しいパスワードの設定</h2>
+        <p class="login-lead" id="newpw-lead">新しいパスワードを入力してください。</p>
+        <div class="login-field">
+          <label for="newpw-1">新しいパスワード</label>
+          <input type="password" class="form-input" id="newpw-1" autocomplete="new-password" required>
+        </div>
+        <div class="login-field">
+          <label for="newpw-2">確認のためもう一度</label>
+          <input type="password" class="form-input" id="newpw-2" autocomplete="new-password" required>
+        </div>
+        <p class="login-small">8文字以上で、英大文字・英小文字・数字をそれぞれ1文字以上含めてください。</p>
+        <button type="submit" class="btn btn-primary login-submit">パスワードを設定</button>
+        <div class="login-links">
+          <a href="#" data-action="restart">中止してログイン画面に戻る</a>
+        </div>
+      </form>
+
+      <!-- 6. ログイン済み -->
+      <div class="login-step" data-view="signed" hidden>
+        <p class="login-lead"><strong id="signed-name"></strong> さんとしてログインしています。</p>
+        <a class="btn btn-primary login-submit" id="btn-continue" href="dashboard.html">管理画面へ進む</a>
+        <div class="login-links">
+          <a href="#" data-action="restart">ログアウトして別のアカウントでログイン</a>
+        </div>
+      </div>
+
+      <!-- 読み込み中 -->
+      <div class="login-step" data-view="loading">
+        <p class="login-lead" style="text-align:center">読み込み中です…</p>
+      </div>
+
+      <div id="demo-note" class="login-demo" hidden>
+        💡 デモ環境: 任意の値でログインできます (二段階認証・メール送信は本番接続時に使えます)。
       </div>
     </div>
   </main>
   <style>
     body.login-page { background: linear-gradient(135deg, #1c4a7a, #15375d); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .login-wrap { width: 100%; max-width: 400px; }
-    .login-card { background: #fff; padding: 36px 32px; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
-    .login-brand { text-align: center; }
+    .login-wrap { width: 100%; max-width: 420px; }
+    .login-card { background: #fff; padding: 32px 30px; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .login-brand { text-align: center; margin-bottom: 18px; }
     .brand-mark { display: inline-flex !important; align-items: center; justify-content: center; background: var(--primary); color: #fff; border-radius: 50%; font-family: "Yu Mincho",serif; }
+    .login-step[hidden], .login-msg[hidden] { display: none !important; }
+    .login-step-title { font-size: 17px; color: var(--primary); margin: 0 0 8px; }
+    .login-lead { font-size: 13px; color: #444; line-height: 1.7; margin: 0 0 12px; }
+    .login-small { font-size: 12px; color: #666; line-height: 1.6; margin: 0; }
+    .login-field { margin: 0 0 12px; }
+    .login-field label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; }
+    .login-field .form-input { width: 100%; box-sizing: border-box; }
+    .code-input { font-size: 22px !important; letter-spacing: 6px; text-align: center; font-family: "SFMono-Regular", Menlo, Consolas, monospace; }
+    .login-submit { display: block; width: 100%; padding: 12px; font-size: 15px; text-align: center; text-decoration: none; margin-top: 6px; box-sizing: border-box; }
+    .login-submit[disabled] { opacity: .6; cursor: wait; }
+    .login-links { text-align: center; margin-top: 14px; font-size: 12px; }
+    .login-links a { color: var(--link); }
+    .login-steps { font-size: 12px; color: #444; line-height: 1.7; padding-left: 20px; margin: 0 0 12px; }
+    .qr-box { text-align: center; margin: 8px 0 10px; min-height: 40px; }
+    .qr-box img { width: 180px; height: 180px; border: 1px solid #eee; background: #fff; padding: 6px; }
+    .secret-box { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; background: #f7f7f7; border: 1px solid #eee; border-radius: 4px; padding: 8px 10px; margin-bottom: 6px; }
+    .secret-box code { flex: 1 1 100%; font-size: 14px; word-break: break-all; letter-spacing: 1px; user-select: all; }
+    .btn-sm { padding: 3px 10px; font-size: 12px; }
+    .login-msg { font-size: 13px; line-height: 1.7; padding: 10px 12px; border-radius: 4px; margin: 0 0 14px; }
+    .login-msg--error { background: #fdecea; color: #7a1c12; border: 1px solid #f5c2bd; }
+    .login-msg--info { background: #eef6fd; color: #134a7c; border: 1px solid #c8e0f5; }
+    .login-demo { margin-top: 16px; padding: 10px; background: #fff8d6; border: 1px solid #f0e0a0; border-radius: 3px; font-size: 12px; color: #666; }
+    @media (max-width: 420px) { .login-card { padding: 24px 18px; } }
   </style>
-  <script>
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
+  (function () {
+    'use strict';
     // favicon
-    (function() {
+    (function () {
       const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#1c4a7a"/><text x="32" y="46" font-size="40" text-anchor="middle" fill="#ffffff" font-family="serif" font-weight="bold">G</text></svg>';
-      const href = 'data:image/svg+xml,' + encodeURIComponent(svg);
-      const icon = document.createElement('link'); icon.rel = 'icon'; icon.href = href; document.head.appendChild(icon);
+      const icon = document.createElement('link');
+      icon.rel = 'icon';
+      icon.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+      document.head.appendChild(icon);
     })();
-    document.querySelector('#login-form').addEventListener('submit', e => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      sessionStorage.setItem('sky-rent.session', JSON.stringify({
-        userId: fd.get('userId'),
-        loginAt: new Date().toISOString()
-      }));
-      if (fd.get('remember')) localStorage.setItem('sky-rent.remember', '1');
-      window.location.href = 'dashboard.html';
-    });
-    document.querySelector('#btn-forgot').addEventListener('click', e => {
-      e.preventDefault();
-      const email = prompt('登録メールアドレスを入力してください');
-      if (email) alert('✓ パスワード再設定リンクを ' + email + ' へ送信しました\n(届かない場合は support@sky-rent.example.com までご連絡ください)');
-    });
-    // 既ログインなら自動でダッシュボードへ
-    if (sessionStorage.getItem('sky-rent.session')) {
-      // window.location.href = 'dashboard.html';  // ループ防止のためコメントアウト
+
+    const B = window.SkyRentBackend;
+    const LIVE = !!(B && B.live);
+    const $ = s => document.querySelector(s);
+    const params = new URLSearchParams(location.search);
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // 招待・再設定リンクで開いて、パスワードの設定がまだ済んでいないこと (再読み込みしても続きから出す)
+    const LINK_FLOW_KEY = 'sky-rent.manageLinkFlow';
+    const FACTOR_NAME = 'グロースレンタカー 管理画面';
+
+    // ------------------------------------------------------------
+    // ?next= の検証 (オープンリダイレクト対策)
+    //   同じディレクトリ (manage/) のファイル名 + 任意のクエリ・# だけを許可する。
+    //   'https://…' '//…' '../…' 'javascript:' などはすべてダッシュボードに置き換える。
+    // ------------------------------------------------------------
+    const DEFAULT_NEXT = 'dashboard.html';
+    function safeNext(raw) {
+      if (raw == null || raw === '') return DEFAULT_NEXT;
+      const s = String(raw);
+      const m = /^([A-Za-z0-9][A-Za-z0-9_-]*\.html)([?#][^\s\\]*)?$/.exec(s);
+      if (!m || m[1].toLowerCase() === 'login.html') return DEFAULT_NEXT;
+      try {
+        const dir = new URL('./', location.href);
+        const u = new URL(s, location.href);
+        if (u.origin !== dir.origin || u.pathname !== dir.pathname + m[1]) return DEFAULT_NEXT;
+      } catch (e) {
+        return DEFAULT_NEXT;
+      }
+      return s;
     }
+    const NEXT = safeNext(params.get('next'));
+
+    const api = window.SkyRentManageLogin = { safeNext: safeNext, next: NEXT, lastRedirect: null };
+    function go(url) {
+      api.lastRedirect = url;
+      try { location.replace(url); } catch (e) { /* 画面遷移できない環境 (テスト) */ }
+    }
+
+    // ------------------------------------------------------------
+    // 表示
+    // ------------------------------------------------------------
+    function show(view) {
+      document.querySelectorAll('[data-view]').forEach(el => { el.hidden = el.getAttribute('data-view') !== view; });
+      api.view = view;
+      const first = document.querySelector('[data-view="' + view + '"] input:not([type=hidden]):not([disabled])');
+      if (first) { try { first.focus(); } catch (e) { /* 続行 */ } }
+    }
+    function setMsg(id, text) {
+      const el = $(id);
+      el.textContent = text || '';
+      el.hidden = !text;
+    }
+    function alertMsg(text) { setMsg('#login-alert', text); if (text) setMsg('#login-info', ''); }
+    function infoMsg(text) { setMsg('#login-info', text); }
+    function clearMsgs() { setMsg('#login-alert', ''); setMsg('#login-info', ''); }
+    function errText(e) {
+      if (e && e.code && B && typeof B.errorMessage === 'function' && !e.message) return B.errorMessage(e.code);
+      return (e && e.message) || (B ? B.errorMessage('INTERNAL') : 'エラーが発生しました。');
+    }
+
+    // 送信中はボタンを押せないようにする
+    async function busy(form, fn) {
+      const btn = form.querySelector('button[type=submit]');
+      if (btn && btn.disabled) return;
+      const label = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = '処理中…'; }
+      try {
+        await fn();
+      } catch (e) {
+        alertMsg(errText(e));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = label; }
+      }
+    }
+
+    // 全角数字・空白・ハイフンを整える
+    function normalizeCode(v) {
+      return String(v || '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[\s\-ー－]/g, '');
+    }
+
+    function readFlow() {
+      try { const v = sessionStorage.getItem(LINK_FLOW_KEY); return v === 'invite' || v === 'recovery' ? v : null; } catch (e) { return null; }
+    }
+    function writeFlow(v) {
+      try { if (v) sessionStorage.setItem(LINK_FLOW_KEY, v); else sessionStorage.removeItem(LINK_FLOW_KEY); } catch (e) { /* 続行 */ }
+    }
+
+    // アクセストークン (JWT) の aal (aal1 = パスワードのみ / aal2 = 二段階認証済み)
+    function aalOf(session) {
+      try {
+        const part = String(session.access_token).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const bin = atob(part + '==='.slice((part.length + 3) % 4));
+        return JSON.parse(bin).aal || 'aal1';
+      } catch (e) {
+        return 'aal1';
+      }
+    }
+
+    // 自分の staff 行 (RLS で本人の行は AAL1 でも読める)
+    async function ownStaff(userId) {
+      const c = B.client;
+      if (!c) throw Object.assign(new Error(B.errorMessage('NETWORK')), { code: 'NETWORK' });
+      const res = await c.from('staff').select('user_id,name,role,active').eq('user_id', userId).maybeSingle();
+      if (res.error) throw Object.assign(new Error(B.errorMessage('INTERNAL')), { code: 'INTERNAL' });
+      return res.data || null;
+    }
+
+    // パスワード再設定メール (戻り先はこのログイン画面)
+    async function sendResetMail(email) {
+      const c = B.client;
+      if (!c) throw Object.assign(new Error(B.errorMessage('NETWORK')), { code: 'NETWORK' });
+      const redirectTo = new URL('login.html', location.href).href;
+      const res = await c.auth.resetPasswordForEmail(email, { redirectTo: redirectTo });
+      if (res.error) {
+        const err = res.error;
+        const code = /rate_limit/.test(String(err.code || '')) || err.status === 429 ? 'RATE_LIMITED'
+          : (/fetch|network/i.test(String(err.message || '')) ? 'NETWORK' : 'INTERNAL');
+        throw Object.assign(new Error(B.errorMessage(code)), { code: code });
+      }
+    }
+
+    const state = { factorId: null, flow: null, passwordDone: false };
+
+    function finish() {
+      writeFlow(null);
+      infoMsg('ログインしました。管理画面を開いています…');
+      show('loading');
+      go(NEXT);
+    }
+
+    async function restart(message) {
+      state.factorId = null; state.flow = null; state.passwordDone = false;
+      writeFlow(null);
+      if (LIVE) { try { await B.admin.signOut(); } catch (e) { /* 続行 */ } }
+      clearMsgs();
+      $('#login-password').value = '';
+      if (message) alertMsg(message);
+      show('login');
+    }
+
+    // ------------------------------------------------------------
+    // 二段階認証
+    // ------------------------------------------------------------
+    async function verifiedFactors() {
+      const r = await B.admin.mfa.listFactors();
+      return (r.totp || []).filter(f => f.status === 'verified').map(f => ({ id: f.id, friendlyName: f.friendly_name || '' }));
+    }
+
+    // opts: {factors?, challengeLead? (確認コード画面の説明), challengeInfo? / enrollInfo? (上部のお知らせ)}
+    async function startMfa(opts) {
+      opts = opts || {};
+      const factors = opts.factors || await verifiedFactors();
+      if (factors.length) {
+        showChallenge(factors, opts.challengeLead);
+        if (opts.challengeInfo) infoMsg(opts.challengeInfo);
+      } else {
+        await showEnroll(opts.enrollInfo);
+      }
+    }
+
+    function showChallenge(factors, lead) {
+      $('#mfa-lead').textContent = lead || '認証アプリに表示されている 6 桁の数字を入力してください。';
+      const sel = $('#mfa-factor');
+      sel.innerHTML = '';
+      factors.forEach((f, i) => {
+        const o = document.createElement('option');
+        o.value = f.id;
+        o.textContent = f.friendlyName || ('認証アプリ ' + (i + 1));
+        sel.appendChild(o);
+      });
+      $('#mfa-factor-row').hidden = factors.length < 2;
+      state.factorId = factors[0].id;
+      $('#mfa-code').value = '';
+      show('mfa');
+    }
+
+    // supabase-js の QR (data:image/svg+xml;utf-8,<svg…>) を img で確実に表示できる形にする
+    function qrSrc(v) {
+      const s = String(v || '');
+      if (!/^data:image\/svg\+xml[;,]/i.test(s)) return null;
+      const comma = s.indexOf(',');
+      const head = s.slice(0, comma);
+      const body = s.slice(comma + 1);
+      if (/;base64$/i.test(head)) return s;
+      if (body.indexOf('<') < 0) return s;  // 既にエンコード済み
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(body);
+    }
+
+    async function showEnroll(lead) {
+      show('loading');
+      let r;
+      try {
+        r = await B.admin.mfa.enroll({ friendlyName: FACTOR_NAME });
+      } catch (e) {
+        show('login');
+        throw e;
+      }
+      state.factorId = r.factorId;
+      const src = qrSrc(r.qrCode);
+      const img = $('#enroll-qr');
+      if (src) { img.src = src; img.hidden = false; $('#enroll-qr-missing').hidden = true; }
+      else { img.removeAttribute('src'); img.hidden = true; $('#enroll-qr-missing').hidden = false; }
+      $('#enroll-secret').textContent = r.secret || '';
+      $('#enroll-code').value = '';
+      if (lead) infoMsg(lead);
+      show('enroll');
+    }
+
+    async function verifyCode(input) {
+      const code = normalizeCode(input.value);
+      if (!/^\d{6}$/.test(code)) {
+        alertMsg('確認コードは 6 桁の数字で入力してください。');
+        input.focus();
+        return false;
+      }
+      try {
+        await B.admin.mfa.challengeAndVerify(state.factorId, code);
+      } catch (e) {
+        input.value = '';
+        throw e;
+      }
+      return true;
+    }
+
+    async function afterAal2() {
+      // 再設定リンクから来た場合は、本人確認 (二段階認証) の後にパスワードを設定する
+      if (state.flow && !state.passwordDone) { showNewPassword(); return; }
+      finish();
+    }
+
+    // ------------------------------------------------------------
+    // 招待・パスワード再設定のリンクから戻ったとき
+    // ------------------------------------------------------------
+    function showNewPassword() {
+      const invite = state.flow === 'invite';
+      $('#newpw-title').textContent = invite ? 'パスワードの設定 (はじめてのログイン)' : '新しいパスワードの設定';
+      $('#newpw-lead').textContent = invite
+        ? 'グロースレンタカー管理画面へようこそ。ログインに使うパスワードを決めて入力してください。続けて二段階認証を設定します。'
+        : '新しいパスワードを入力してください。';
+      $('#newpw-1').value = '';
+      $('#newpw-2').value = '';
+      show('newpw');
+    }
+
+    async function startLinkFlow(type, session) {
+      state.flow = type;
+      writeFlow(type);
+      const row = await ownStaff(session.user.id);
+      if (!row || !row.active) {
+        await restart(B.errorMessage('NOT_STAFF'));
+        return;
+      }
+      const factors = await verifiedFactors();
+      if (factors.length && aalOf(session) !== 'aal2') {
+        // 二段階認証を設定済みのアカウントは、パスワードを変える前に確認コードが必要
+        showChallenge(factors, 'パスワードを再設定する前に、本人確認のため認証アプリの 6 桁の確認コードを入力してください。');
+        return;
+      }
+      showNewPassword();
+    }
+
+    // ------------------------------------------------------------
+    // 画面の操作
+    // ------------------------------------------------------------
+    $('#login-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      busy(form, async () => {
+        clearMsgs();
+        const email = $('#login-email').value.trim();
+        const pw = $('#login-password').value;
+        if (!LIVE) {
+          await B.admin.signIn(email || 'demo', pw);
+          finish();
+          return;
+        }
+        if (!EMAIL_RE.test(email)) { alertMsg('メールアドレスを正しく入力してください。'); $('#login-email').focus(); return; }
+        if (!pw) { alertMsg('パスワードを入力してください。'); $('#login-password').focus(); return; }
+        const r = await B.admin.signIn(email, pw);
+        $('#login-password').value = '';
+        state.flow = null; state.passwordDone = false;
+        writeFlow(null);
+        if (!r.needsMfa) { finish(); return; }
+        if (r.hasFactor && r.factors && r.factors.length) showChallenge(r.factors);
+        else await showEnroll();
+      });
+    });
+
+    $('#enroll-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      busy(form, async () => {
+        setMsg('#login-alert', '');
+        if (!(await verifyCode($('#enroll-code')))) return;
+        infoMsg('二段階認証を設定しました。次回からはログインのたびに確認コードを入力します。');
+        await afterAal2();
+      });
+    });
+
+    $('#mfa-factor').addEventListener('change', e => { state.factorId = e.target.value; });
+    $('#mfa-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      busy(form, async () => {
+        clearMsgs();
+        if (!(await verifyCode($('#mfa-code')))) return;
+        await afterAal2();
+      });
+    });
+
+    $('#forgot-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      busy(form, async () => {
+        clearMsgs();
+        const email = $('#forgot-email').value.trim();
+        if (!EMAIL_RE.test(email)) { alertMsg('メールアドレスを正しく入力してください。'); $('#forgot-email').focus(); return; }
+        if (!LIVE) {
+          infoMsg('デモ環境ではメールは送信されません。本番接続時は、入力したメールアドレスに再設定用のリンクが届きます。');
+          return;
+        }
+        await sendResetMail(email);
+        // 登録の有無は画面に出さない (他人がアドレスの登録状況を調べられないようにする)
+        infoMsg('入力したメールアドレスがスタッフとして登録されている場合は、パスワード再設定用のリンクをお送りしました。メールのリンクを開いて、新しいパスワードを設定してください。届かない場合は迷惑メールフォルダもご確認ください。');
+      });
+    });
+
+    $('#newpw-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      busy(form, async () => {
+        clearMsgs();
+        const p1 = $('#newpw-1').value;
+        const p2 = $('#newpw-2').value;
+        const chk = B.auth.checkPassword(p1);
+        if (!chk.ok) { alertMsg(chk.message); $('#newpw-1').focus(); return; }
+        if (p1 !== p2) { alertMsg('確認のために入力したパスワードが一致しません。もう一度入力してください。'); $('#newpw-2').focus(); return; }
+        await B.auth.updatePassword(p1);
+        $('#newpw-1').value = '';
+        $('#newpw-2').value = '';
+        state.passwordDone = true;
+        writeFlow(null);
+        const session = await B.auth.session();
+        if (session && aalOf(session) === 'aal2') {
+          finish();
+          return;
+        }
+        await startMfa({
+          challengeInfo: 'パスワードを設定しました。続けて認証アプリの確認コードを入力してください。',
+          enrollInfo: 'パスワードを設定しました。続けて二段階認証を設定してください。'
+        });
+      });
+    });
+
+    $('#btn-copy-secret').addEventListener('click', () => {
+      const text = $('#enroll-secret').textContent;
+      const done = () => infoMsg('キーをコピーしました。認証アプリに貼り付けてください。');
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => {});
+      } catch (e) { /* 続行 */ }
+    });
+
+    document.addEventListener('click', e => {
+      const a = e.target.closest && e.target.closest('[data-action]');
+      if (!a) return;
+      e.preventDefault();
+      const act = a.getAttribute('data-action');
+      if (act === 'forgot') {
+        clearMsgs();
+        $('#forgot-email').value = $('#login-email').value.trim();
+        show('forgot');
+      } else if (act === 'back') {
+        clearMsgs();
+        show('login');
+      } else if (act === 'restart') {
+        restart();
+      }
+    });
+
+    // ------------------------------------------------------------
+    // 開いたときの状態
+    // ------------------------------------------------------------
+    async function start() {
+      if (!LIVE) {
+        $('#demo-note').hidden = false;
+        $('#login-email').placeholder = 'メールアドレス (デモは任意の値)';
+        $('#login-email').removeAttribute('required');
+        $('#login-password').removeAttribute('required');
+        show('login');
+        return;
+      }
+      $('#login-email').type = 'email';
+      $('#forgot-email').type = 'email';
+      if (params.get('error') === 'not_staff') alertMsg(B.errorMessage('NOT_STAFF'));
+      const ev = B.auth.urlEvent();
+      if (ev.error) alertMsg(ev.error.message);
+
+      let session = null;
+      try {
+        session = await B.auth.session();
+      } catch (e) {
+        alertMsg(errText(e));
+        show('login');
+        return;
+      }
+      const flow = ev.type === 'recovery' || ev.type === 'invite' ? ev.type : readFlow();
+      if (session && flow) {
+        await startLinkFlow(flow, session);
+        return;
+      }
+      writeFlow(null);
+      if (session) {
+        let row = null;
+        try { row = await ownStaff(session.user.id); } catch (e) { row = null; }
+        if (row && row.active) {
+          if (aalOf(session) === 'aal2') {
+            $('#signed-name').textContent = row.name || session.user.email || '';
+            $('#btn-continue').setAttribute('href', NEXT);
+            show('signed');
+            return;
+          }
+          // パスワードは確認済み → 二段階認証から
+          await startMfa({
+            challengeLead: 'パスワードの確認は済んでいます。続けて認証アプリの 6 桁の確認コードを入力してください。',
+            enrollInfo: 'パスワードの確認は済んでいます。続けて二段階認証を設定してください。'
+          });
+          return;
+        }
+      }
+      if (params.get('step') === 'mfa') infoMsg('ログインの有効期限が切れました。もう一度メールアドレスとパスワードを入力してください。');
+      if (!session && (ev.type === 'recovery' || ev.type === 'invite') && !ev.error) alertMsg(B.errorMessage('LINK_INVALID'));
+      show('login');
+    }
+
+    start().catch(e => {
+      alertMsg(errText(e));
+      show('login');
+    });
+  })();
   </script>
 </body>
 </html>

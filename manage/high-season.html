@@ -5,53 +5,231 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ハイシーズン管理 | グロースレンタカー 管理画面</title>
   <link rel="stylesheet" href="css/manage.css">
+  <style>
+    .hs-box { border-radius: 4px; padding: 10px 14px; font-size: 13px; line-height: 1.75; margin-bottom: 12px; background: #eef4fa; border: 1px solid #d4e2ef; color: #1c4a7a; }
+    .hs-box a { color: var(--link); text-decoration: underline; }
+    .hs-table td, .hs-table th { vertical-align: middle; }
+    .hs-table input[type="text"] { width: 100%; min-width: 140px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 3px; font: inherit; }
+    .hs-table select { padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font: inherit; }
+    .hs-md { white-space: nowrap; }
+    .hs-sub { color: #888; font-size: 11.5px; }
+    .hs-row.is-invalid td { background: #fff7f6; }
+    .hs-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; flex-wrap: wrap; padding: 12px 14px; }
+    .hs-err { color: #c0392b; font-size: 13px; padding: 0 14px 12px; }
+    .hs-dirty { color: #b35c00; font-size: 12.5px; }
+    .hs-effects li { list-style: disc; margin-left: 20px; font-size: 13px; line-height: 1.8; }
+    .hs-cal { font-size: 12.5px; margin-top: 8px; }
+    .hs-cal th, .hs-cal td { border: 1px solid #e4e8ec; padding: 5px 9px; text-align: left; }
+    .hs-cal th { background: #f4f7fa; font-weight: 600; }
+  </style>
 </head>
 <body>
   <div data-include="topbar"></div>
 
   <main class="main">
-    <h1 class="page-title">ハイシーズン管理</h1>
-    <p class="page-note">繁忙期の料金加算設定。GW・夏休み・年末年始など期間と倍率を指定します。</p>
-
-    <div style="text-align:right;margin-bottom:10px">
-      <button id="btn-add" class="btn btn-primary">+ シーズン追加</button>
-    </div>
+    <h1 class="page-title">ハイシーズン (繁忙期) 管理</h1>
+    <div class="hs-box"><strong>繁忙期は総合料金表 (pricing_rules) の「繁忙期 (busyPeriods)」で決まります。</strong>
+      ご利用期間に下の期間の日が1日でも含まれると <strong>繁忙期割増</strong> がかかり、キャンセル料も <strong>繁忙期の規定</strong> になります。
+      期間は毎年くり返し適用されます (月/日で指定。年をまたぐ期間も指定できます)。
+      <span id="perm-note"></span></div>
 
     <section class="card">
-      <table class="data-table list">
-        <thead><tr><th>シーズンID</th><th>名称</th><th>期間</th><th>料金倍率</th><th>適用クラス</th><th>状態</th><th></th></tr></thead>
-        <tbody id="tbl"></tbody>
+      <table class="data-table list hs-table">
+        <thead><tr><th style="width:34%">名称</th><th>開始 (月/日)</th><th>終了 (月/日)</th><th>次に適用される期間</th><th style="width:70px"></th></tr></thead>
+        <tbody id="tbl"><tr class="empty"><td colspan="5">読み込み中...</td></tr></tbody>
       </table>
+      <div class="hs-actions" id="edit-actions" hidden>
+        <span class="hs-dirty" id="dirty" hidden>未保存の変更があります</span>
+        <button type="button" class="btn btn-gray" id="btn-add" style="padding:8px 16px">+ 期間を追加</button>
+        <button type="button" class="btn btn-primary" id="btn-save" style="padding:8px 26px">保存</button>
+      </div>
+      <p class="hs-err" id="err" role="alert" hidden></p>
     </section>
 
-    <section class="card" style="margin-top:18px;padding:20px">
-      <h3 style="margin-bottom:10px;color:var(--primary);font-size:15px">優先順位について</h3>
-      <p style="font-size:13px;color:var(--muted)">期間が重複する場合は、上にあるものが優先適用されます。料金プランとの併用も可能です。</p>
+    <section class="card" style="margin-top:14px;padding:18px 20px">
+      <h3 style="margin-bottom:10px;color:var(--primary);font-size:15px">繁忙期になると変わること</h3>
+      <ul class="hs-effects" id="effects"></ul>
     </section>
   </main>
 
   <script src="partials.js"></script>
-  <script src="js/crud.js"></script>
-  <script>
-  SkyRentCRUD.init({
-    storageKey: 'high-season',
-    idPrefix: 'HS',
-    columns: [
-      { key: 'id', label: 'シーズンID', code: true, readonly: true },
-      { key: 'name', label: '名称', bold: true, required: true },
-      { key: 'period', label: '期間' },
-      { key: 'rate', label: '料金倍率' },
-      { key: 'targetClass', label: '適用クラス', type: 'select', options: ['全クラス','コンパクト','ミドル','ミニバン','SUV'] },
-      { key: 'active', label: '状態', type: 'status' }
-    ],
-    defaults: [
-      { id: 'HS001', name: 'ゴールデンウィーク', period: '2026/04/29 〜 2026/05/06', rate: '×1.30', targetClass: '全クラス', active: true },
-      { id: 'HS002', name: '夏休み',             period: '2026/07/20 〜 2026/08/31', rate: '×1.20', targetClass: '全クラス', active: true },
-      { id: 'HS003', name: 'シルバーウィーク',   period: '2026/09/19 〜 2026/09/23', rate: '×1.15', targetClass: '全クラス', active: true },
-      { id: 'HS004', name: '年末年始',           period: '2026/12/26 〜 2027/01/05', rate: '×1.40', targetClass: '全クラス', active: true },
-      { id: 'HS005', name: '春休み',             period: '2027/03/20 〜 2027/04/05', rate: '×1.10', targetClass: '全クラス', active: true }
-    ]
-  });
+
+  <script src="../js/config.js?v=20260923"></script>
+  <script src="../js/store.js?v=20260923"></script>
+  <script src="../js/pricing-core.js?v=20260923"></script>
+  <script src="../js/pricing.js?v=20260923"></script>
+  <script src="../js/backend.js?v=20260923"></script>
+  <script src="../js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
+  (function () {
+    'use strict';
+    const S = window.SkyRentStore;
+    const B = window.SkyRentBackend;
+    const P = window.SkyRentPricing;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    const canEdit = B.admin.can('settings.write');
+    const DAYS_IN = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let dirty = false;
+
+    function pad2(n) { return (n < 10 ? '0' : '') + n; }
+    function parseMd(v) {
+      const m = /^(\d{1,2})-(\d{1,2})$/.exec(String(v == null ? '' : v).trim());
+      if (!m) return null;
+      const mo = +m[1], d = +m[2];
+      if (mo < 1 || mo > 12 || d < 1 || d > DAYS_IN[mo - 1]) return null;
+      return { m: mo, d: d };
+    }
+    function mdText(v) { const p = parseMd(v); return p ? p.m + '/' + p.d : '-'; }
+
+    // 現在の料金表 (サーバー → 無ければ既定値)。画面では busyPeriods だけを変える
+    function currentRules() {
+      const r = S.read('settings.pricing_rules', null);
+      if (r && typeof r === 'object' && !Array.isArray(r)) return r;
+      return P.rules();
+    }
+    function periods() {
+      const list = currentRules().busyPeriods;
+      return Array.isArray(list) ? list : [];
+    }
+
+    // 今日 (日本時間) 以降で次に適用される期間
+    function nextRange(p) {
+      const f = parseMd(p.from), t = parseMd(p.to);
+      if (!f || !t) return '';
+      const today = B.jst.ymd(new Date());
+      const y = +today.slice(0, 4);
+      const ymd = (yy, x) => yy + '-' + pad2(x.m) + '-' + pad2(x.d);
+      const cross = (pad2(f.m) + pad2(f.d)) > (pad2(t.m) + pad2(t.d));
+      for (let yy = y - 1; yy <= y + 1; yy++) {
+        const from = ymd(yy, f), to = ymd(cross ? yy + 1 : yy, t);
+        if (to >= today) {
+          const fmt = s => B.jst.format(s + 'T00:00', { time: false, weekday: false });
+          return fmt(from) + ' 〜 ' + fmt(to) + (from <= today ? ' <span class="hs-sub">(適用中)</span>' : '');
+        }
+      }
+      return '';
+    }
+
+    function monthSel(v, cls) {
+      let h = '<select class="' + cls + '-m" aria-label="月">';
+      for (let i = 1; i <= 12; i++) h += '<option value="' + i + '"' + (v && v.m === i ? ' selected' : '') + '>' + i + '月</option>';
+      return h + '</select>';
+    }
+    function daySel(v, cls) {
+      let h = '<select class="' + cls + '-d" aria-label="日">';
+      for (let i = 1; i <= 31; i++) h += '<option value="' + i + '"' + (v && v.d === i ? ' selected' : '') + '>' + i + '日</option>';
+      return h + '</select>';
+    }
+
+    function rowHtml(p) {
+      const f = parseMd(p.from) || { m: 1, d: 1 }, t = parseMd(p.to) || { m: 1, d: 1 };
+      if (!canEdit) {
+        return '<tr class="hs-row"><td><strong>' + esc(p.name || '(名称なし)') + '</strong></td><td class="hs-md">' + esc(mdText(p.from)) + '</td><td class="hs-md">' + esc(mdText(p.to)) +
+          ((pad2(f.m) + pad2(f.d)) > (pad2(t.m) + pad2(t.d)) ? ' <span class="hs-sub">(翌年)</span>' : '') + '</td><td>' + nextRange(p) + '</td><td></td></tr>';
+      }
+      return '<tr class="hs-row" data-row>' +
+        '<td><input type="text" class="hs-name" maxlength="40" value="' + esc(p.name || '') + '" placeholder="例: お盆" aria-label="名称"></td>' +
+        '<td class="hs-md">' + monthSel(f, 'hs-from') + ' ' + daySel(f, 'hs-from') + '</td>' +
+        '<td class="hs-md">' + monthSel(t, 'hs-to') + ' ' + daySel(t, 'hs-to') + '</td>' +
+        '<td class="hs-next">' + nextRange(p) + '</td>' +
+        '<td style="text-align:center"><button type="button" class="btn btn-gray hs-del" style="padding:5px 10px;font-size:12px">削除</button></td>' +
+        '</tr>';
+    }
+
+    function render(list) {
+      $('#tbl').innerHTML = list.length ? list.map(rowHtml).join('')
+        : '<tr class="empty"><td colspan="5">繁忙期は設定されていません (繁忙期割増・繁忙期のキャンセル規定は使われません)</td></tr>';
+    }
+
+    function collect() {
+      const out = [], errors = [];
+      document.querySelectorAll('#tbl [data-row]').forEach((tr, i) => {
+        tr.classList.remove('is-invalid');
+        const name = tr.querySelector('.hs-name').value.trim();
+        const fm = +tr.querySelector('.hs-from-m').value, fd = +tr.querySelector('.hs-from-d').value;
+        const tm = +tr.querySelector('.hs-to-m').value, td = +tr.querySelector('.hs-to-d').value;
+        const from = pad2(fm) + '-' + pad2(fd), to = pad2(tm) + '-' + pad2(td);
+        let bad = '';
+        if (!name) bad = (i + 1) + '行目: 名称を入力してください。';
+        else if (!parseMd(from)) bad = (name) + ': 開始日 (' + fm + '月' + fd + '日) がありません。';
+        else if (!parseMd(to)) bad = (name) + ': 終了日 (' + tm + '月' + td + '日) がありません。';
+        if (bad) { errors.push(bad); tr.classList.add('is-invalid'); return; }
+        out.push({ name: name, from: from, to: to });
+      });
+      return { list: out, errors: errors };
+    }
+
+    function markDirty() { dirty = true; $('#dirty').hidden = false; }
+
+    async function save() {
+      const err = $('#err');
+      err.hidden = true;
+      const c = collect();
+      if (c.errors.length) { err.textContent = c.errors.join(' '); err.hidden = false; return; }
+      // 他の項目 (料金・キャンセル規定・祝日など) はそのまま、busyPeriods だけを変える
+      const base = JSON.parse(JSON.stringify(currentRules()));
+      const prevList = Array.isArray(base.busyPeriods) ? base.busyPeriods : [];
+      base.busyPeriods = c.list.map((p, i) => {
+        const prev = prevList.find(x => x && x.name === p.name) || {};
+        return Object.assign({}, prev, p);
+      });
+      const btn = $('#btn-save');
+      btn.disabled = true;
+      try {
+        await B.admin.saveSetting('pricing_rules', base);
+        dirty = false;
+        $('#dirty').hidden = true;
+        render(periods());
+        B.toast('繁忙期を保存しました。新しい見積・予約から反映されます (確定済みの予約の金額は変わりません)。', 'success');
+      } catch (e) {
+        err.textContent = '保存できませんでした。' + ((e && e.message) || B.errorMessage('INTERNAL'));
+        err.hidden = false;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function renderEffects() {
+      const R = currentRules();
+      const fee = Number(R.busyFee) || 0;
+      $('#effects').innerHTML =
+        '<li>繁忙期割増: <strong>' + esc(P.yen(fee)) + '</strong> (1回のご利用につき1回)。繁忙期割増がかかるときは、土日祝割増 (' + esc(P.yen(Number(R.weekendHolidayFee) || 0)) + ') はかかりません。</li>' +
+        '<li>キャンセル料: 貸出日が繁忙期のときは、繁忙期の規定 (無料で取り消せる期限が早くなる) を使います。詳しくは <a href="site-settings.html" style="color:var(--link)">予約サイト設定</a> のキャンセル料の表をご覧ください。</li>' +
+        '<li>確定済みの予約の金額は変わりません (予約の時点の料金で確定しています)。</li>';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      $('#perm-note').textContent = canEdit ? '' : '(編集は管理者だけが行えます)';
+      render(periods());
+      renderEffects();
+      if (!canEdit) return;
+      $('#edit-actions').hidden = false;
+      $('#btn-add').addEventListener('click', () => {
+        const empty = $('#tbl tr.empty');
+        if (empty) empty.remove();
+        $('#tbl').insertAdjacentHTML('beforeend', rowHtml({ name: '', from: '08-10', to: '08-16' }));
+        markDirty();
+        const inputs = document.querySelectorAll('#tbl .hs-name');
+        try { inputs[inputs.length - 1].focus(); } catch (e) { /* 無視 */ }
+      });
+      $('#tbl').addEventListener('click', e => {
+        const b = e.target.closest('.hs-del');
+        if (!b) return;
+        b.closest('tr').remove();
+        markDirty();
+      });
+      $('#tbl').addEventListener('input', markDirty);
+      $('#tbl').addEventListener('change', markDirty);
+      $('#btn-save').addEventListener('click', save);
+      window.addEventListener('beforeunload', e => {
+        if (!dirty) return undefined;
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      });
+    });
+  })();
   </script>
 </body>
 </html>

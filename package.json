@@ -1,0 +1,26 @@
+{
+  "name": "sky-rent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "グロースレンタカー 予約サイト・管理画面 (静的サイト + Supabase)。サイト本体はビルド不要で、ここにあるのは運用スクリプトと検証用の依存だけです。",
+  "scripts": {
+    "create-admin": "node scripts/create-admin.mjs",
+    "sync-shared": "node scripts/sync-shared.mjs",
+    "test": "node scripts/sync-shared.mjs --check && node --test \"tests/*.test.mjs\"",
+    "test:db": "supabase test db",
+    "test:pricing": "node --test tests/pricing.test.mjs",
+    "test:fixtures": "node scripts/make-test-fixtures.mjs",
+    "mock:google": "node tests/mocks/google-mock.mjs",
+    "mock:resend": "node tests/mocks/resend-mock.mjs",
+    "test:functions": "node --test --test-concurrency=1 \"tests/functions/*.test.mjs\"",
+    "test:all": "npm test && npm run test:functions && npm run test:db"
+  },
+  "engines": {
+    "node": ">=20.6"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.117.0",
+    "jsdom": "^30.1.1"
+  }
+}

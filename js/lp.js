@@ -102,24 +102,85 @@
   }
 
   // ===== 検索パネル =====
-  function fmtLocal(d) { const p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+  //   日時は端末のタイムゾーンに関係なく日本時間で扱う。search.html へは日本時間の 'YYYY-MM-DDTHH:MM' で渡す。
+  const HOUR = 3600000, DAY = 86400000, JST_OFFSET = 9 * HOUR;
+  function jstInput(ms) {
+    const B = window.SkyRentBackend;
+    if (B && B.jst) return B.jst.toInput(ms);
+    return new Date(ms + JST_OFFSET).toISOString().slice(0, 16);
+  }
+  function jstValid(v) {
+    const B = window.SkyRentBackend;
+    if (B && B.jst) return !!B.jst.fromInput(v);
+    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(String(v || ''));
+  }
   function searchPanel() {
     const cats = S.categories(), locs = S.locations();
-    $('#hs-category').innerHTML = '<option value="">すべてのカテゴリ</option>' + cats.map(c => '<option value="' + c.categoryId + '">' + esc(c.icon + ' ' + c.name) + '</option>').join('');
-    $('#hs-location').innerHTML = '<option value="">すべての拠点</option>' + locs.map(l => '<option value="' + l.locationId + '">' + esc(l.name) + '</option>').join('');
-    const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(10, 0, 0, 0);
-    const t2 = new Date(t); t2.setDate(t2.getDate() + 1);
-    $('#hs-start').value = fmtLocal(t);
-    $('#hs-end').value = fmtLocal(t2);
+    $('#hs-category').innerHTML = '<option value="">すべてのカテゴリ</option>' + cats.map(c => '<option value="' + esc(c.categoryId) + '">' + esc((c.icon ? c.icon + ' ' : '') + c.name) + '</option>').join('');
+    $('#hs-location').innerHTML = '<option value="">すべての拠点</option>' + locs.map(l => '<option value="' + esc(l.locationId) + '">' + esc(l.name) + '</option>').join('');
+    // 既定: 明日 10:00 〜 あさって 10:00 (日本時間)
+    const today = Math.floor((Date.now() + JST_OFFSET) / DAY) * DAY - JST_OFFSET;
+    const t = today + DAY + 10 * HOUR;
+    $('#hs-start').value = jstInput(t);
+    $('#hs-end').value = jstInput(t + DAY);
+    $('#hs-start').min = jstInput(today);
+    $('#hs-end').min = jstInput(today);
     $('#hero-search').addEventListener('submit', e => {
       e.preventDefault();
       const p = new URLSearchParams();
       if ($('#hs-category').value) p.set('category', $('#hs-category').value);
       if ($('#hs-location').value) p.set('location', $('#hs-location').value);
-      if ($('#hs-start').value) p.set('start', new Date($('#hs-start').value).toISOString());
-      if ($('#hs-end').value) p.set('end', new Date($('#hs-end').value).toISOString());
+      if (jstValid($('#hs-start').value)) p.set('start', $('#hs-start').value);
+      if (jstValid($('#hs-end').value)) p.set('end', $('#hs-end').value);
       location.href = 'search.html?' + p.toString();
     });
+  }
+
+  // ===== 管理画面の設定 (SEO・テーマカラー・GA) を反映 =====
+  //   データの読み込み後 (skyrent:ready) に SkyRentStore の settings.* から読む。
+  //   本番はサーバー (public_catalog) の値、デモは localStorage の値。
+  function readSetting(key) {
+    try {
+      const v = S.read('settings.' + key, null);
+      return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+    } catch (e) { return {}; }
+  }
+  function shade(hex, percent) {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); if (!m) return hex;
+    return '#' + [m[1], m[2], m[3]].map(h => {
+      const v = parseInt(h, 16);
+      return Math.max(0, Math.min(255, v + Math.round(v * percent / 100))).toString(16).padStart(2, '0');
+    }).join('');
+  }
+  function setMeta(name, content) {
+    let m = document.querySelector('meta[name="' + name + '"]');
+    if (!m) { m = document.createElement('meta'); m.setAttribute('name', name); document.head.appendChild(m); }
+    m.setAttribute('content', content);
+  }
+  function applySiteSettings() {
+    const seo = readSetting('seo'), site = readSetting('site'), ga = readSetting('ga');
+    if (typeof seo.title === 'string' && seo.title.trim()) document.title = seo.title.trim();
+    if (typeof seo.description === 'string' && seo.description.trim()) setMeta('description', seo.description.trim());
+    if (typeof seo.keywords === 'string' && seo.keywords.trim()) setMeta('keywords', seo.keywords.trim());
+    // テーマカラーは #RRGGBB だけ受け付ける (CSS に文字列をそのまま入れない)
+    const color = typeof site.themeColor === 'string' ? site.themeColor.trim() : '';
+    if (/^#?[0-9a-f]{6}$/i.test(color)) {
+      const hex = color.charAt(0) === '#' ? color : '#' + color;
+      let st = document.getElementById('skyrent-theme');
+      if (!st) { st = document.createElement('style'); st.id = 'skyrent-theme'; document.head.appendChild(st); }
+      st.textContent = ':root { --color-primary: ' + hex + ' !important; --color-primary-dark: ' + shade(hex, -15) + ' !important; }';
+    }
+    const gaId = typeof ga.ga4Id === 'string' ? ga.ga4Id.trim() : '';
+    if (/^G-[A-Z0-9]{4,20}$/i.test(gaId) && !window.gtag) {
+      const s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(gaId);
+      document.head.appendChild(s);
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function () { window.dataLayer.push(arguments); };
+      window.gtag('js', new Date());
+      window.gtag('config', gaId);
+    }
   }
 
   // ===== 統計 =====
@@ -139,7 +200,7 @@
     wrap.innerHTML = cats.map((c, i) => {
       const cnt = S.assets({ categoryId: c.categoryId, activeOnly: true }).length;
       const ph = P.CAT_PHOTOS[c.categoryId];
-      return '<a class="cat-item rv d' + Math.min(i + 1, 6) + '" href="search.html?category=' + c.categoryId + '">' +
+      return '<a class="cat-item rv d' + Math.min(i + 1, 6) + '" href="search.html?category=' + esc(encodeURIComponent(c.categoryId)) + '">' +
         '<span class="idx">' + String(i + 1).padStart(2, '0') + '</span>' +
         '<span class="ttl"><span class="en">' + esc(CAT_EN[c.categoryId] || c.nameEn || '') + '</span><span class="jp">' + esc(c.name) + '</span></span>' +
         '<span class="desc">' + esc(c.description || '') + '<span class="cnt">' + cnt + ' UNITS</span></span>' +
@@ -201,7 +262,7 @@
           '<div class="nm">' + esc(a.name) + '</div>' +
           '<div class="mt">' + esc(c ? c.name : '') + (a.capacity ? '・定員' + a.capacity + '名' : (a.stock > 1 ? '・在庫' + a.stock + '点' : '')) + (a.requiredLicense ? '・<b style="color:#b03c15">要免許</b>' : '') + '</div>' +
           '<div class="pr"><span class="yen">¥' + Number(a.priceDay).toLocaleString() + '</span><small>/日〜</small></div>' +
-          '<a class="btn btn-primary" href="detail.html?id=' + a.assetId + '">詳細・予約する</a>' +
+          '<a class="btn btn-primary" href="detail.html?id=' + esc(encodeURIComponent(a.assetId)) + '">詳細・予約する</a>' +
         '</div></div>';
     }).join('');
     // ナビ矢印
@@ -241,6 +302,11 @@
     }, { threshold: 0 });
     els.forEach(el => io.observe(el));
   }
+
+  // boot.js がデータを読み込んだ後に発火する (このファイルはその前に実行される)
+  window.addEventListener('skyrent:ready', () => {
+    try { applySiteSettings(); } catch (e) { console.error('applySiteSettings failed', e); }
+  }, { once: true });
 
   function boot() {
     // データ初期化や一部機能が失敗しても、イントロだけは必ず解除する。

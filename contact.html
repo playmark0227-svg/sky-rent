@@ -59,6 +59,10 @@
   .ct-done h3 { font-size: 17px; font-weight: 900; color: #fff; margin-bottom: 10px; }
   .ct-done p { font-size: 13.5px; color: var(--color-muted); line-height: 2; }
   .ct-done .ref { font-family: var(--font-num); font-size: 15px; color: var(--color-primary); letter-spacing: .08em; margin-top: 12px; }
+  .ct-form .fg.has-err input, .ct-form .fg.has-err select, .ct-form .fg.has-err textarea { border-color: #ff8a5c; }
+  .ct-form .fg .fe { color: #ff8a5c; font-size: 12px; }
+  .ct-hp { position: absolute !important; left: -10000px !important; top: auto; width: 1px; height: 1px; overflow: hidden; }
+  .ct-purpose { margin: 4px 0 6px; }
   @media (max-width: 620px) { .ct-form .row { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -89,8 +93,8 @@
       </div>
       <div class="ct-way">
         <span class="ic" aria-hidden="true">🗓️</span>
-        <h3>予約の確認・変更</h3>
-        <p>ご予約の内容確認やキャンセルは、マイページからお手続きいただけます。キャンセル料の発生時期は特定商取引法に基づく表記をご確認ください。</p>
+        <h3>予約の確認・キャンセル</h3>
+        <p>ご予約の内容確認とキャンセルは、マイページ (会員の方) または予約確定メールに記載の照会URLから、ご自身でお手続きいただけます。キャンセル料は確定前に画面で金額をご確認いただけます。日時・車両の変更は公式LINEまたは下のフォームからご相談ください。</p>
         <a href="mypage.html" class="btn btn-secondary">マイページを開く</a>
       </div>
     </div>
@@ -132,25 +136,37 @@
           </select>
         </div>
         <div class="fg wide">
+          <label for="cf-reservation">予約番号 <span class="opt">任意</span></label>
+          <input type="text" id="cf-reservation" name="reservationId" maxlength="20" autocomplete="off" placeholder="例: R00012" style="max-width:220px">
+          <p class="hint">ご予約済みの内容についてのお問い合わせは、予約確定メールに記載の予約番号をご入力ください。</p>
+        </div>
+        <div class="fg wide">
           <label for="cf-body">お問い合わせ内容 <span class="req">必須</span></label>
-          <textarea id="cf-body" name="body" required placeholder="ご利用希望日・車種・人数などをご記入いただくと、スムーズにご案内できます。"></textarea>
-          <p class="hint">ご予約済みの内容についてのお問い合わせは、予約番号 (例: R-0001) をあわせてご記入ください。</p>
+          <textarea id="cf-body" name="body" maxlength="5000" required placeholder="ご利用希望日・車種・人数などをご記入いただくと、スムーズにご案内できます。"></textarea>
+          <p class="hint">5000文字以内でご記入ください。運転免許証の番号やクレジットカード番号は記入しないでください。</p>
         </div>
       </div>
 
+      <!-- ボット対策 (人には見えない欄。入力しないでください) -->
+      <div class="ct-hp" aria-hidden="true">
+        <label for="cf-website">ウェブサイト (入力しないでください)</label>
+        <input type="text" id="cf-website" name="website" tabindex="-1" autocomplete="off" value="">
+      </div>
+
+      <p class="hint ct-purpose">ご入力いただいた情報は、株式会社Skyward Growth が、お問い合わせへの回答とご連絡のために利用します (お名前・メールアドレス・種別・内容は必須、その他は任意です)。取扱いの詳細は<a href="privacy.html" style="color:var(--color-primary)">プライバシーポリシー</a>をご確認ください。</p>
       <label class="ct-agree">
         <input type="checkbox" id="cf-agree" required>
-        <span><a href="privacy.html">プライバシーポリシー</a>に同意のうえ送信します。ご入力いただいた情報は、お問い合わせへの回答のためにのみ利用します。</span>
+        <span id="cf-agree-label"><a href="privacy.html">プライバシーポリシー</a>に同意のうえ送信します。</span>
       </label>
 
-      <p class="ct-err" id="cf-err"></p>
-      <button type="submit" class="btn btn-primary btn-lg">この内容で送信する</button>
-      <p class="hint" style="margin-top:14px">※ 本フォームは受付内容をお使いのブラウザ内に保存し、運営管理画面へ連携するデモ実装です。実運用時はメール送信サーバーへの接続が必要です。</p>
+      <p class="ct-err" id="cf-err" role="alert"></p>
+      <button type="submit" class="btn btn-primary btn-lg" id="cf-submit">この内容で送信する</button>
     </form>
 
-    <div class="ct-done" id="ct-done">
+    <div class="ct-done" id="ct-done" tabindex="-1">
       <h3>お問い合わせを受け付けました</h3>
       <p>内容を確認のうえ、2営業日以内にご入力のメールアドレスへご返信いたします。お急ぎの場合は<a href="https://lin.ee/PuLt0Ig" target="_blank" rel="noopener" style="color:var(--color-primary)">公式LINE</a>よりご連絡ください。</p>
+      <p id="ct-mail"></p>
       <p class="ref" id="ct-ref"></p>
     </div>
   </main>
@@ -158,59 +174,157 @@
   <div data-inc="footer"></div>
   <div data-inc="cta"></div>
 
-  <script src="js/config.js"></script>
-  <script src="js/store.js?v=20260916-1"></script>
-  <script src="js/pricing.js"></script>
-  <script src="js/api.js"></script>
   <script src="js/partials-public.js"></script>
-  <script>
+
+  <script src="js/config.js?v=20260923"></script>
+  <script src="js/store.js?v=20260923"></script>
+  <script src="js/pricing-core.js?v=20260923"></script>
+  <script src="js/pricing.js?v=20260923"></script>
+  <script src="js/api.js?v=20260923"></script>
+  <script src="js/backend.js?v=20260923"></script>
+  <script src="js/boot.js?v=20260923"></script>
+  <script type="text/x-deferred">
     (function () {
       'use strict';
+      const S = window.SkyRentStore, B = window.SkyRentBackend;
       const form = document.getElementById('ct-form');
       const err = document.getElementById('cf-err');
       const done = document.getElementById('ct-done');
-      if (!form) return;
+      const btn = document.getElementById('cf-submit');
+      if (!form || !B) return;
+      function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+      const $id = id => document.getElementById(id);
+      const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      // サーバーの項目名 → 入力欄
+      const FIELD_IDS = { name: 'cf-name', company: 'cf-company', email: 'cf-email', tel: 'cf-tel', topic: 'cf-topic', body: 'cf-body', reservationId: 'cf-reservation' };
+      // 公開中のプライバシーポリシーの版 (本番はサーバーの legal_documents。デモは既定値)
+      const DEFAULT_PRIVACY = { id: 'privacy', version: '2026-08', title: 'プライバシーポリシー', url: 'privacy.html' };
+      function privacyDoc() {
+        const list = S.read('legal', null);
+        const d = Array.isArray(list) ? list.find(x => x && x.id === 'privacy') : null;
+        return d && d.version ? d : DEFAULT_PRIVACY;
+      }
+      function safeUrl(u) { return /^(https:\/\/|[A-Za-z0-9._-]+\.html(#[A-Za-z0-9_-]*)?$)/.test(String(u || '')) ? String(u) : 'privacy.html'; }
+
+      // 二重送信防止の冪等キー: このページを開いている間は同じキーで送る
+      // (通信が途切れて送り直しても、受付は1件にまとまる)。受付が完了したら作り直す。
+      function newKey() {
+        const a = new Uint8Array(18);
+        if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(a);
+        else for (let i = 0; i < a.length; i++) a[i] = Math.floor(Math.random() * 256);
+        let s = '';
+        for (let i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
+        return 'inq_' + btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      }
+      let idemKey = newKey();
+      let sending = false;
+
+      const doc = privacyDoc();
+      $id('cf-agree-label').innerHTML = '<a href="' + esc(safeUrl(doc.url)) + '">' + esc(doc.title || 'プライバシーポリシー') + '</a> (' + esc(doc.version) + '版) に同意のうえ送信します。';
 
       // 種別をクエリで指定できる (例: contact.html?topic=法人利用・請求書払いについて)
       const preset = new URLSearchParams(location.search).get('topic');
       if (preset) {
-        const sel = document.getElementById('cf-topic');
+        const sel = $id('cf-topic');
         [...sel.options].forEach(o => { if (o.value === preset) sel.value = preset; });
       }
-
-      function fail(msg, id) {
-        err.textContent = msg; err.classList.add('on');
-        const el = id && document.getElementById(id);
-        if (el) { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+      // ログイン中の会員はお名前・連絡先を入れておく
+      const m = S.currentMember && S.currentMember();
+      if (m) {
+        [['cf-name', m.name], ['cf-email', m.email], ['cf-tel', m.phone], ['cf-company', m.company]].forEach(x => {
+          const el = $id(x[0]);
+          if (el && !el.value && x[1]) el.value = x[1];
+        });
       }
 
-      form.addEventListener('submit', e => {
+      function clearErrors() {
+        err.textContent = ''; err.classList.remove('on');
+        form.querySelectorAll('.fg.has-err').forEach(fg => fg.classList.remove('has-err'));
+        form.querySelectorAll('.fe').forEach(p => p.remove());
+      }
+      // errs: [[入力欄のid|null, 文言]]
+      function fail(errs) {
+        const msgs = errs.map(x => x[1]);
+        err.textContent = msgs.join(' ');
+        err.classList.add('on');
+        errs.forEach(x => {
+          const el = x[0] && $id(x[0]);
+          const fg = el && el.closest('.fg');
+          if (!fg) return;
+          fg.classList.add('has-err');
+          const p = document.createElement('p');
+          p.className = 'fe';
+          p.textContent = x[1];
+          fg.appendChild(p);
+        });
+        const first = errs[0] && errs[0][0] && $id(errs[0][0]);
+        if (first) {
+          try { first.focus(); } catch (e) { /* 続行 */ }
+          if (first.scrollIntoView) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+      }
+
+      function mailText(email) {
+        const st = email && email.status;
+        if (st === 'sent') return 'ご入力のメールアドレスに、受付確認のメールをお送りしました。';
+        if (st === 'queued') return '受付確認のメールは、まもなくお送りします。';
+        if (B.live) return '受付確認のメールをお送りできませんでしたが、お問い合わせは受け付けています。メールが届かない場合も、当社からのご返信をお待ちください。';
+        return 'デモ環境のため、受付確認のメールは送信されません。';
+      }
+
+      form.addEventListener('submit', async e => {
         e.preventDefault();
-        err.classList.remove('on');
-        const v = id => (document.getElementById(id).value || '').trim();
-        if (!v('cf-name')) return fail('お名前をご入力ください。', 'cf-name');
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('cf-email'))) return fail('メールアドレスの形式をご確認ください。', 'cf-email');
-        if (!v('cf-topic')) return fail('お問い合わせ種別をお選びください。', 'cf-topic');
-        if (v('cf-body').length < 5) return fail('お問い合わせ内容をご入力ください。', 'cf-body');
-        if (!document.getElementById('cf-agree').checked) return fail('プライバシーポリシーへの同意が必要です。', 'cf-agree');
-
-        const ref = 'C-' + String(Date.now()).slice(-6);
-        const rec = {
-          inquiryId: ref, name: v('cf-name'), company: v('cf-company'),
-          email: v('cf-email'), tel: v('cf-tel'), topic: v('cf-topic'),
-          body: v('cf-body'), status: 'new', createdAt: new Date().toISOString()
+        if (sending) return;
+        clearErrors();
+        const v = id => ($id(id).value || '').trim();
+        const p = {
+          name: v('cf-name'), company: v('cf-company'), email: v('cf-email'), tel: v('cf-tel'),
+          topic: v('cf-topic'), body: v('cf-body'), reservationId: v('cf-reservation').toUpperCase(),
+          website: $id('cf-website').value || ''
         };
-        try {
-          const KEY = 'sky-rent.inquiries';
-          const list = JSON.parse(localStorage.getItem(KEY) || '[]');
-          list.unshift(rec);
-          localStorage.setItem(KEY, JSON.stringify(list));
-        } catch (e) { console.warn('inquiry save failed', e); }
+        const errs = [];
+        if (!p.name) errs.push(['cf-name', 'お名前をご入力ください。']);
+        if (!EMAIL_RE.test(p.email)) errs.push(['cf-email', 'メールアドレスの形式をご確認ください。']);
+        if (p.tel && !/^[0-9０-９+\-‐－ー() ]{10,20}$/.test(p.tel)) errs.push(['cf-tel', '電話番号を正しく入力してください (半角数字とハイフン)。']);
+        if (!p.topic) errs.push(['cf-topic', 'お問い合わせ種別をお選びください。']);
+        if (p.reservationId && !/^R\d{1,12}$/.test(p.reservationId)) errs.push(['cf-reservation', '予約番号は「R」と数字で入力してください (例: R00012)。']);
+        if (p.body.length < 5) errs.push(['cf-body', 'お問い合わせ内容をご入力ください。']);
+        else if (p.body.length > 5000) errs.push(['cf-body', 'お問い合わせ内容は5000文字以内でご記入ください。']);
+        if (!$id('cf-agree').checked) errs.push(['cf-agree', 'プライバシーポリシーへの同意が必要です。']);
+        if (errs.length) return fail(errs);
 
-        form.style.display = 'none';
-        document.getElementById('ct-ref').textContent = '受付番号: ' + ref;
-        done.classList.add('on');
-        done.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        const d = privacyDoc();
+        const payload = {
+          idempotencyKey: idemKey,
+          name: p.name, company: p.company, email: p.email, tel: p.tel, topic: p.topic, body: p.body,
+          reservationId: p.reservationId || undefined,
+          website: p.website,
+          consent: { documents: [{ id: 'privacy', version: d.version }], agreedAt: new Date().toISOString() }
+        };
+        sending = true;
+        const label = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '送信しています…';
+        try {
+          const res = await B.submitInquiry(payload);
+          idemKey = newKey();
+          form.style.display = 'none';
+          $id('ct-mail').textContent = mailText(res && res.email);
+          $id('ct-ref').textContent = '受付番号: ' + String((res && res.id) || '');
+          done.classList.add('on');
+          try { done.focus(); } catch (ex) { /* 続行 */ }
+          if (done.scrollIntoView) done.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        } catch (ex) {
+          const fields = ex && ex.fields && typeof ex.fields === 'object' ? ex.fields : null;
+          const list = [];
+          if (fields) Object.keys(fields).forEach(k => list.push([FIELD_IDS[k] || null, String(fields[k])]));
+          if (!list.length) list.push([ex && ex.code === 'CONSENT_REQUIRED' ? 'cf-agree' : null, (ex && ex.message) || B.errorMessage('INTERNAL')]);
+          fail(list);
+        } finally {
+          sending = false;
+          btn.disabled = false;
+          btn.textContent = label;
+        }
       });
     })();
   </script>
