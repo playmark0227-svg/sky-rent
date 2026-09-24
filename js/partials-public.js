@@ -20,7 +20,7 @@
     ];
     return '<header class="site-header">' +
       '<div class="container header-inner">' +
-      '<a href="index.html" class="logo" aria-label="グロースレンタカー トップページへ"><picture><source media="(max-width: 480px)" srcset="images/brand/logo-mark-white.png" width="800" height="248"><img class="logo-img" src="images/brand/logo-horizontal-white.png" alt="グロースレンタカー" width="1400" height="197"></picture></a>' +
+      '<a href="index.html" class="logo" aria-label="グロースレンタカー トップページへ"><picture><source media="(max-width: 480px)" srcset="images/brand/logo-mark-white.png" width="800" height="249"><img class="logo-img" src="images/brand/logo-horizontal-white.png" alt="グロースレンタカー" width="1400" height="196"></picture></a>' +
       '<nav class="site-nav">' +
       nav.map(n => '<a href="' + n[0] + '"' + (n[2] ? ' class="nav-hide-sp"' : '') + '>' + n[1] + '</a>').join('') +
       '<a href="search.html" class="nav-cta">予約する</a>' +

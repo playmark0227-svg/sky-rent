@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-ロゴの元画像 (白地・紺と緑) から、サイトで使う画像を一式作り直す。
+ロゴの元画像から、サイトで使う画像を一式作り直す。
+元画像は「背景が透明な PNG」でも「白地の画像」でもよい (紺と緑の2色のロゴ)。
 
   使い方:
-    1. 新しいロゴを images/brand/logo-original.webp (または .png) として置く
+    1. 新しいロゴを images/brand/logo-original.png (または .webp) として置く
     2. python3 -m venv .venv && .venv/bin/pip install pillow numpy
     3. .venv/bin/python scripts/make-logo-assets.py [元画像のパス]
 
@@ -15,44 +16,70 @@
 
   パーツ (上から: 車のマーク / カタカナ / 英字) の位置は、インクのある横帯を自動で検出する。
   色は元画像から多い順に2色 (紺・緑) を拾う。
+  最後に、各ページの <img> に書いてある width / height を新しい画像の大きさに合わせる。
 """
 import os
+import re
 import sys
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'images', 'brand') + os.sep
 SRC = sys.argv[1] if len(sys.argv) > 1 else next(
-    p for p in (OUT + 'logo-original.webp', OUT + 'logo-original.png') if os.path.exists(p))
+    p for p in (OUT + 'logo-original.png', OUT + 'logo-original.webp') if os.path.exists(p))
 
-a = np.asarray(Image.open(SRC).convert('RGB')).astype(float)
+src = np.asarray(Image.open(SRC).convert('RGBA')).astype(float)
+a, src_alpha = src[..., :3], src[..., 3] / 255
 H, W, _ = a.shape
-bg = np.median(np.concatenate([a[:20].reshape(-1, 3), a[-20:].reshape(-1, 3)]), axis=0)
-ink = np.abs(a - bg).sum(2) > 60
+WHITE = np.array([255, 255, 255], float)
 
-# ---- 色: 紺 (青みが強い) と 緑 ----
 def mode_color(px):
     q = (px // 4 * 4).astype(int)
     u, c = np.unique(q, axis=0, return_counts=True)
     return u[c.argmax()].astype(float)
-NAVY = mode_color(a[ink & (a[:, :, 2] > a[:, :, 1] + 20)])
-GREEN = mode_color(a[ink & (a[:, :, 1] > a[:, :, 0] + 60) & (a[:, :, 1] > a[:, :, 2] + 20)])
-WHITE = np.array([255, 255, 255], float)
-print('紺', NAVY.astype(int), '緑', GREEN.astype(int))
 
-# ---- 背景と2色への分解 (輪郭のなめらかさを保って透過にする) ----
-def unmix(color):
-    v = color - bg
-    return np.clip(((a - bg) @ v) / (v @ v), 0, 1)
-tn, tg = unmix(NAVY), unmix(GREEN)
-dn = np.linalg.norm(a - (bg + tn[..., None] * (NAVY - bg)), axis=2)
-dg = np.linalg.norm(a - (bg + tg[..., None] * (GREEN - bg)), axis=2)
-is_green = dg < dn
-alpha = np.where(is_green, tg, tn)
+def navy_like(m):
+    return m & (a[:, :, 2] > a[:, :, 1] + 20)
+
+def green_like(m):
+    return m & (a[:, :, 1] > a[:, :, 0] + 60) & (a[:, :, 1] > a[:, :, 2] + 20)
+
+def dilate(mask, size):
+    img = Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(size))
+    return np.asarray(img) > 0
+
+edge_alpha = np.concatenate([src_alpha[:20].ravel(), src_alpha[-20:].ravel()])
+if np.median(edge_alpha) < 0.02:
+    # ---- 背景が透明な元画像: 透明度をそのまま使い、色だけ2色にそろえる ----
+    print('元画像: 背景が透明')
+    alpha = np.clip(src_alpha / np.percentile(src_alpha[src_alpha > 0.5], 90), 0, 1)
+    alpha[~dilate(alpha > 0.5, 9)] = 0          # 線から離れた薄いゴミを消す
+    solid = alpha > 0.9
+    NAVY, GREEN = mode_color(a[navy_like(solid)]), mode_color(a[green_like(solid)])
+    closer_green = np.linalg.norm(a - GREEN, axis=2) < np.linalg.norm(a - NAVY, axis=2)
+    # 輪郭の半透明な画素は色が当てにならないので、近くのベタ塗りの色に合わせる
+    gz, nz = dilate(solid & closer_green, 7), dilate(solid & ~closer_green, 7)
+    is_green = np.where(gz & ~nz, True, np.where(nz & ~gz, False, closer_green))
+else:
+    # ---- 白地の元画像: 背景と2色に分解して透過にする (輪郭のなめらかさを保つ) ----
+    print('元画像: 背景あり')
+    bg = np.median(np.concatenate([a[:20].reshape(-1, 3), a[-20:].reshape(-1, 3)]), axis=0)
+    ink0 = np.abs(a - bg).sum(2) > 60
+    NAVY, GREEN = mode_color(a[navy_like(ink0)]), mode_color(a[green_like(ink0)])
+    def unmix(color):
+        v = color - bg
+        return np.clip(((a - bg) @ v) / (v @ v), 0, 1)
+    tn, tg = unmix(NAVY), unmix(GREEN)
+    dn = np.linalg.norm(a - (bg + tn[..., None] * (NAVY - bg)), axis=2)
+    dg = np.linalg.norm(a - (bg + tg[..., None] * (GREEN - bg)), axis=2)
+    is_green = dg < dn
+    alpha = np.where(is_green, tg, tn)
 alpha[alpha < 0.04] = 0
 alpha = np.clip((alpha - 0.04) / 0.92, 0, 1)
+ink = alpha > 0.25
+print('紺', NAVY.astype(int), '緑', GREEN.astype(int))
 
 # ---- パーツの位置 (インクのある横帯) ----
 rows = ink.sum(1) > 0
@@ -88,10 +115,12 @@ def pad(img, px):
     c.paste(img, (px, px), img)
     return c
 
+SIZES = {}
 def save(img, name, maxw=None):
     if maxw and img.width > maxw:
         img = img.resize((maxw, round(img.height * maxw / img.width)), Image.LANCZOS)
     img.save(OUT + name, optimize=True)
+    SIZES[name] = img.size
     print('  %-28s %dx%d' % (name, img.width, img.height))
 
 for suffix, navy_to in (('', NAVY), ('-white', WHITE)):
@@ -128,3 +157,19 @@ f2 = full.resize((860, round(full.height * 860 / full.width)), Image.LANCZOS)
 og.paste(f2, ((1200 - f2.width) // 2, (630 - f2.height) // 2), f2)
 og.save(OUT + 'og-image.png', optimize=True)
 print('  og-image.png                 1200x630')
+
+# ---- ページ側の width / height を新しい大きさに合わせる (読み込み中のがたつき防止) ----
+TAG = re.compile(r'(images/brand/(logo[\w-]*\.png)"[^>]*?)width="\d+" height="\d+"')
+def fix_sizes(m):
+    size = SIZES.get(m.group(2))
+    return m.group(0) if not size else '%swidth="%d" height="%d"' % (m.group(1), size[0], size[1])
+for d in ('', 'js', 'manage'):
+    for name in sorted(os.listdir(os.path.join(ROOT, d))):
+        path = os.path.join(ROOT, d, name)
+        if not name.endswith(('.html', '.js')) or not os.path.isfile(path):
+            continue
+        text = open(path, encoding='utf-8').read()
+        new = TAG.sub(fix_sizes, text)
+        if new != text:
+            open(path, 'w', encoding='utf-8').write(new)
+            print('  サイズ更新:', os.path.relpath(path, ROOT))

@@ -143,7 +143,7 @@
     <header class="topbar">
       <div class="topbar-inner">
         <a class="brand" href="dashboard.html">
-          <img class="brand-logo" src="../images/brand/logo-horizontal-white.png" alt="グロースレンタカー" width="1400" height="197">
+          <img class="brand-logo" src="../images/brand/logo-horizontal-white.png" alt="グロースレンタカー" width="1400" height="196">
           <span class="brand-sub"><small>管理画面</small></span>
         </a>
 
