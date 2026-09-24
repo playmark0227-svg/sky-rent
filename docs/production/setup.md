@@ -639,6 +639,8 @@ node scripts/create-admin.mjs --email owner@skyward-growth.com --name "藤本 �
 - デモモードに戻すときは、`SUPABASE_URL` と `SUPABASE_ANON_KEY` を空 (`''`) に戻します。
 - デモモードでブラウザに保存された架空データは本番に移行されません (事業判断 M: デモデータは破棄)。
 - 独自ドメインにする場合は、GitHub の **Settings → Pages → Custom domain** で設定し、4-1 の URL と 3章の `SITE_URL`・`ALLOWED_ORIGINS` にも追加します。
+  あわせて、各ページの `<head>` にある SNS 共有用のタグ (`og:url`・`og:image`) の
+  `https://playmark0227-svg.github.io/sky-rent/` を新しい URL に置き換えます (LINE などで共有したときのプレビューに使われます)。
 
 > [!IMPORTANT]
 > **本番は独自ドメイン (例: `rent.skyward-growth.com`) での公開を強く推奨します。**
@@ -800,3 +802,21 @@ colima stop
 | 確認メールのリンクを開くとエラー | 4-1 の Site URL / Redirect URLs に公開サイトの URL があるか。リンクの有効期限切れ (もう一度送信) |
 | スタッフが管理画面に入れない | 8-2 の二段階認証。スタッフが「無効」になっていないか (「スタッフ・権限」画面) |
 | 予約がカレンダーに書き込まれない | 共有の権限が「予定の変更」か (接続テストで `events`)。「予約をカレンダーに書き込む」が ON か。7章の定期実行 |
+
+---
+
+## 付録: ロゴの差し替え
+
+サイトのロゴ・ファビコン・SNS 共有画像は、すべて `images/brand/` の画像を使っています。
+新しいロゴ (白地に紺と緑、上から「車のマーク / カタカナ / 英字」の構成) に差し替えるときは:
+
+1. 新しいロゴを `images/brand/logo-original.webp` (または `.png`) として置く
+2. 次を実行する (白地用・黒地用・横長版・アイコン・共有画像をまとめて作り直します)
+
+   ```bash
+   python3 -m venv .venv && .venv/bin/pip install pillow numpy
+   .venv/bin/python scripts/make-logo-assets.py
+   ```
+
+3. 画面で見え方を確認してコミットする
+

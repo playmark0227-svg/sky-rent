@@ -22,3 +22,6 @@ service-account*.json
 # ローカル検証用のダミー鍵 (scripts/make-test-fixtures.mjs で生成)
 tests/fixtures/*.pem
 tests/fixtures/test-service-account.json
+
+# Python の仮想環境 (ロゴ画像の作り直しなど)
+.venv/

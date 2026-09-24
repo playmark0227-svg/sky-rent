@@ -143,8 +143,8 @@
     <header class="topbar">
       <div class="topbar-inner">
         <a class="brand" href="dashboard.html">
-          <span class="brand-mark">G</span>
-          <span class="brand-sub">グロースレンタカー<br><small>管理画面</small></span>
+          <img class="brand-logo" src="../images/brand/logo-horizontal-white.png" alt="グロースレンタカー" width="1400" height="197">
+          <span class="brand-sub"><small>管理画面</small></span>
         </a>
 
         <button class="nav-burger" type="button" aria-label="メニューを開く" aria-expanded="false" aria-controls="topnav">
@@ -231,15 +231,14 @@
   // ===== favicon / テーマカラー (全ページ共通の見た目) =====
   function injectFavicon() {
     if (document.querySelector('link[rel="icon"]')) return;
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#1c4a7a"/><text x="32" y="46" font-size="40" text-anchor="middle" fill="#ffffff" font-family="serif" font-weight="bold">G</text></svg>';
-    const href = 'data:image/svg+xml,' + encodeURIComponent(svg);
     const icon = document.createElement('link');
     icon.rel = 'icon';
-    icon.href = href;
+    icon.type = 'image/png';
+    icon.href = '../images/brand/favicon-32.png';
     document.head.appendChild(icon);
     const apple = document.createElement('link');
     apple.rel = 'apple-touch-icon';
-    apple.href = href;
+    apple.href = '../images/brand/apple-touch-icon.png';
     document.head.appendChild(apple);
     if (!document.querySelector('meta[name="theme-color"]')) {
       const tc = document.createElement('meta');

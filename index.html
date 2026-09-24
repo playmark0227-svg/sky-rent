@@ -8,25 +8,20 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/public.css">
   <link rel="stylesheet" href="css/lp.css">
-  <script>
-    // ===== favicon =====
-    // 管理画面で設定した SEO・テーマカラー・GA (settings.seo / site / ga) は、データの読み込み後
-    // (skyrent:ready) に js/lp.js が SkyRentStore から反映する (本番はサーバー、デモは localStorage の値)。
-    (function () {
-      try {
-        const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#16181d"/><text x="32" y="46" font-size="38" text-anchor="middle" fill="#d94f22" font-family="serif" font-weight="bold">G</text></svg>';
-        const href = 'data:image/svg+xml,' + encodeURIComponent(svg);
-        const icon = document.createElement('link'); icon.rel = 'icon'; icon.href = href; document.head.appendChild(icon);
-        const apple = document.createElement('link'); apple.rel = 'apple-touch-icon'; apple.href = href; document.head.appendChild(apple);
-      } catch (e) { /* favicon が無くても続行 */ }
-    })();
-  </script>
+  <link rel="icon" type="image/png" sizes="32x32" href="images/brand/favicon-32.png">
+  <link rel="apple-touch-icon" href="images/brand/apple-touch-icon.png">
+  <meta property="og:site_name" content="グロースレンタカー">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="グロースレンタカー | 空へ、自由を。— 北海道のレンタカー・キッチンカー">
+  <meta property="og:description" content="北海道 北見・釧路。コンパクトカー・SUV・ミニバン・軽トラックのレンタカーと、イベント出店に使えるキッチンカー。空き状況をリアルタイム検索して、24時間Webで予約完了。">
+  <meta property="og:url" content="https://playmark0227-svg.github.io/sky-rent/index.html">
+  <meta property="og:image" content="https://playmark0227-svg.github.io/sky-rent/images/brand/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
   <!-- ===== オープニング ===== -->
   <div id="intro" aria-hidden="true">
-    <div class="in-kanji">G</div>
-    <div class="in-word">Growth Rent a Car</div>
+    <img class="in-logo" src="images/brand/logo-white.png" alt="" width="1200" height="547">
     <div class="in-line"></div>
   </div>
   <script>
@@ -50,7 +45,7 @@
   <!-- ===== ヘッダー ===== -->
   <header class="site-header on-hero">
     <div class="container header-inner">
-      <a href="index.html" class="logo"><span class="logo-mark">G</span><span class="logo-text">グロースレンタカー</span></a>
+      <a href="index.html" class="logo" aria-label="グロースレンタカー トップページへ"><picture><source media="(max-width: 480px)" srcset="images/brand/logo-mark-white.png" width="800" height="248"><img class="logo-img" src="images/brand/logo-horizontal-white.png" alt="グロースレンタカー" width="1400" height="197"></picture></a>
       <nav class="site-nav">
         <a href="fleet.html" class="nav-hide-sp">車両と料金</a>
         <a href="guide.html" class="nav-hide-sp">ご利用方法</a>

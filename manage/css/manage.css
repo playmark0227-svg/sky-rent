@@ -55,18 +55,10 @@ html, body {
   border-right: 1px solid rgba(255,255,255,0.2);
   margin-right: 8px;
 }
-.brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #fff;
-  color: var(--topbar);
-  font-weight: 700;
-  font-size: 22px;
-  font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+.brand-logo {
+  display: block;
+  height: 30px;
+  width: auto;
 }
 .brand-sub {
   font-weight: 700;
@@ -74,7 +66,9 @@ html, body {
   color: #fff;
 }
 .brand-sub small {
+  display: block;
   font-size: 11px;
+  letter-spacing: .12em;
   font-weight: 400;
   opacity: 0.85;
 }

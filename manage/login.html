@@ -12,9 +12,8 @@
   <main class="login-wrap">
     <div class="login-card">
       <div class="login-brand">
-        <div class="brand-mark" style="width:64px;height:64px;font-size:36px;margin:0 auto 12px">G</div>
-        <h1 style="font-size:24px;margin-bottom:4px">グロースレンタカー</h1>
-        <p style="font-size:12px;color:#666">管理画面</p>
+        <img class="login-logo" src="../images/brand/logo.png" alt="グロースレンタカー" width="1200" height="547">
+        <h1 class="login-title">管理画面</h1>
       </div>
 
       <div id="login-alert" class="login-msg login-msg--error" role="alert" hidden></div>
@@ -141,7 +140,8 @@
     .login-wrap { width: 100%; max-width: 420px; }
     .login-card { background: #fff; padding: 32px 30px; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
     .login-brand { text-align: center; margin-bottom: 18px; }
-    .brand-mark { display: inline-flex !important; align-items: center; justify-content: center; background: var(--primary); color: #fff; border-radius: 50%; font-family: "Yu Mincho",serif; }
+    .login-logo { display: block; width: 230px; max-width: 80%; height: auto; margin: 0 auto 6px; }
+    .login-title { font-size: 13px; font-weight: 700; color: #1c4a7a; letter-spacing: .2em; margin: 0; }
     .login-step[hidden], .login-msg[hidden] { display: none !important; }
     .login-step-title { font-size: 17px; color: var(--primary); margin: 0 0 8px; }
     .login-lead { font-size: 13px; color: #444; line-height: 1.7; margin: 0 0 12px; }
@@ -178,10 +178,10 @@
     'use strict';
     // favicon
     (function () {
-      const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#1c4a7a"/><text x="32" y="46" font-size="40" text-anchor="middle" fill="#ffffff" font-family="serif" font-weight="bold">G</text></svg>';
       const icon = document.createElement('link');
       icon.rel = 'icon';
-      icon.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+      icon.type = 'image/png';
+      icon.href = '../images/brand/favicon-32.png';
       document.head.appendChild(icon);
     })();
 

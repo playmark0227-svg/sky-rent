@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/manage.css">
   <style>
     #print-area { display: none; }
+    .doc-logo { display: block; width: 150px; height: auto; margin: 0 0 4px auto; }
     .doc { max-width: 720px; margin: 0 auto; padding: 26px 30px; color: #1a1a1a; font-size: 12.5px; line-height: 1.7; }
     .doc h1 { text-align: center; font-size: 22px; letter-spacing: 6px; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 16px; }
     .doc .meta { text-align: right; font-size: 11px; margin-bottom: 12px; }
@@ -167,7 +168,9 @@
     function openDoc(type, id) {
       const r = S.list('reservations').find(x => x.reservationId === id);
       if (!r) return;
-      const docHtml = DOCS[type](r);
+      // 帳票の右上にロゴ (印刷でも同じ画像を使う)
+      const docHtml = DOCS[type](r).replace('<div class="doc">',
+        '<div class="doc"><img class="doc-logo" src="../images/brand/logo.png" alt="グロースレンタカー" width="1200" height="547">');
       const html =
         '<div class="crud-modal-bg"></div><div class="crud-modal-card" style="min-width:700px;max-width:780px">' +
         '<div class="crud-modal-head"><h3>' + TITLES[type] + ' プレビュー</h3><button class="crud-close" type="button">×</button></div>' +
