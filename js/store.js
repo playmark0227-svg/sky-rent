@@ -2,9 +2,11 @@
  * グロースレンタカー - 統合データストア
  *
  * 要件定義書 v3.0 (2026-06-26) 準拠のデータ層。
- *   - 車両を対象とした「アセット」モデル (物品単体のレンタルは取り扱わない)
+ *   - 車両を対象とした「アセット」モデル (物品単体のレンタルは取り扱わない。
+ *     家電などの装備品は、車両の予約に追加するオプションとしてだけ提供する)
  *   - カテゴリごとのカスタム項目 (EAV/JSON方式) — 管理画面から自由に定義可能
- *   - 拠点 (北見・釧路) / オプション2階層 (共通・カテゴリ専用。現在は補償のみ) / 在庫数管理
+ *   - 拠点 (北見・釧路) / オプション2階層 (共通 = 装備オプション・カテゴリ専用 = 補償) /
+ *     車両の空き判定 (装備オプションの在庫数は管理しない)
  *   - 会員・ポイント・クーポン制度 / 請求書払い (法人・行政のみ)
  *   - 通知ログ (メール送信のデモ代替)
  *
@@ -19,7 +21,7 @@
 (function () {
   'use strict';
   const PREFIX = 'sky-rent.';
-  const DATA_VERSION = 7;
+  const DATA_VERSION = 8;
   const DAY = 86400000;
   const CONFIG = window.SKY_RENT_CONFIG || {};
   const LIVE = !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY);
@@ -204,14 +206,33 @@
   ];
 
   // オプション: categoryIds = null → 共通 (全車両カテゴリ)。priceType: per_day | per_rental
+  //   kind: 'cover' (補償。exclusiveGroup 'cover' で1つだけ) / 'other' (装備)
+  //   includes: セットに含まれる品目。セットと中の品目は同時に選べない (pricing-core が OPTION_CONFLICT にする)
+  //   内容は supabase/seed.sql の options と同じ (料金は総合料金表 2026年6月改定版)
   const SEED_OPTIONS = [
     // 補償 (レンタカー)
-    { optionId: 'OP101', name: '免責補償制度 (CDW)',   price: 1650, priceShort: 1100, priceType: 'per_day', categoryIds: ['cat-rental'], kind: 'cover', exclusiveGroup: 'cover', active: true },
-    { optionId: 'OP102', name: '安心保証コース (PAP)', price: 3300, priceShort: 2200, priceType: 'per_day', categoryIds: ['cat-rental'], kind: 'cover', exclusiveGroup: 'cover', active: true },
+    { optionId: 'OP101', name: '免責補償制度 (CDW)',   price: 1650, priceShort: 1100, priceType: 'per_day', categoryIds: ['cat-rental'], kind: 'cover', exclusiveGroup: 'cover', active: true, sort: 1, description: '事故時の免責負担ゼロ (最大5万円)' },
+    { optionId: 'OP102', name: '安心保証コース (PAP)', price: 3300, priceShort: 2200, priceType: 'per_day', categoryIds: ['cat-rental'], kind: 'cover', exclusiveGroup: 'cover', active: true, sort: 2, description: '免責免除・NOC免除' },
     // 補償 (キッチンカー)
-    { optionId: 'OP201', name: '免責補償制度 (CDW)',   price: 3300, priceShort: null, priceType: 'per_day', categoryIds: ['cat-kitchen'], kind: 'cover', exclusiveGroup: 'cover', active: true },
-    { optionId: 'OP202', name: '安心保証コース (PAP)', price: 6600, priceShort: null, priceType: 'per_day', categoryIds: ['cat-kitchen'], kind: 'cover', exclusiveGroup: 'cover', active: true }
+    { optionId: 'OP201', name: '免責補償制度 (CDW)',   price: 3300, priceShort: null, priceType: 'per_day', categoryIds: ['cat-kitchen'], kind: 'cover', exclusiveGroup: 'cover', active: true, sort: 3, description: '事故時の免責負担ゼロ (最大10万円)' },
+    { optionId: 'OP202', name: '安心保証コース (PAP)', price: 6600, priceShort: null, priceType: 'per_day', categoryIds: ['cat-kitchen'], kind: 'cover', exclusiveGroup: 'cover', active: true, sort: 4, description: '免責免除・NOC免除' },
+    // 装備オプション (全車共通・24時間ごと。短時間料金なし)
+    { optionId: 'OP001', name: 'ポータブル冷蔵冷凍庫', price: 3300, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true, sort: 11, description: 'アイリスオーヤマ IPD-4A-B' },
+    { optionId: 'OP002', name: '電子レンジ',           price: 2200, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true, sort: 12, description: 'パナソニック NE-FL1C-W' },
+    { optionId: 'OP003', name: 'サーキュレーター',     price: 1100, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true, sort: 13, description: 'アイリスオーヤマ KCF-SDC15T-EC-W' },
+    { optionId: 'OP004', name: 'ポータブル電源',       price: 3300, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true, sort: 14, description: 'Jackery JE-1800A' },
+    { optionId: 'OP005', name: 'ドラムリール',         price: 1100, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true, sort: 15, description: '日動工業 NR-304D-S' },
+    { optionId: 'OP006', name: 'カセットコンロ',       price: 1100, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true, sort: 16, description: '岩谷産業 CB-ODX1-BK' },
+    { optionId: 'OP007', name: 'カセットボンベ',       price: 1100, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true, sort: 17, description: '岩谷産業 CB-250-OR' },
+    { optionId: 'OP008', name: '炊飯器',               price: 2200, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true, sort: 18, description: 'タイガー魔法瓶 JPV-Y180KV' },
+    { optionId: 'OP009', name: '電気ケトル',           price: 1100, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true, sort: 19, description: '象印マホービン CK-VB15 BM' },
+    { optionId: 'OP010', name: '家電セット (上記9点まとめ)', price: 11000, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true, sort: 20,
+      description: 'ポータブル冷蔵冷凍庫〜電気ケトルの9点をまとめたセット',
+      includes: ['OP001', 'OP002', 'OP003', 'OP004', 'OP005', 'OP006', 'OP007', 'OP008', 'OP009'] },
+    { optionId: 'OP011', name: '集客セット',           price: 1100, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true, sort: 21, description: 'ホワイトボード・マグネット・ペン' }
   ];
+  // DATA_VERSION 8 で再開した装備オプション (7 → 8 の移行で足す)
+  const EQUIPMENT_OPTION_IDS = ['OP001', 'OP002', 'OP003', 'OP004', 'OP005', 'OP006', 'OP007', 'OP008', 'OP009', 'OP010', 'OP011'];
 
   const SEED_MEMBERS = [
     { memberId: 'M001', name: 'デモ 太郎', nameKana: 'デモ タロウ', email: 'demo@example.com', phone: '090-0000-1111',
@@ -321,10 +342,32 @@
   // ===================================================================
   // シード投入 / マイグレーション
   // ===================================================================
+  // 7 → 8: 装備オプション (OP001〜OP011) の再開。予約・会員などのデータは消さず、オプションだけを直す
+  //   - 装備オプションが無ければ末尾に足す (管理画面で編集・追加したオプションはそのまま)
+  //   - 既存のオプションには、無い項目 (説明文・並び順など) だけを補う
+  function migrateToV8() {
+    const seedById = {};
+    SEED_OPTIONS.forEach(o => { seedById[o.optionId] = o; });
+    const current = list('options');
+    const have = {};
+    const next = current.map(o => {
+      have[o.optionId] = true;
+      const seed = seedById[o.optionId];
+      return seed ? Object.assign({}, seed, o) : o;
+    });
+    EQUIPMENT_OPTION_IDS.forEach(id => { if (!have[id]) next.push(Object.assign({}, seedById[id])); });
+    write('options', next);
+  }
+
   function ensureSeeded() {
     const ver = read('dataVersion', 0);
     if (ver === DATA_VERSION) return;
-    // 旧バージョンのデータキーを破棄 (settings.* は温存)
+    if (ver === 7) {
+      migrateToV8();
+      write('dataVersion', DATA_VERSION);
+      return;
+    }
+    // それより古いバージョンのデータキーを破棄 (settings.* は温存)
     ['vehicles', 'reservations', 'categories', 'locations', 'assets', 'options',
      'members', 'invoices', 'notifications'].forEach(remove);
     write('categories', SEED_CATEGORIES);

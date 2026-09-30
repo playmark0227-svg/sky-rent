@@ -57,13 +57,13 @@
 
   <script src="partials.js"></script>
 
-  <script src="../js/config.js?v=20260923"></script>
-  <script src="../js/store.js?v=20260923"></script>
-  <script src="../js/pricing-core.js?v=20260923"></script>
-  <script src="../js/pricing.js?v=20260923"></script>
-  <script src="../js/api.js?v=20260923"></script>
-  <script src="../js/backend.js?v=20260923"></script>
-  <script src="../js/boot.js?v=20260923"></script>
+  <script src="../js/config.js?v=20260930"></script>
+  <script src="../js/store.js?v=20260930"></script>
+  <script src="../js/pricing-core.js?v=20260930"></script>
+  <script src="../js/pricing.js?v=20260930"></script>
+  <script src="../js/api.js?v=20260930"></script>
+  <script src="../js/backend.js?v=20260930"></script>
+  <script src="../js/boot.js?v=20260930"></script>
   <script type="text/x-deferred">
   (function () {
     const S = window.SkyRentStore;
@@ -103,6 +103,31 @@
     }
 
     function store(r) { return S.getLocation(r.locationId) || { name: 'グロースレンタカー 本店', address: '', tel: '' }; }
+    // 予約のオプション (予約時の控え) を補償・装備に分ける。種類は今のオプション設定から引く (見つからなければ装備)
+    function currentOption(x) { return S.findById('options', 'optionId', x.optionId || x.id) || null; }
+    function isCover(o) { return o.kind ? o.kind === 'cover' : o.exclusiveGroup === 'cover'; }
+    function optionGroups(r) {
+      const cover = [], equip = [];
+      (r.options || []).forEach(x => { (isCover(currentOption(x) || x) ? cover : equip).push(x); });
+      return [{ kind: 'cover', title: '補償オプション', list: cover }, { kind: 'equip', title: '装備オプション', list: equip }].filter(g => g.list.length);
+    }
+    // 貸出・返却時に数量を確かめる装備の品目 (家電セットなどのセットは、中の品目に分けて並べる)
+    function equipItems(r) {
+      const items = [];
+      optionGroups(r).filter(g => g.kind === 'equip').forEach(g => g.list.forEach(x => {
+        const cur = currentOption(x) || {};
+        const inner = Array.isArray(cur.includes) ? cur.includes : [];
+        if (!inner.length) { items.push(x.name); return; }
+        const setName = String(x.name || '').replace(/\s*[（(].*$/, '') || x.name;
+        inner.forEach(id => { const y = S.findById('options', 'optionId', id); items.push((y ? y.name : id) + ' (' + setName + ')'); });
+      }));
+      return items;
+    }
+    function optionsHtml(r) {
+      const groups = optionGroups(r);
+      if (!groups.length) return '';
+      return '<table class="d-table"><tbody>' + groups.map(g => '<tr><th style="width:24%">' + esc(g.title) + '</th><td>' + g.list.map(o => esc(o.name)).join('、') + '</td></tr>').join('') + '</tbody></table>';
+    }
     function priceRows(r) {
       const lines = (r.price && (r.price.lines || r.price.breakdown)) || [];
       return lines.map(l => '<tr><td>' + esc(l.label) + '</td><td style="text-align:right">' + (l.amount < 0 ? '-¥' + Math.abs(l.amount).toLocaleString() : '¥' + l.amount.toLocaleString()) + '</td></tr>').join('') +
@@ -120,7 +145,7 @@
         '<tr><th>貸渡日時</th><td>' + fmtDT(r.start) + '</td><th>返却日時</th><td>' + fmtDT(r.end) + '</td></tr></table>' +
         (a.requiredLicense ? '<p style="color:#c0392b;font-size:11px">必要免許・資格: ' + esc(a.requiredLicense) + '</p>' : '') +
         '<table class="d-table"><thead><tr><th>料金内訳</th><th style="text-align:right">金額</th></tr></thead><tbody>' + priceRows(r) + '</tbody></table>' +
-        ((r.options || []).length ? '<p style="font-size:11px">オプション: ' + r.options.map(o => esc(o.name)).join('、') + '</p>' : '') +
+        optionsHtml(r) +
         '<div class="notes"><b>ご注意事項</b><ul><li>酒気帯び・過労状態での運転は固くお断りします。</li><li>本車両の又貸し (転貸) を禁じます。</li><li>事故・故障の際は速やかに当社まで連絡してください。</li><li>返却時は満タン返しとし、車内清掃にご協力ください。</li></ul></div>' +
         '<div class="sign"><div class="box">貸渡人 確認印</div><div class="box">借受人 署名</div></div></div>';
     }
@@ -130,6 +155,7 @@
       return '<div class="doc"><h1>車輌チェックシート</h1><div class="meta">予約番号: ' + esc(r.reservationId) + ' ／ 車両: ' + esc(a.name || r.assetName) + ' (' + esc(a.plate || '') + ')</div>' +
         '<table class="d-table"><thead><tr><th style="width:40%">点検項目</th><th style="text-align:center">出発時</th><th style="text-align:center">返却時</th><th>特記事項</th></tr></thead><tbody>' +
         items.map(it => '<tr><td>' + it + '</td><td style="text-align:center">□良 □要確認</td><td style="text-align:center">□良 □要確認</td><td></td></tr>').join('') +
+        equipItems(r).map(it => '<tr><td>装備: ' + esc(it) + ' ×1</td><td style="text-align:center">□有 □要確認</td><td style="text-align:center">□有 □要確認</td><td></td></tr>').join('') +
         '<tr><td>燃料残量</td><td style="text-align:center">E ─┼─┼─┼─ F</td><td style="text-align:center">E ─┼─┼─┼─ F</td><td></td></tr>' +
         '<tr><td>走行距離 (km)</td><td>＿＿＿＿＿ km</td><td>＿＿＿＿＿ km</td><td>走行 ＿＿ km</td></tr>' +
         '</tbody></table>' +
@@ -143,6 +169,7 @@
         '<div class="amt-big">¥ ' + amt.toLocaleString() + ' -</div>' +
         '<p>但し、レンタル料金として (予約番号 ' + esc(r.reservationId) + ')</p>' +
         '<p>上記正に領収いたしました。</p>' +
+        '<table class="d-table"><thead><tr><th>内訳</th><th style="text-align:right">金額</th></tr></thead><tbody>' + priceRows(r) + '</tbody></table>' +
         '<table class="d-table" style="width:60%"><tr><th>税抜金額</th><td style="text-align:right">¥' + (amt - tax).toLocaleString() + '</td></tr><tr><th>消費税 (10%内税)</th><td style="text-align:right">¥' + tax.toLocaleString() + '</td></tr></table>' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px">' +
         (amt >= 50000 ? '<div class="stamp-box">収入印紙</div>' : '<div></div>') +

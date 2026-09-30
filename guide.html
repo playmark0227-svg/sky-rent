@@ -27,7 +27,7 @@
   }
   .g-step h3 { font-size: 18px; font-weight: 900; color: #fff; margin: 0 0 10px; }
   .g-step > div > *:last-child { margin-bottom: 0; }
-  .doc-body li a:not(.btn):not(.g-inline-link), .faq .a a { color: var(--color-primary); text-decoration: underline; text-underline-offset: 3px; }
+  .doc-body li a:not(.btn):not(.g-inline-link), .doc-body p a:not(.btn):not(.g-inline-link), .faq .a a { color: var(--color-primary); text-decoration: underline; text-underline-offset: 3px; }
   .g-inline-link { display: inline-flex; align-items: center; gap: 6px; color: var(--color-primary); font-size: 13.5px; font-weight: 700; margin-top: 4px; }
   .g-inline-link:hover { text-decoration: underline; }
 
@@ -103,6 +103,7 @@
             <ul>
               <li>出発日時と返却日時、ご利用の拠点 (北見本店 / 釧路店) を選択します</li>
               <li>コンパクトカー・SUV・ミニバン・軽トラック・キッチンカーからお選びいただけます</li>
+              <li>ポータブル電源や家電セットなどの装備オプションも、ご予約時に選択できます (全車共通・24時間ごとの料金)</li>
               <li>ご利用は1時間単位の時間貸しと、24時間貸しの2種類からお選びいただけます (キッチンカーは24時間貸しのみ)</li>
               <li>ご予約の際に運転免許証の番号を入力する必要はありません。「運転される方全員が有効な運転免許証を持っている」ことをご確認のうえチェックしてください (免許証は当日店頭で確認します)</li>
               <li>最終確認画面で、料金の内訳と合計、お支払い方法、キャンセル料の規定をご確認のうえ「上記の内容で予約を確定する」を押すと、ご予約が成立します</li>
@@ -155,7 +156,7 @@
             <ul>
               <li>貸渡約款・ご利用上の注意事項のご説明</li>
               <li>車両の外装・内装の状態 (キズやへこみ) をスタッフと一緒に確認</li>
-              <li>車両装備の使い方の確認</li>
+              <li>装備・オプション品の数量と使い方の確認</li>
               <li>補償制度への加入受付 — 免責補償制度 (CDW) ¥1,650/日、安心保証コース (PAP) ¥3,300/日 (いずれも税込)。キッチンカーは CDW ¥3,300/日、PAP ¥6,600/日です</li>
             </ul>
             <p>確認が済みましたら、そのままご出発いただけます。</p>
@@ -171,7 +172,7 @@
             <p>お約束のご返却日時までに、貸渡を受けた拠点へお戻しください。</p>
             <ul>
               <li>燃料は満タンにしてご返却ください (満タン返し)</li>
-              <li>スタッフと一緒に車両を確認し、精算して終了です</li>
+              <li>スタッフと一緒に車両と装備品を確認し、精算して終了です</li>
               <li>ご返却時刻を延長されたい場合は、返却予定時刻より前に公式LINEへご連絡ください。次のご予約状況によっては、延長をお受けできない場合があります</li>
             </ul>
             <p>ご連絡なく返却が遅れた場合は、延滞料金を申し受けます。</p>
@@ -264,6 +265,9 @@
       </ul>
       <p class="doc-note">割引は基本料金にのみ適用されます。オプション料金・超過料金・キャンセル料には適用できません。</p>
 
+      <h3>装備オプション</h3>
+      <p>ポータブル冷蔵冷凍庫、電子レンジ、ポータブル電源、カセットコンロ、炊飯器などを24時間あたり¥1,100からご用意しています (全車共通)。よく使う9点をまとめた家電セットは¥11,000です。ご予約時にお選びください。装備は車両のご予約に追加する形でのお貸し出しで、24時間に満たないご利用でも24時間分の料金となります。家電セットと、セットに含まれる品目を一緒に選ぶことはできません。品目と機種の一覧は<a href="fleet.html#opt-equip">車両と料金</a>に掲載しています。</p>
+
       <h3>補償・キャンセル料</h3>
       <p>免責補償制度 (CDW) は¥1,650/日、安心保証コース (PAP) は¥3,300/日です (キッチンカーは¥3,300/日・¥6,600/日)。万一の事故の際にお客様にご負担いただくノンオペレーションチャージ (NOC) や、キャンセル料の詳細は、下記のページに掲載しています。</p>
       <a class="g-inline-link" href="fleet.html">車両ごとの料金を見る →</a><br>
@@ -310,12 +314,12 @@
 
   <script src="js/partials-public.js"></script>
 
-  <script src="js/config.js?v=20260923"></script>
-  <script src="js/store.js?v=20260923"></script>
-  <script src="js/pricing-core.js?v=20260923"></script>
-  <script src="js/pricing.js?v=20260923"></script>
-  <script src="js/api.js?v=20260923"></script>
-  <script src="js/backend.js?v=20260923"></script>
-  <script src="js/boot.js?v=20260923"></script>
+  <script src="js/config.js?v=20260930"></script>
+  <script src="js/store.js?v=20260930"></script>
+  <script src="js/pricing-core.js?v=20260930"></script>
+  <script src="js/pricing.js?v=20260930"></script>
+  <script src="js/api.js?v=20260930"></script>
+  <script src="js/backend.js?v=20260930"></script>
+  <script src="js/boot.js?v=20260930"></script>
 </body>
 </html>

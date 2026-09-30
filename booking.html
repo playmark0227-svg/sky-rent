@@ -167,14 +167,14 @@
 
   <footer class="site-footer"><div class="container"><div class="footer-bottom" style="border-top:none"><span data-i18n="footer.copyright">© 2026 グロースレンタカー</span><a href="index.html">← トップへ戻る</a></div></div></footer>
 
-  <script src="js/config.js?v=20260923"></script>
-  <script src="js/store.js?v=20260923"></script>
-  <script src="js/pricing-core.js?v=20260923"></script>
-  <script src="js/pricing.js?v=20260923"></script>
-  <script src="js/i18n.js?v=20260923"></script>
-  <script src="js/api.js?v=20260923"></script>
-  <script src="js/backend.js?v=20260923"></script>
-  <script src="js/boot.js?v=20260923"></script>
+  <script src="js/config.js?v=20260930"></script>
+  <script src="js/store.js?v=20260930"></script>
+  <script src="js/pricing-core.js?v=20260930"></script>
+  <script src="js/pricing.js?v=20260930"></script>
+  <script src="js/i18n.js?v=20260930"></script>
+  <script src="js/api.js?v=20260930"></script>
+  <script src="js/backend.js?v=20260930"></script>
+  <script src="js/boot.js?v=20260930"></script>
   <script type="text/x-deferred">
   (function () {
     'use strict';
@@ -201,7 +201,9 @@
     const PERIOD_ERRORS = ['AVAILABILITY_CONFLICT', 'STAFF_UNAVAILABLE', 'HANDOVER_CONFLICT', 'CALENDAR_UNAVAILABLE',
       'START_IN_PAST', 'INVALID_PERIOD', 'PERIOD_TOO_LONG', 'START_TOO_FAR', 'ASSET_UNAVAILABLE', 'INVALID_ASSET'];
     // 入力画面に戻って直す必要があるエラー
-    const INPUT_ERRORS = ['COUPON_INVALID', 'INVOICE_NOT_ALLOWED', 'DISCOUNT_NOT_APPLICABLE', 'OPTION_CONFLICT', 'OPTION_INVALID', 'OPTION_NOT_APPLICABLE'];
+    const INPUT_ERRORS = ['COUPON_INVALID', 'INVOICE_NOT_ALLOWED', 'DISCOUNT_NOT_APPLICABLE'];
+    // オプションを選び直す必要があるエラー (オプションは車両の詳細画面で選ぶ)
+    const OPTION_ERRORS = ['OPTION_CONFLICT', 'OPTION_INVALID', 'OPTION_NOT_APPLICABLE'];
     // 送信の結果が分からない (通信断など) エラー。冪等キーを変えずに再送してよい
     const RETRYABLE = ['NETWORK', 'TIMEOUT', 'INTERNAL', 'RATE_LIMITED'];
 
@@ -222,6 +224,8 @@
       submitting:{ja:'予約を確定しています…',en:'Submitting…'},
       submit:{ja:'上記の内容で予約を確定する',en:'Confirm this booking'},
       rechoose:{ja:'日時・車両を選び直す',en:'Choose another date'},
+      reoption:{ja:'オプションを選び直す',en:'Change options'},
+      optCover:{ja:'補償オプション',en:'Coverage'}, optEquip:{ja:'装備オプション',en:'Equipment'},
       backInput:{ja:'入力画面に戻る',en:'Back to details'},
       resId:{ja:'予約番号',en:'Booking No.'}
     };
@@ -261,8 +265,28 @@
       // 二重送信防止の冪等キー: この予約手続きのあいだ同じキーを使う (sessionStorage の pendingBooking に保持)
       if (!pending.idempotencyKey) { pending.idempotencyKey = newKey(); savePending(pending); }
       const all = (function () { const o = S.optionsForCategory(asset.categoryId); return o.common.concat(o.specific); })();
-      selectedOptions = all.filter(o => (pending.optionIds || []).indexOf(o.optionId) >= 0);
+      selectedOptions = sortOptions(all.filter(o => (pending.optionIds || []).indexOf(o.optionId) >= 0));
       discountType = pending.discountType || null;
+    }
+
+    // オプションの並び (sort → 登録順)。補償 (kind='cover') と装備 (それ以外) に分けて表示する
+    function sortOptions(list) {
+      return list.map((o, i) => ({ o: o, i: i }))
+        .sort((a, b) => ((a.o.sort == null ? 99 : Number(a.o.sort)) - (b.o.sort == null ? 99 : Number(b.o.sort))) || (a.i - b.i))
+        .map(x => x.o);
+    }
+    function isCover(o) { return o.kind ? o.kind === 'cover' : o.exclusiveGroup === 'cover'; }
+    function optionGroups() {
+      return [
+        { title: tt('optCover'), list: selectedOptions.filter(isCover) },
+        { title: tt('optEquip'), list: selectedOptions.filter(o => !isCover(o)) }
+      ].filter(g => g.list.length);
+    }
+    // エラーの種類ごとの操作ボタン (日時を選び直す / オプションを選び直す)
+    function errorActions(code, fallback) {
+      if (OPTION_ERRORS.indexOf(code) >= 0) return { reoption: true };
+      if (PERIOD_ERRORS.indexOf(code) >= 0) return { rechoose: true };
+      return fallback || {};
     }
 
     function rules() { return P.rules(); }
@@ -466,6 +490,7 @@
       if (opts.list && opts.list.length) html += '<ul style="margin:6px 0 0 1.2em">' + opts.list.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
       const acts = [];
       if (opts.rechoose) acts.push('<a class="btn btn-secondary" href="' + esc(detailUrl()) + '">' + tt('rechoose') + '</a>');
+      if (opts.reoption) acts.push('<a class="btn btn-secondary" href="' + esc(detailUrl()) + '" data-act="reoption">' + tt('reoption') + '</a>');
       if (opts.backInput) acts.push('<button type="button" class="btn btn-secondary" data-act="back-input">' + tt('backInput') + '</button>');
       if (opts.mypage) acts.push('<a class="btn btn-secondary" href="mypage.html">' + esc(I.t('mypage.title')) + '</a>');
       if (acts.length) html += '<div class="bk-inline-actions">' + acts.join('') + '</div>';
@@ -505,7 +530,7 @@
 
     async function precheck() {
       const local = localQuote();
-      if (!local.ok) { showError('#input-error', B.errorMessage(local.errors[0])); return false; }
+      if (!local.ok) { showError('#input-error', B.errorMessage(local.errors[0]), errorActions(local.errors[0])); return false; }
       let res = null;
       try {
         res = await B.quote({
@@ -522,7 +547,7 @@
       const reasons = (res.availability && res.availability.reasons) || [];
       if (reasons.length) { showError('#input-error', B.errorMessage(reasons[0]), { rechoose: true }); return false; }
       const q = res.quote;
-      if (q && q.ok === false && q.errors && q.errors.length) { showError('#input-error', B.errorMessage(q.errors[0])); return false; }
+      if (q && q.ok === false && q.errors && q.errors.length) { showError('#input-error', B.errorMessage(q.errors[0]), errorActions(q.errors[0])); return false; }
       if (q && typeof q.total === 'number' && q.total !== local.total) {
         serverQuote = { key: quoteKey(), quote: q };
         priceNotice = { from: local.total, to: q.total };
@@ -601,7 +626,8 @@
         '<table class="bk-table"><tr><th>車両</th><td>' + esc(assetName(asset)) + '</td></tr>' +
         '<tr><th>区分</th><td>' + esc(cat.name) + (fields.bodyType ? ' / ' + esc(fields.bodyType) : '') + (asset.capacity ? ' / 定員' + esc(asset.capacity) + '名' : '') + '</td></tr>' +
         '<tr><th>台数</th><td>1台</td></tr>' +
-        (selectedOptions.length ? '<tr><th>オプション</th><td>' + selectedOptions.map(o => esc(o.name)).join('<br>') + '</td></tr>' : '') +
+        optionGroups().map(g => '<tr><th>' + esc(g.title) + '</th><td data-opt-group>' + g.list.map(o =>
+          esc(o.name) + (o.description ? ' <small class="muted">(' + esc(o.description) + ')</small>' : '')).join('<br>') + '</td></tr>').join('') +
         (asset.requiredLicense ? '<tr><th>必要な免許</th><td>' + esc(asset.requiredLicense) + '</td></tr>' : '') +
         '</table>');
       // 2. 貸出・返却の日時と店舗
@@ -750,7 +776,7 @@
       }
       const d = collect();
       const q = currentQuote();
-      if (!q.ok) { showError('#confirm-error', B.errorMessage((q.errors || [])[0]), { backInput: true }); return; }
+      if (!q.ok) { showError('#confirm-error', B.errorMessage((q.errors || [])[0]), errorActions((q.errors || [])[0], { backInput: true })); return; }
       const payload = {
         idempotencyKey: pending.idempotencyKey,
         assetId: asset.assetId, start: pending.start, end: pending.end,
@@ -794,7 +820,7 @@
       if (code === 'VALIDATION' && err.fields && Object.keys(err.fields).length) {
         showPane('input');
         const rest = showFieldErrors(err.fields);
-        showError('#input-error', codeMessage(err), { list: rest });
+        showError('#input-error', codeMessage(err), { list: rest, reoption: !!err.fields.optionIds });
         return;
       }
       if (code === 'CONSENT_REQUIRED') {
@@ -813,6 +839,7 @@
         return;
       }
       if (PERIOD_ERRORS.indexOf(code) >= 0) { showError(box, codeMessage(err), { rechoose: true }); return; }
+      if (OPTION_ERRORS.indexOf(code) >= 0) { showError(box, codeMessage(err), { reoption: true }); return; }
       if (INPUT_ERRORS.indexOf(code) >= 0) {
         if (box === '#confirm-error') showError(box, codeMessage(err), { backInput: true });
         else showError(box, codeMessage(err));
@@ -912,6 +939,9 @@
       if (doneOnly) { renderDone(pending.done); showPane('done'); return; }
       member = S.currentMember();
       renderSummary(); renderMemberBanner(); prefillFromMember(); renderDynamicFields(); renderConsents();
+      // 同時に選べないオプションの組み合わせ (家電セットと中の品目など) は、詳細画面で選び直してもらう
+      const optErr = (localQuote().errors || []).find(e => OPTION_ERRORS.indexOf(e) >= 0);
+      if (optErr) showError('#input-error', B.errorMessage(optErr), { reoption: true });
       if (core.toMs(pending.start) <= Date.now()) showError('#input-error', tt('past'), { rechoose: true });
     }
     document.addEventListener('DOMContentLoaded', boot);

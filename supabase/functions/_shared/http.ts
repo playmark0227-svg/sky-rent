@@ -63,7 +63,7 @@ export const DEFAULT_MESSAGES: Record<string, string> = {
   INVALID_RANGE: '期間の指定が正しくありません。',
   RANGE_TOO_LONG: '指定された期間が長すぎます。期間を短くしてください。',
   OPTION_INVALID: '選択されたオプションはこの車両ではご利用いただけません。オプションを選び直してください。',
-  OPTION_CONFLICT: '同時に選べない補償が選ばれています。どちらか1つにしてください。',
+  OPTION_CONFLICT: '同時に選べないオプションが選ばれています。補償は1つまで、家電セットに含まれる品目は個別に追加できません。',
   DISCOUNT_NOT_APPLICABLE: '選択された割引はこのご予約には適用できません (利用時間・車種の条件をご確認ください)。',
   INVALID_STATUS: '状態の指定が正しくありません。',
   INVALID_DELTA: '増減するポイント数を入力してください。',

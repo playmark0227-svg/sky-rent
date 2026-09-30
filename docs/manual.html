@@ -211,7 +211,7 @@
       <li><a href="#ch4"><span class="n">4</span><span class="t">帳票の出力<small>貸渡証・車輌チェックシート・領収書の出し方と印刷</small></span></a></li>
       <li><a href="#ch5"><span class="n">5</span><span class="t"><span class="star">★</span> 新しいカテゴリを追加する<small>例:「冷凍車」を追加する通し手順 (最重要)</small></span></a></li>
       <li><a href="#ch6"><span class="n">6</span><span class="t">車両・物品の登録と在庫・車検期限の管理</span></a></li>
-      <li><a href="#ch7"><span class="n">7</span><span class="t">オプション管理<small>カテゴリ専用オプション（補償）と共通オプション</small></span></a></li>
+      <li><a href="#ch7"><span class="n">7</span><span class="t">オプション管理<small>共通オプション（装備）とカテゴリ専用オプション（補償）・家電セット</small></span></a></li>
       <li><a href="#ch8"><span class="n">8</span><span class="t">会員・ポイント・クーポン<small>請求書払い許可の付与・ポイント手動調整・自動発行のしくみ</small></span></a></li>
       <li><a href="#ch9"><span class="n">9</span><span class="t">請求書の発行と入金管理<small>月次一括請求の手順</small></span></a></li>
       <li><a href="#ch10"><span class="n">10</span><span class="t">拠点・スタッフ 各種設定<small>営業時間・定休日・ポイント設定・振込先</small></span></a></li>
@@ -297,6 +297,7 @@
   <ol class="steps">
     <li>ダッシュボードの <strong>「予約一覧へ」</strong>、または <span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">予約一覧</span></span> を開きます。</li>
     <li>該当の予約の行の右端 <strong>「詳細」</strong> を押します。</li>
+    <li>予約詳細の <strong>「料金内訳」</strong> に装備オプション（ポータブル電源・家電セットなど）があれば、その品目をそろえ、お客様と一緒に数量と動作を確認してお渡しします。<strong>家電セット</strong>はポータブル冷蔵冷凍庫〜電気ケトルの 9 点です。</li>
     <li>免許証番号などを確認し、<strong>「🚗 貸出処理（出発）」</strong> ボタンを押します。状態が <span class="badge">確定</span> → <span class="badge">貸出中</span> に変わります。</li>
     <li>必要に応じて、貸渡証などの帳票を印刷します（第 4 章）。</li>
   </ol>
@@ -305,7 +306,7 @@
   <p>ダッシュボードの <strong>「本日の帰着予定」</strong>に、返却予定の予約が表示されます。車両が戻ってきたら「返却済」にします。</p>
   <ol class="steps">
     <li>予約一覧で対象予約の <strong>「詳細」</strong> を開きます。</li>
-    <li>車両の傷や燃料を確認します（車輌チェックシートを活用）。</li>
+    <li>車両の傷や燃料、貸し出した装備オプションの数量・破損を確認します（車輌チェックシートを活用）。</li>
     <li><strong>「✅ 返却処理」</strong> ボタンを押します。状態が <span class="badge">貸出中</span> → <span class="badge gray">返却済</span> に変わります。</li>
     <li>現地決済で未入金の場合は、同じ画面の <strong>「入金を記録」</strong> で入金済にします。</li>
   </ol>
@@ -408,9 +409,9 @@
   <table class="tbl">
     <thead><tr><th>帳票</th><th>記載されるおもな内容</th></tr></thead>
     <tbody>
-      <tr><th>貸渡証</th><td>貸渡人・借受人・車両・ナンバー・定員・貸渡／返却日時・料金内訳・必要免許・注意事項・署名欄</td></tr>
-      <tr><th>車輌チェックシート</th><td>外装キズ・タイヤ・灯火・車内清掃・燃料残量・走行距離を「出発時／返却時」でチェック</td></tr>
-      <tr><th>領収書</th><td>金額（税込）・内税表示。5万円以上は収入印紙欄が付きます</td></tr>
+      <tr><th>貸渡証</th><td>貸渡人・借受人・車両・ナンバー・定員・貸渡／返却日時・料金内訳・補償オプション／装備オプション（選ばれたときだけ）・必要免許・注意事項・署名欄</td></tr>
+      <tr><th>車輌チェックシート</th><td>外装キズ・タイヤ・灯火・車内清掃・燃料残量・走行距離を「出発時／返却時」でチェック。装備オプションがあるときは、品目ごとの有無（□有 □要確認）の欄も付きます（<strong>家電セットは中の 9 品目に分けて</strong>出ます）</td></tr>
+      <tr><th>領収書</th><td>金額（税込）・料金の内訳（基本料金・オプションなど）・内税表示。5万円以上は収入印紙欄が付きます</td></tr>
       <tr><th>物品貸出書</th><td>品目名・数量・貸出期間・料金・オプション・注意事項・署名欄</td></tr>
     </tbody>
   </table>
@@ -463,9 +464,9 @@
   <div class="path"><span class="lbl">画面</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">オプション管理</span><span class="arw">▸</span><span class="crumb">＋ オプション追加</span></div>
   <ol class="steps">
     <li>そのカテゴリだけのオプションが必要なら <strong>「＋ オプション追加」</strong> を押します。</li>
-    <li>名称・料金・課金単位を入力し、<strong>適用範囲</strong>で <strong>「カテゴリを指定」→「冷凍車」</strong> にチェックして保存します。</li>
+    <li>名称・料金・課金単位を入力し、<strong>適用範囲</strong>で <strong>「カテゴリを指定」→「冷凍車」</strong> にチェックして保存します。免責補償などの補償なら、<strong>種類</strong>を <strong>「補償オプション」</strong> にします（補償は 1 つの予約で 1 つだけ選べます）。</li>
   </ol>
-  <p>免責補償などの補償オプションは<strong>カテゴリごとに金額が異なる</strong>ため、新しいカテゴリにもこの画面で紐付けます。適用範囲を <strong>「共通（全車両カテゴリ）」</strong> にしたオプションは、新しく作った車両カテゴリにも自動で付きます。</p>
+  <p>免責補償などの補償オプションは<strong>カテゴリごとに金額が異なる</strong>ため、新しいカテゴリにもこの画面で紐付けます。ポータブル電源などの <strong>装備オプション</strong>は適用範囲が <strong>「共通（全車両カテゴリ）」</strong> なので、新しく作った車両カテゴリにも <strong>自動で付きます</strong>（個別の設定は不要です）。</p>
 
   <h3 class="sec">STEP 4　予約サイトで確認する</h3>
   <div class="path"><span class="lbl">画面</span><span class="crumb">右上のお名前</span><span class="arw">▸</span><span class="crumb">予約サイトを表示</span></div>
@@ -516,7 +517,7 @@
 
   <!-- ================= 7. オプション管理 ================= -->
   <h2 class="chapter" id="ch7"><span class="no">7</span>オプション管理</h2>
-  <p class="lead">■ 目的：免責補償などのカテゴリ専用オプションと、全車共通のオプションを管理する</p>
+  <p class="lead">■ 目的：全車共通の装備オプションと、カテゴリ専用オプション（補償など）を管理する</p>
 
   <h3 class="sec">7.1　2 種類のオプション</h3>
   <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">オプション管理</span></div>
@@ -524,24 +525,39 @@
   <table class="tbl">
     <thead><tr><th>種類</th><th>適用範囲</th><th>例</th></tr></thead>
     <tbody>
-      <tr><th>カテゴリ専用<br>（補償）</th><td>指定したカテゴリにだけ表示されます</td><td>免責補償制度（CDW）／安心保証コース（PAP）。金額はカテゴリごとに設定（一般レンタカー ¥1,650・¥3,300／キッチンカー ¥3,300・¥6,600）</td></tr>
-      <tr><th>共通オプション</th><td>すべての<strong>車両</strong>カテゴリに自動で付きます</td><td>現在は登録されていません。全カテゴリに一律で付けたいオプションができたときに、この画面から追加できます</td></tr>
+      <tr><th>共通オプション<br>（装備オプション）</th><td>すべての<strong>車両</strong>カテゴリに自動で付きます（軽トラック・キッチンカーを含む）</td><td>ポータブル冷蔵冷凍庫・電子レンジ・サーキュレーター・ポータブル電源・ドラムリール・カセットコンロ・カセットボンベ・炊飯器・電気ケトル・家電セット・集客セット（全 11 品目。料金は 24 時間ごと）</td></tr>
+      <tr><th>カテゴリ専用<br>（補償）</th><td>指定したカテゴリにだけ表示されます</td><td>免責補償制度（CDW）／安心保証コース（PAP）。金額はカテゴリごとに設定（一般レンタカー ¥1,650・¥3,300／キッチンカー ¥3,300・¥6,600）。1 つの予約で選べるのはどちらか 1 つです</td></tr>
     </tbody>
   </table>
   </div>
-  <p style="font-size:13.5px;color:var(--sub)">※ 現在お客様に提示しているオプションは補償オプション（CDW／PAP）のみです。種別が「物品レンタル」のカテゴリには共通オプションは付きません。</p>
+  <p style="font-size:13.5px;color:var(--sub)">※ 装備オプションは単体では貸し出さず、車両に付ける形で提供します。種別が「物品レンタル」のカテゴリには共通オプションは付きません。</p>
 
-  <h3 class="sec">7.2　追加・編集する</h3>
+  <h3 class="sec">7.2　装備オプションの決まりごと</h3>
+  <p>お客様は、予約サイトの車両詳細で <strong>「補償オプション」</strong> と <strong>「装備オプション」</strong> から選びます。選んだ品目は予約詳細の「料金内訳」に表示されます。</p>
+  <ul>
+    <li><strong>料金は 24 時間ごと</strong>です。6 時間以内のご利用でも 24 時間分かかります（25 時間なら 2 日分）。</li>
+    <li>学生・法人などの割引は基本料金に対するもので、オプションには適用されません。</li>
+    <li><strong>家電セット</strong>（¥11,000）は、ポータブル冷蔵冷凍庫〜電気ケトルの 9 点をまとめたものです。家電セットを選ぶと、セットに含まれる 9 品目は個別に選べなくなります（同じ品目の二重請求を防ぐため）。集客セットは家電セットに含まれないので、一緒に選べます。</li>
+  </ul>
+  <div class="call warn"><span class="h">注意：装備オプションの在庫数は管理していません</span>
+    同じ品目が同じ時間帯の別の予約に付いていても、予約は受け付けられます。<strong>貸出日の前に予約一覧で装備オプションの付いた予約を確認し</strong>、数が足りるかを確かめてください。足りない場合は、お客様に連絡して調整します。
+  </div>
+
+  <h3 class="sec">7.3　追加・編集する</h3>
   <ol class="steps">
     <li><strong>「＋ オプション追加」</strong> を押します。</li>
     <li><strong>名称・料金</strong>を入力します。</li>
-    <li><strong>課金単位</strong>を選びます：<strong>「1日あたり」</strong>（利用日数分かかる）または <strong>「1回」</strong>（レンタル1回につき）。</li>
+    <li><strong>種類</strong>を選びます：<strong>「装備オプション」</strong>（他と一緒に選べる。家電・集客セットなど）または <strong>「補償オプション」</strong>（1 つだけ選べる）。</li>
+    <li><strong>説明</strong>に型番やセットの内容を入れます（予約サイトの品目名の下に小さく出ます）。</li>
+    <li><strong>課金単位</strong>を選びます：<strong>「24時間あたり」</strong>（24 時間ごとにかかる）または <strong>「1回」</strong>（レンタル1回につき）。</li>
     <li><strong>適用範囲</strong>を選びます：<strong>「共通（全車両カテゴリ）」</strong>か <strong>「カテゴリを指定」</strong>（チェックボックスで複数選択可）。</li>
+    <li>セット（家電セットなど）のときだけ、<strong>「セットに含む品目」</strong>にチェックを入れます。お客様は、セットとここで選んだ品目を同時には選べなくなります（二重請求を防ぐため）。</li>
     <li>状態（有効／無効）を選んで <strong>「保存」</strong>。</li>
   </ol>
   <div class="call tip"><span class="h">ヒント</span>
-    新しいカテゴリを作ったら、そのカテゴリ専用オプションもこの画面で紐付けられます。今は使わないオプションは、削除せず <strong>「無効」</strong> にしておけば、あとで簡単に復活できます。
+    新しいカテゴリを作ったら、そのカテゴリ専用オプションもこの画面で紐付けられます。今は使わないオプションは、削除せず <strong>「無効」</strong> にしておけば、あとで簡単に復活できます。貸し出せない装備オプションがあるときも「無効」にします。
   </div>
+  <p style="font-size:13.5px;color:var(--sub)">※ 予約サイトでの並び順はこの画面では変えられません（新しく追加した品目は最後に並びます）。並び順を変えたいときは、技術担当に依頼してください。</p>
   <a class="backtop" href="#toc">▲ 目次へ戻る</a>
 
   <!-- ================= 8. 会員・ポイント・クーポン ================= -->

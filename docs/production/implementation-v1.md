@@ -1,6 +1,6 @@
 # 本番実装 v1 — 実装契約書
 
-更新日: 2026-09-23 / 対象: グロースレンタカー (公開サイト・会員・管理画面)
+更新日: 2026-09-30 (装備オプションの復活 → §7) / 対象: グロースレンタカー (公開サイト・会員・管理画面)
 
 この文書は **実装者どうしの約束** です。DB は `supabase/migrations/*.sql` と `supabase/seed.sql` が正です
 (読んでから作業すること)。ここに無い名前・形を勝手に作らない。
@@ -65,7 +65,8 @@ SkyRentPricingCore = {
 input = {
   asset:    {id, categoryId, priceHour, priceDay, customFields:{bodyType?}},
   start, end,                     // ISO 文字列 or Date
-  options:  [{id, name, price, priceShort, priceType, categoryIds, exclusiveGroup}],  // 選択されたもの
+  options:  [{id, name, price, priceShort, priceType, categoryIds, exclusiveGroup, includes}],  // 選択されたもの
+                                  // includes: セットに含まれる品目の id の配列 (家電セットだけ。配列でなければ無視)
   discountType: null | 'student' | 'corporate' | 'dual_residence' | 'shusei_club',
   coupon:   null | {id, amount},
   rules:    pricing_rules (省略時 DEFAULT_RULES)
@@ -89,7 +90,11 @@ Quote = {
      行は「基本料金 (24時間 × n)」「延長料金 (m時間)」に分ける。
 2. **オプション** (per_day): h ≤ shortHoursMax(6) かつ priceShort あり → priceShort。
    それ以外は `floor(h/24) × price + (端数0なら0 / 端数≤6 かつ priceShort あり → priceShort / それ以外 price)`。
-   per_rental は1回。同じ exclusiveGroup を2つ以上 → errors に 'OPTION_CONFLICT'。
+   priceShort が無い装備オプションは、6時間以内でも price (24時間料金)。25時間なら ×2。
+   per_rental は1回。次のどちらかなら errors に 'OPTION_CONFLICT' (同時に選べないオプション):
+   - 同じ exclusiveGroup を2つ以上 (補償 CDW と PAP)。
+   - 選ばれたオプションのどれかの includes に、同時に選ばれた別のオプションの id が入っている
+     (家電セット OP010 と、セットに含まれる OP001〜OP009。二重請求の防止)。
 3. **繁忙期割増** busyFee(550) を1回。利用期間が触れる暦日 (JST、開始日〜終了時刻の1ms前の日) に
    busyPeriods (MM-DD, 年またぎ可) が1日でもあれば適用。busy = true。
 4. **土日祝割増** weekendHolidayFee(330) を1回。触れる暦日に土・日・祝日 (extraHolidays 含む) があれば適用。
@@ -97,7 +102,7 @@ Quote = {
 5. **夜間料金** nightFee(1100)。貸出時刻・返却時刻それぞれ (JST) が nightStartHour(20)〜翌 nightEndHour(8)
    (20:00 以上 または 8:00 未満) なら1回ずつ。両方なら2回 (= 2,200)。
 6. **割引** (1つだけ): 利用時間 ≥ minHours(24) かつ categoryIds 条件を満たすとき、基本料金から amount 引き
-   (基本料金を超えない)。満たさない場合は errors に 'DISCOUNT_NOT_APPLICABLE' を入れ、割引しない。
+   (基本料金を超えない。オプション・割増には効かない)。満たさない場合は errors に 'DISCOUNT_NOT_APPLICABLE' を入れ、割引しない。
 7. **クーポン**: 小計から amount 引き (0円未満にしない)。
 8. total = subtotal − discount − couponDiscount。
 
@@ -143,6 +148,8 @@ rules は `SkyRentStore.read('settings.pricing_rules')` → 無ければ DEFAULT
 |---|---|---|
 | VALIDATION | 400 | 入力不備。`fields: {name: 'メッセージ'}` |
 | CONSENT_REQUIRED | 400 | 必須の同意が無い / 版が古い |
+| OPTION_INVALID | 400 | 無効・存在しない・この車両のカテゴリでは選べないオプション (pricing-core の OPTION_NOT_APPLICABLE もこれで返す)。`fields.optionIds` |
+| OPTION_CONFLICT | 400 | 同時に選べないオプション (補償を2つ / 家電セットとセットに含まれる品目)。`fields.optionIds` と `quote` (errors に OPTION_CONFLICT) を同梱 |
 | UNAUTHENTICATED | 401 | ログインが必要 |
 | FORBIDDEN / INVOICE_NOT_ALLOWED | 403 | 権限なし |
 | NOT_FOUND | 404 | |
@@ -188,7 +195,11 @@ DB には `sha256hex(token)` を `guest_token_hash` として保存。**平文�
    Google の結果は `calendar_cache` に5分キャッシュ。予定の件名などは返さない (時間帯のみ)。
 2. `POST /api/quote` `{assetId, start, end, optionIds, discountType?, couponId?}`
    → `{ok, quote, availability:{vehicle:bool, staff:bool, handover:bool, reasons:[code]}}`
-   (クーポンはログイン会員本人の未使用分のみ有効。サーバー側カタログと pricing_rules で計算)
+   (クーポンはログイン会員本人の未使用分のみ有効。サーバー側カタログと pricing_rules で計算。
+   オプションの単価・exclusiveGroup・includes も DB の options 行から取り、クライアントが送る値は使わない)
+   料金ルール上の不備 (期間・`OPTION_CONFLICT`・割引条件) は HTTP 200 のまま `quote.ok = false`・`quote.errors` で返す
+   (detail.html / booking.html はこれを見て理由を出す)。無効・存在しないオプションは 400 `OPTION_INVALID`。
+   400 `OPTION_CONFLICT` を返すのは `POST /api/reservations` だけ。
 3. `POST /api/reservations`
    ```
    {idempotencyKey, assetId, start, end, optionIds, discountType?, couponId?,
@@ -274,6 +285,8 @@ DB には `sha256hex(token)` を `guest_token_hash` として保存。**平文�
 - `transparency: 'transparent'` (空き判定に影響させない)、`extendedProperties.private.skyrent = 予約番号`
 - 説明: 予約番号・車両・人数ではなく **電話番号は入れない** (外部サービスへの個人情報の送信を最小化)。
   管理画面の予約一覧 URL (`SITE_URL + 'manage/reservation-list.html'`) を入れる。
+  予約のオプション (補償・装備) の名前は入れない (プライバシーポリシー §5 で Google カレンダーに登録すると書いた項目は
+  予約番号・車両・お名前・貸出と返却の日時だけ。装備の準備は管理画面の予約一覧で確認する。マニュアル 7.2)。
 - 状態が cancelled / no_show → 予定を削除。confirmed / in_use / returned → upsert。
 - 予定IDは `set_reservation_gcal_events(id, {pickup:{calendarId,eventId}, return:{...}})` で保存。
 - カレンダー未設定なら `skipped`。
@@ -363,6 +376,8 @@ init({area}), toast(msg, type), errorMessage(code) -> 日本語, call(fn, path, 
 
 - 共通: `public_catalog` RPC → 旧形式に変換して `_hydrate({categories, locations, assets, options,
   'settings.<key>': value..., <collection>: items..., legal})`。
+  `public_catalog` の `options[].extra` は `description` と `includes` だけを返す (extra の他の項目は出さない。
+  `20260930000100_equipment_options.sql`)。
 - area = public: 会員セッションがあれば `members`(本人)・`member_points`・`coupons`・`point_ledger`・
   本人の `reservations` を読み `_hydrate`。`search.html` / `detail.html` / `booking.html` では
   `availability(今日-1日, +120日)` を読み、busy を合成予約 (`{reservationId:'busy-N', assetId, start, end,
@@ -389,7 +404,7 @@ init({area}), toast(msg, type), errorMessage(code) -> 日本語, call(fn, path, 
 | category `{categoryId, name, nameEn, type, icon, description, sort, active, customFieldDefs}` | categories (`extra` は展開して上書き) |
 | location `{locationId, name, nameEn, tel, address, hours, holiday, sort, active}` | locations |
 | asset `{assetId, categoryId, locationId, name, nameEn, plate, capacity, priceHour, priceDay, priceWeek, priceMonth, stock, requiredLicense, image, photo, active, shakenDate, maintenanceDate, customFields, sort}` | assets |
-| option `{optionId, name, price, priceShort, priceType, categoryIds, kind, exclusiveGroup, active, sort, description}` | options (`extra.description`) |
+| option `{optionId, name, price, priceShort, priceType, categoryIds, kind, exclusiveGroup, active, sort, description, includes}` | options (`extra.description`, `extra.includes`) |
 | reservation `{reservationId, kind, assetId, vehicleId(=assetId), assetName, vehicleName, categoryId, locationId, quantity:1, customerName, customerKana, customerEmail, customerPhone, company, memberId(=member_no), userId, start, end, optionIds, options, payment:{method,status}, price, total, discountType, couponId, status, pointGranted, invoiceId, note, staffNote, cancelFee, cancelledAt, cancelledBy, licenseConfirmed, createdAt, version, gcalEvents}` | reservations |
 | member `{memberId(=member_no), userId, name, nameKana, email, phone, company, isCorporate, invoiceAllowed, marketingOptIn, status, points, coupons:[{couponId, amount, reason, issuedAt, usedAt, usedFor}], pointHistory:[{at, delta, reason}], createdAt, lastUseAt}` | members + member_points + coupons + point_ledger |
 | invoice `{invoiceId, memberId, userId, company, address, caseName, reservationIds, amount, status, issuedAt, dueDate, paidAt}` | invoices |
@@ -412,6 +427,10 @@ init({area}), toast(msg, type), errorMessage(code) -> 日本語, call(fn, path, 
   キャンセル (料金を表示して確認)、退会。`#lookup=<id>.<token>` で開いたらゲスト照会・キャンセル。
 - **contact.html**: `SkyRentBackend.submitInquiry`。ハニーポット欄を追加 (非表示)。
 - **search.html / detail.html**: 担当者不在・受け渡し重複の時間帯は選べない/理由を表示 (`staffCheck`)。
+- **detail.html のオプション** (booking.html は選んだものを引き継ぐ): kind で見出しを分ける。
+  `kind = 'cover'` → 「補償オプション」(1つだけ選べる)、それ以外 → 「装備オプション」(全車共通・24時間ごと)。補償を先、装備を後。
+  英語は 'Coverage' / 'Equipment'。説明 (装備は型番) を名前の下に小さく出す。
+  家電セットにチェックを入れると、includes の9品目のチェックを外して無効にし「家電セットに含まれています」と出す。外すと元に戻す。
 - **privacy.html**: 本番時の保存先 (Supabase・東京リージョン)、メール送信 (Resend)、Google カレンダー
   (予約番号・車両・お名前・日時を担当者カレンダーへ登録) を委託先として追記。デモの localStorage 記述は
   「デモ環境では」と限定。免許番号はWeb予約では取得しない旨。
@@ -454,4 +473,31 @@ init({area}), toast(msg, type), errorMessage(code) -> 日本語, call(fn, path, 
 - **外部スクリプト**: supabase-js / chart.js / exceljs は版を固定し SRI (sha384) を付ける。版を上げたらハッシュも更新する。
 - **テスト**: `npm test` (料金・画面) / `npm run test:functions` (Edge Functions、ファイルは直列実行) / `npm run test:db` または
   `supabase test db` (pgTAP)。モックの起動は `npm run mock:google` / `npm run mock:resend`、ダミー鍵は `npm run test:fixtures`。
+
+---
+
+## 7. 装備オプションの復活 (2026-09-30)
+
+2026-09-04 に全廃した装備オプション11品目を、事業者の依頼で戻した (総合料金表 2026年6月改定版どおり)。
+品目・料金・型番の一覧は [`../dev-contract.md`](../dev-contract.md) の options の節。
+
+| 項目 | 内容 |
+|---|---|
+| データ | `options` に OP001〜OP011 (`supabase/seed.sql`)。`price_type = 'per_day'`、`price_short = null`、`category_ids = null` (全車共通)、`kind = 'other'`、`exclusive_group = null`、`sort` 11〜21。型番は `extra.description`。家電セット OP010 だけ `extra.includes = ["OP001", …, "OP009"]` |
+| 料金 | §1 の per_day のまま (24時間ごと。6時間以内でも24時間料金)。割引はオプションに効かない |
+| 同時に選べない組み合わせ | 家電セットと、セットに含まれる品目 → `OPTION_CONFLICT` (§1 の 2.)。サーバーは DB の `extra.includes` を `coreOption` 経由で pricing-core に渡す (`supabase/functions/_shared/catalog.ts`) |
+| マイグレーション | `20260930000100_equipment_options.sql` — `public_catalog()` を再定義し、`options[].extra` に `includes` を加える (`20260923000600_catalog_settings_tweaks.sql` の定義がもと。security definer・`search_path = ''`・anon / authenticated への実行権限は同じ) |
+| エラーの文言 | `OPTION_CONFLICT` を補償専用から一般化。画面・API: 「同時に選べないオプションが選ばれています。補償は1つまで、家電セットに含まれる品目は個別に追加できません。」 / 入力欄 (`errors.ts`): 「同時に選べないオプションが選ばれています。」 |
+| 画面 | detail.html の見出しを「補償オプション」「装備オプション」に分け、家電セットの中身を自動で外す (§4.6)。booking.html の確認画面も2行に分け、オプションのエラーでは「オプションを選び直す」(詳細画面へ) を出す |
+| 管理画面 | `manage/options.html` に種類 (補償 / 装備)・説明・セットに含む品目を追加 (新規は装備が既定)。予約詳細・貸渡証・チェックシート (家電セットは中の9品目に分ける)・領収書にオプションの行 |
+| スキーマ | `options.kind` の既定値を `'cover'` → `'other'` (種類を指定せずに追加したオプションが補償として扱われないように。同じマイグレーション) |
+| Google カレンダー | 変更なし。予定の説明にオプション名は入れない (プライバシーポリシーの登録項目に無いため。§3.3)。載せる場合はプライバシーポリシーの改定と版の更新が要る |
+| デモデータ | `js/store.js` の DATA_VERSION 7 → 8。7 のデータは予約・会員を残して装備オプションを足す。6 以前は作り直し |
+| お問い合わせ | 種類に「装備オプションについて」を戻した (`contact.html` と `_shared/mail-templates.ts` の `INQUIRY_TOPICS`。並びは撤去前と同じ「キッチンカーのレンタルについて」の次) |
+| 法務文書の版 | `law.html` の本文 (事業内容・料金) が変わるため、`legal_documents` の `law` だけ版 `2026-10` (effective_at `2026-10-01`)。予約時の同意対象 (clause / cancel / privacy) は据え置き |
+| 在庫 | 装備オプションに在庫数の管理は無い (撤去前と同じ)。同じ時間帯に同じ品目の予約が重なっても止めない。要否は事業者に確認 ([現状監査 §10.5](current-state-audit.md#105-実装で新たに置いた業務ルール-要確認)) |
+| seed 投入済みの本番 | seed は入れ直さない。migration の push・Edge Functions の再公開・装備オプションの insert (seed の該当文)・`law` の版の切り替え (旧版の active を false にしてから 2026-10 を入れる。`legal_documents_one_active` があるため seed の insert だけでは切り替わらない) を [手順書 2-5](setup.md#2-5-既に-seed-を入れた本番に装備オプションを追加する-2026-09-30-の更新) の順に行う |
+
+戻していないもの (撤去前の記述のうち、事実と違ったもの): 料金表に無いオプション (発電機・フライヤー・鉄板・のぼり旗など)、
+家電・工具の単体レンタルとそのカテゴリ、電話でのキャンセル受付。
 

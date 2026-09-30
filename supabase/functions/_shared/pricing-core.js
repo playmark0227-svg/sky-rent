@@ -297,9 +297,12 @@
   // ===================================================================
   /**
    * @param {object} input {asset, start, end, options, discountType, coupon, rules}
+   *   options: [{id, name, price, priceShort, priceType, categoryIds, exclusiveGroup, includes}]
+   *     includes = セットに含まれる品目の id の配列 (例: 家電セット → 冷蔵冷凍庫〜電気ケトルの9点)。無ければ null
    * @returns {object} Quote {ok, errors, hours, days, plan, lines:[{code,label,amount}], base,
    *                          subtotal, discount, couponDiscount, total, busy, rulesVersion}
-   *   errors: INVALID_PERIOD (期間不正) / INVALID_ASSET (車両・料金なし) / OPTION_CONFLICT (同じ補償の重複) /
+   *   errors: INVALID_PERIOD (期間不正) / INVALID_ASSET (車両・料金なし) /
+   *           OPTION_CONFLICT (同時に選べないオプション: 同じ補償の重複・セットとセットに含まれる品目) /
    *           OPTION_NOT_APPLICABLE (この車両に付けられないオプション) / DISCOUNT_NOT_APPLICABLE (割引の条件外)
    */
   function quote(input) {
@@ -357,7 +360,7 @@
 
     // 2. オプション
     const shortMax = num(R.shortHoursMax) != null ? num(R.shortHoursMax) : 0;
-    const seen = {}, groups = {};
+    const seen = {}, groups = {}, sets = [];
     (Array.isArray(input.options) ? input.options : []).forEach(function (o) {
       if (!o) return;
       const idRaw = pick(o, 'id', 'optionId');
@@ -375,6 +378,8 @@
         groups[group] = (groups[group] || 0) + 1;
         if (groups[group] >= 2) pushUnique(errors, 'OPTION_CONFLICT');
       }
+      const includes = pick(o, 'includes', 'includes');
+      if (Array.isArray(includes) && includes.length) sets.push({ id: id, includes: includes.map(String) });
       const name = String(o.name || 'オプション');
       const price = Math.max(0, num(o.price) || 0);
       const priceShort = num(pick(o, 'priceShort', 'price_short'));
@@ -389,6 +394,13 @@
         else label = name + ' (24時間 × ' + n + (r > 0 ? ' + ' + r + '時間' + (useShort ? '・短時間料金' : '') : '') + ')';
       }
       lines.push({ code: 'option', optionId: id, label: label, amount: amount });
+    });
+    // セット (例: 家電セット) と、そのセットに含まれる品目を一緒に選ぶと二重請求になるので選べない
+    //   (選んだ順番に関係なく、全部を見終わってから調べる)
+    sets.forEach(function (s) {
+      s.includes.forEach(function (inner) {
+        if (inner !== s.id && seen[inner]) pushUnique(errors, 'OPTION_CONFLICT');
+      });
     });
 
     // 3・4. 繁忙期割増 / 土日祝割増 (利用期間が触れる暦日 = 開始日〜終了時刻の1ms前の日)

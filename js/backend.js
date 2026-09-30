@@ -67,7 +67,7 @@
     INVALID_ASSET: 'この車両は料金が設定されていないため、Webではご予約いただけません。別の車両をお選びいただくか、公式LINEまたはお問い合わせフォームからお問い合わせください。',
     OPTION_INVALID: '選択されたオプションはこの車両ではご利用いただけません。オプションを選び直してください。',
     OPTION_NOT_APPLICABLE: '選択されたオプションはこの車両ではご利用いただけません。オプションを選び直してください。',
-    OPTION_CONFLICT: '同時に選べない補償が選ばれています。どちらか1つにしてください。',
+    OPTION_CONFLICT: '同時に選べないオプションが選ばれています。補償は1つまで、家電セットに含まれる品目は個別に追加できません。',
     DISCOUNT_NOT_APPLICABLE: '選択された割引はこのご予約には適用できません (利用時間・車種の条件をご確認ください)。',
     MEMBER_NOT_ACTIVE: '会員情報を確認できませんでした。ログインし直してから、もう一度お試しください。',
     LAST_ADMIN: '最後の管理者は無効化・役割変更できません。先に別の管理者を追加してください。',
@@ -319,7 +319,7 @@
              ['customFields', 'custom_fields'], ['sort', 'sort', 'int']]
     },
     option: {
-      // description などの列に無い項目は extra に入る (extra.description)
+      // description・includes (セットに含まれる品目) などの列に無い項目は extra に入る (extra.description / extra.includes)
       idKey: 'optionId',
       cols: [['optionId', 'id'], ['name', 'name'], ['price', 'price', 'int'], ['priceShort', 'price_short', 'int'],
              ['priceType', 'price_type'], ['categoryIds', 'category_ids', 'textArray'], ['kind', 'kind'],
@@ -1612,7 +1612,8 @@
         start: start, end: end,
         options: options.map(o => ({
           id: o.optionId, name: o.name, price: o.price, priceShort: o.priceShort == null ? null : o.priceShort,
-          priceType: o.priceType || 'per_day', categoryIds: o.categoryIds || null, exclusiveGroup: o.exclusiveGroup || null
+          priceType: o.priceType || 'per_day', categoryIds: o.categoryIds || null, exclusiveGroup: o.exclusiveGroup || null,
+          includes: Array.isArray(o.includes) ? o.includes : null
         })),
         discountType: discountType || null, coupon: coupon || null, rules: pricingRules()
       });

@@ -92,10 +92,18 @@ export function coreAsset(a: AssetRow) {
   };
 }
 
+/** セットに含まれる品目 (DB の extra.includes。例: 家電セット → OP001〜OP009)。無ければ null */
+export function optionIncludes(o: OptionRow): string[] | null {
+  const v = o.extra ? o.extra.includes : null;
+  return Array.isArray(v) ? v.map(String) : null;
+}
+
 export function coreOption(o: OptionRow) {
   return {
     id: o.id, name: o.name, price: o.price, priceShort: o.price_short, priceType: o.price_type,
-    categoryIds: o.category_ids, exclusiveGroup: o.exclusive_group
+    categoryIds: o.category_ids, exclusiveGroup: o.exclusive_group,
+    // 同時に選べない組み合わせの判定に使う (DB の値だけを使い、送られてきた値は見ない)
+    includes: optionIncludes(o)
   };
 }
 
@@ -125,7 +133,7 @@ export type QuoteResult = {
 
 /**
  * サーバー側の見積。車両が無い・停止中 / オプションが無効 / 割引の種類が不明 はここで例外。
- * 料金ルール上の不備 (期間・補償の重複・割引条件) は quote.errors に入る (呼び出し側で判断)。
+ * 料金ルール上の不備 (期間・同時に選べないオプション・割引条件) は quote.errors に入る (呼び出し側で判断)。
  */
 export async function serverQuote(p: QuoteInput): Promise<QuoteResult> {
   const [bundle, options, rules] = await Promise.all([

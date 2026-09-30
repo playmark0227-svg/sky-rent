@@ -686,16 +686,21 @@
     <table class="tbl pk">
       <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
       <tbody>
-        <tr><td class="c-key">optionId</td><td class="c-type">string (PK)</td><td>例 <code>OP101</code>。</td></tr>
-        <tr><td class="c-key">name</td><td class="c-type">string</td><td>名称。例「免責補償制度 (CDW)」「安心保証コース (PAP)」。</td></tr>
+        <tr><td class="c-key">optionId</td><td class="c-type">string (PK)</td><td>例 <code>OP004</code> / <code>OP101</code>。</td></tr>
+        <tr><td class="c-key">name</td><td class="c-type">string</td><td>名称。例「ポータブル電源」「免責補償制度 (CDW)」。</td></tr>
         <tr><td class="c-key">price</td><td class="c-type">number</td><td>単価 (円)。</td></tr>
-        <tr><td class="c-key">priceType</td><td class="c-type">'per_day'|'per_rental'</td><td>課金単位。日数×単価 / 1回固定。</td></tr>
+        <tr><td class="c-key">priceShort</td><td class="c-type">number | null</td><td>1〜6時間の料金 (補償の一部)。null なら6時間以内でも <code>price</code> (装備オプションはすべて null)。</td></tr>
+        <tr><td class="c-key">priceType</td><td class="c-type">'per_day'|'per_rental'</td><td>課金単位。24時間ごと×単価 / 1回固定。</td></tr>
         <tr><td class="c-key">categoryIds</td><td class="c-type">null | string[]</td><td><b>null = 共通オプション</b> (全車両カテゴリ) / 配列 = カテゴリ専用。物品カテゴリには共通を出さない。</td></tr>
+        <tr><td class="c-key">kind</td><td class="c-type">'cover'|'other'</td><td>cover = 補償オプション / other = 装備オプション。車両詳細の見出しを分ける (補償が先)。</td></tr>
+        <tr><td class="c-key">exclusiveGroup</td><td class="c-type">string | null</td><td>同じグループからは1つだけ選べる (補償は <code>'cover'</code>)。</td></tr>
+        <tr><td class="c-key">description</td><td class="c-type">string</td><td>名称の下に小さく出す説明 (装備オプションは型番)。</td></tr>
+        <tr><td class="c-key">includes</td><td class="c-type">string[] (任意)</td><td>セットに含まれる品目の <code>optionId</code>。家電セット (OP010) だけが OP001〜OP009 を持つ。セットと中の品目は同時に選べない (<code>OPTION_CONFLICT</code>)。</td></tr>
         <tr><td class="c-key">active</td><td class="c-type">boolean</td><td>有効フラグ。</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="legend">シード — カテゴリ専用 (補償) 4件のみ: 一般レンタカー CDW ¥1,650 / PAP ¥3,300、キッチンカー CDW ¥3,300 / PAP ¥6,600。共通オプション (categoryIds = null) の登録は無し。</p>
+  <p class="legend">シード — 共通 (装備オプション11品目・24時間ごと): ポータブル冷蔵冷凍庫 ¥3,300・電子レンジ ¥2,200・サーキュレーター ¥1,100・ポータブル電源 ¥3,300・ドラムリール ¥1,100・カセットコンロ ¥1,100・カセットボンベ ¥1,100・炊飯器 ¥2,200・電気ケトル ¥1,100・家電セット (上記9点) ¥11,000・集客セット ¥1,100。カテゴリ専用 (補償): 一般レンタカー CDW ¥1,650 / PAP ¥3,300、キッチンカー CDW ¥3,300 / PAP ¥6,600。</p>
 
   <h3 class="h-sec" id="c3-6"><span class="sno">3.6</span>members (会員) / coupons<span class="tag">会員</span></h3>
   <div class="tbl-wrap">

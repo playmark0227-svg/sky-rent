@@ -11,7 +11,7 @@
 // =====================================================================
 import { ApiError, handle, readJson, subPath, validationError } from '../_shared/http.ts';
 import { adminClient, type Caller, env, getCaller, isServiceRole } from '../_shared/db.ts';
-import { pgToApiError, withPgRetry } from '../_shared/errors.ts';
+import { fieldsOfCode, pgToApiError, withPgRetry } from '../_shared/errors.ts';
 import {
   type AssetRow,
   cancellationFor,
@@ -533,8 +533,10 @@ async function reservationHandler(req: Request) {
   // --- サーバーで見積 → 表示金額と照合 ---
   const { quote, bundle, options, rules } = await serverQuote({ ...q, coupon });
   if (!quote.ok) {
+    // 入力欄に結び付くコード (OPTION_CONFLICT → fields.optionIds など) は、DB が返したときと同じ fields も付ける
     const code = quoteErrorCode(quote.errors);
-    throw new ApiError(code, undefined, undefined, { quote });
+    const fields = fieldsOfCode(code);
+    throw new ApiError(code, undefined, undefined, fields ? { quote, fields } : { quote });
   }
   if (quote.total !== b.expectedTotal) throw new ApiError('PRICE_CHANGED', 409, undefined, { quote });
 

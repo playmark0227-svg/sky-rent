@@ -20,6 +20,8 @@
   .doc-body .cell-list li { margin-bottom: 2px; }
   .doc-body .cell-list li:last-child { margin-bottom: 0; }
   .law-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+  .doc-ver { font-size: 12.5px; color: var(--color-muted-2); margin-top: 8px; line-height: 1.8; }
+  .doc-ver a { color: var(--color-primary); text-decoration: underline; text-underline-offset: 3px; }
   @media (max-width: 640px) { .tbl-scroll table { min-width: 620px; } .dl-table { min-width: 0; } }
 </style>
   <link rel="icon" type="image/png" sizes="32x32" href="images/brand/favicon-32.png">
@@ -44,6 +46,7 @@
       <p class="eyebrow">LEGAL</p>
       <h1>特定商取引法に基づく表記</h1>
       <p>特定商取引に関する法律に基づき、グロースレンタカー (株式会社Skyward Growth) のサービス提供条件を表示します。表示金額はすべて税込です。</p>
+      <p class="doc-ver" id="law-ver">版: 2026-10 (2026年10月1日改定: 事業内容と料金に装備オプションを掲載しました)。<a href="#cancel">キャンセルの方法・キャンセル料</a> (キャンセル規定) は 2026-08 版から変わっていません。</p>
     </div>
 
     <div class="doc-body">
@@ -90,7 +93,7 @@
           </tr>
           <tr>
             <th>事業内容</th>
-            <td>レンタカー (コンパクトカー・SUV・ミニバン・軽トラック) およびキッチンカーの貸渡し</td>
+            <td>レンタカー (コンパクトカー・SUV・ミニバン・軽トラック) およびキッチンカーの貸渡し、ならびに付随する装備品の貸出し</td>
           </tr>
           <tr>
             <th>問い合わせ受付時間</th>
@@ -118,6 +121,7 @@
               基本料金のほかに、下記の料金が発生する場合があります。内訳は<a href="#extra">「商品代金以外の必要料金」</a>をご確認ください。
               <ul class="cell-list">
                 <li>補償オプション (免責補償制度 CDW・安心保証コース PAP)、事故時の車両免責額</li>
+                <li>装備オプション (¥1,100〜¥11,000 / 24時間あたり)</li>
                 <li>土日祝割増 ¥330 / 夜間料金 ¥1,100 / 繁忙期割増 ¥550</li>
                 <li>超過料金・延滞料金</li>
                 <li>ノンオペレーションチャージ (NOC)</li>
@@ -198,7 +202,7 @@
           </tbody>
         </table>
       </div>
-      <p class="doc-note">表示価格はすべて税込です。車両の詳細は<a href="fleet.html">車両と料金</a>を、補償オプションの内容は<a href="insurance.html">保険・補償プラン</a>をご確認ください。</p>
+      <p class="doc-note">表示価格はすべて税込です。車両の詳細と装備オプションの品目は<a href="fleet.html">車両と料金</a>を、補償オプションの内容は<a href="insurance.html">保険・補償プラン</a>をご確認ください。</p>
 
       <h2 id="extra">商品代金以外の必要料金</h2>
       <div class="tbl-scroll">
@@ -221,6 +225,16 @@
               <td>補償</td>
               <td>車両免責額</td>
               <td>事故が発生した場合のお客様のご負担額です。免責補償制度 (CDW) にご加入いただいた場合は免除されます。</td>
+            </tr>
+            <tr id="extra-equip">
+              <td>装備</td>
+              <td>装備オプション (24時間あたり)</td>
+              <td>
+                ポータブル冷蔵冷凍庫 ¥3,300 / 電子レンジ ¥2,200 / サーキュレーター ¥1,100 / ポータブル電源 ¥3,300 /
+                ドラムリール ¥1,100 / カセットコンロ ¥1,100 / カセットボンベ ¥1,100 / 炊飯器 ¥2,200 /
+                電気ケトル ¥1,100 / 家電セット (上記9点まとめ) ¥11,000 / 集客セット ¥1,100<br>
+                車両のご予約に追加する場合にお貸しします。24時間に満たないご利用でも24時間分の料金です。家電セットと、セットに含まれる品目は同時にお選びいただけません。
+              </td>
             </tr>
             <tr>
               <td>割増</td>
@@ -321,7 +335,7 @@
           </tbody>
         </table>
       </div>
-      <p class="doc-note">表中の金額は24時間ご利用の場合の例です。括弧内は基本料金に対する割合で、実際のキャンセル料はご予約内容の基本料金に応じて計算いたします。料金およびキャンセル規定は「レンタカー 総合料金表 (2026年6月改定版)」に基づきます。</p>
+      <p class="doc-note">表中の金額は24時間ご利用の場合の例です。括弧内は基本料金に対する割合で、実際のキャンセル料はご予約内容の基本料金に応じて計算いたします。料金およびキャンセル規定は「レンタカー 総合料金表 (2026年6月改定版)」に基づきます。キャンセル規定 (「キャンセルの方法」「キャンセル料」) の版は 2026-08 (2026年8月1日施行) です。</p>
 
       <h2 id="contact">お問い合わせ</h2>
       <p>本表記の内容、ご予約の変更、電話番号の開示請求などは、お問い合わせフォームまたは公式LINEにてご連絡ください。受付時間は 9:00〜19:00 (年中無休) です。キャンセルは<a href="#cancel">「キャンセルの方法」</a>のとおり、マイページまたは照会URLからもお手続きいただけます。</p>
@@ -339,12 +353,12 @@
 
   <script src="js/partials-public.js"></script>
 
-  <script src="js/config.js?v=20260923"></script>
-  <script src="js/store.js?v=20260923"></script>
-  <script src="js/pricing-core.js?v=20260923"></script>
-  <script src="js/pricing.js?v=20260923"></script>
-  <script src="js/api.js?v=20260923"></script>
-  <script src="js/backend.js?v=20260923"></script>
-  <script src="js/boot.js?v=20260923"></script>
+  <script src="js/config.js?v=20260930"></script>
+  <script src="js/store.js?v=20260930"></script>
+  <script src="js/pricing-core.js?v=20260930"></script>
+  <script src="js/pricing.js?v=20260930"></script>
+  <script src="js/api.js?v=20260930"></script>
+  <script src="js/backend.js?v=20260930"></script>
+  <script src="js/boot.js?v=20260930"></script>
 </body>
 </html>

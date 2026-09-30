@@ -49,6 +49,26 @@ insert into public.options (id, name, price, price_short, price_type, category_i
   ('OP202', '安心保証コース (PAP)', 6600, null, 'per_day', '{cat-kitchen}', 'cover', 'cover', 4, '{"description":"免責免除・NOC免除"}')
 on conflict (id) do nothing;
 
+-- 装備オプション (全車共通 = 一般レンタカー・キッチンカーの両方。24時間ごとの料金で、短時間料金は無い)
+--   車両の予約に追加する形だけで提供する (装備品だけのレンタルはしない)。在庫数は管理しない。
+--   家電セット (OP010) は OP001〜OP009 を含む。extra.includes に入れておき、セットと中の品目を
+--   一緒に選ぶと料金計算 (pricing-core) が OPTION_CONFLICT にする (二重請求を防ぐ)。
+insert into public.options (id, name, price, price_short, price_type, category_ids, kind, exclusive_group, sort, extra) values
+  ('OP001', 'ポータブル冷蔵冷凍庫',       3300,  null, 'per_day', null, 'other', null, 11, '{"description":"アイリスオーヤマ IPD-4A-B"}'),
+  ('OP002', '電子レンジ',                 2200,  null, 'per_day', null, 'other', null, 12, '{"description":"パナソニック NE-FL1C-W"}'),
+  ('OP003', 'サーキュレーター',           1100,  null, 'per_day', null, 'other', null, 13, '{"description":"アイリスオーヤマ KCF-SDC15T-EC-W"}'),
+  ('OP004', 'ポータブル電源',             3300,  null, 'per_day', null, 'other', null, 14, '{"description":"Jackery JE-1800A"}'),
+  ('OP005', 'ドラムリール',               1100,  null, 'per_day', null, 'other', null, 15, '{"description":"日動工業 NR-304D-S"}'),
+  ('OP006', 'カセットコンロ',             1100,  null, 'per_day', null, 'other', null, 16, '{"description":"岩谷産業 CB-ODX1-BK"}'),
+  ('OP007', 'カセットボンベ',             1100,  null, 'per_day', null, 'other', null, 17, '{"description":"岩谷産業 CB-250-OR"}'),
+  ('OP008', '炊飯器',                     2200,  null, 'per_day', null, 'other', null, 18, '{"description":"タイガー魔法瓶 JPV-Y180KV"}'),
+  ('OP009', '電気ケトル',                 1100,  null, 'per_day', null, 'other', null, 19, '{"description":"象印マホービン CK-VB15 BM"}'),
+  ('OP010', '家電セット (上記9点まとめ)', 11000, null, 'per_day', null, 'other', null, 20,
+   '{"description":"ポータブル冷蔵冷凍庫〜電気ケトルの9点をまとめたセット",
+     "includes":["OP001","OP002","OP003","OP004","OP005","OP006","OP007","OP008","OP009"]}'),
+  ('OP011', '集客セット',                 1100,  null, 'per_day', null, 'other', null, 21, '{"description":"ホワイトボード・マグネット・ペン"}')
+on conflict (id) do nothing;
+
 -- 設定
 insert into public.app_settings (key, value) values
   ('points', '{"pointPerUse":1,"couponThreshold":10,"couponAmount":1000,"expiryMonths":12}'),
@@ -110,9 +130,10 @@ insert into public.app_settings (key, value) values
 on conflict (key) do nothing;
 
 -- 公開中の法務文書 (内容を改定したら version を上げて新しい行を active にする)
+--   law は 2026-10 版 (装備オプションの再開で事業内容・料金の記載が変わったため)。予約時の同意の対象外。
 insert into public.legal_documents (id, version, title, url, effective_at) values
   ('clause',  '2026-08', '貸渡約款',                   'clause.html',  '2026-08-01'),
   ('cancel',  '2026-08', 'キャンセル規定',             'law.html#cancel', '2026-08-01'),
   ('privacy', '2026-08', 'プライバシーポリシー',       'privacy.html', '2026-08-01'),
-  ('law',     '2026-08', '特定商取引法に基づく表記',   'law.html',     '2026-08-01')
+  ('law',     '2026-10', '特定商取引法に基づく表記',   'law.html',     '2026-10-01')
 on conflict do nothing;

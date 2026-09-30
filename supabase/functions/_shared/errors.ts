@@ -12,9 +12,18 @@ const FIELD_OF: Record<string, Record<string, string>> = {
   PERIOD_TOO_LONG: { end: 'Webで予約できる期間は最長93日です。' },
   START_TOO_FAR: { start: 'ご予約は400日先まで受け付けています。' },
   OPTION_INVALID: { optionIds: 'この車両では選べないオプションが含まれています。' },
-  OPTION_CONFLICT: { optionIds: '同時に選べない補償が選ばれています。' },
+  OPTION_CONFLICT: { optionIds: '同時に選べないオプションが選ばれています。' },
   DISCOUNT_NOT_APPLICABLE: { discountType: 'この割引は適用できません。' }
 };
+
+/**
+ * コードに結び付く入力欄のメッセージ (無ければ undefined)。
+ * DB が返したときも、料金計算 (pricing-core の errors) で見つかったときも、同じ code なら同じ fields を返すために使う。
+ */
+export function fieldsOfCode(code: string): Record<string, string> | undefined {
+  const f = FIELD_OF[code];
+  return f ? { ...f } : undefined;
+}
 
 /** DB 側の別名 → 契約書のコード */
 const ALIASES: Record<string, string> = {
@@ -33,7 +42,7 @@ export function pgToApiError(err: unknown): ApiError {
   const head = msg.split(/[\s:]/)[0] || '';
   const code = ALIASES[head] || head;
   if (pgCode === 'P0001' && code && code !== 'INTERNAL' && STATUS_BY_CODE[code]) {
-    const fields = FIELD_OF[code];
+    const fields = fieldsOfCode(code);
     return new ApiError(code, STATUS_BY_CODE[code], undefined, fields ? { fields } : undefined);
   }
   // 排他制約 (期間の重なり)

@@ -11,9 +11,12 @@
 
   <main class="main">
     <h1 class="page-title">オプション管理</h1>
-    <p class="page-note">カテゴリ専用オプション (免責補償制度・安心保証コースなど) と、共通オプション (全車両カテゴリに適用) を管理します。新しいカテゴリを追加した際も、ここからオプションを紐付けられます。</p>
+    <p class="page-note">補償オプション (免責補償制度・安心保証コースなど、カテゴリ専用) と、装備オプション (ポータブル電源・家電セットなど、全車両カテゴリ共通) を管理します。新しいカテゴリを追加した際も、ここからオプションを紐付けられます。</p>
 
     <section class="card filter-bar">
+      <div class="filter-group"><label>種類</label>
+        <select id="f-kind"><option value="">すべて</option><option value="cover">補償オプション</option><option value="other">装備オプション</option></select>
+      </div>
       <div class="filter-group"><label>適用範囲</label>
         <select id="f-scope"><option value="">すべて</option><option value="common">共通のみ</option></select>
       </div>
@@ -24,33 +27,44 @@
     <section class="card">
       <table class="data-table list">
         <thead>
-          <tr><th>オプション名</th><th>料金</th><th>課金単位</th><th>適用範囲</th><th>状態</th><th></th></tr>
+          <tr><th>オプション名</th><th>種類</th><th>料金</th><th>課金単位</th><th>適用範囲</th><th>状態</th><th></th></tr>
         </thead>
-        <tbody id="tbl"><tr class="empty"><td colspan="6">読み込み中...</td></tr></tbody>
+        <tbody id="tbl"><tr class="empty"><td colspan="7">読み込み中...</td></tr></tbody>
       </table>
     </section>
   </main>
 
   <script src="partials.js"></script>
 
-  <script src="../js/config.js?v=20260923"></script>
-  <script src="../js/store.js?v=20260923"></script>
-  <script src="../js/pricing-core.js?v=20260923"></script>
-  <script src="../js/pricing.js?v=20260923"></script>
-  <script src="../js/api.js?v=20260923"></script>
-  <script src="../js/backend.js?v=20260923"></script>
-  <script src="../js/boot.js?v=20260923"></script>
+  <script src="../js/config.js?v=20260930"></script>
+  <script src="../js/store.js?v=20260930"></script>
+  <script src="../js/pricing-core.js?v=20260930"></script>
+  <script src="../js/pricing.js?v=20260930"></script>
+  <script src="../js/api.js?v=20260930"></script>
+  <script src="../js/backend.js?v=20260930"></script>
+  <script src="../js/boot.js?v=20260930"></script>
   <script type="text/x-deferred">
   (function () {
     const S = window.SkyRentStore;
     const $ = s => document.querySelector(s);
     function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
-    const unitLabel = t => t === 'per_rental' ? '1回' : '1日あたり';
+    const unitLabel = t => t === 'per_rental' ? '1回' : '24時間あたり';
+    // 種類: kind='cover' = 補償オプション (1つだけ選べる) / それ以外 = 装備オプション
+    //   kind の無い古いデータは「補償の1つだけ選べるグループ」かで判断する (画面 detail.html と同じ)
+    const isCover = o => o.kind ? o.kind === 'cover' : o.exclusiveGroup === 'cover';
+    const kindLabel = o => isCover(o) ? '補償' : '装備';
+    function sorted(arr) {
+      return arr.map((o, i) => ({ o: o, i: i }))
+        .sort((a, b) => ((a.o.sort == null ? 99 : Number(a.o.sort)) - (b.o.sort == null ? 99 : Number(b.o.sort))) || (a.i - b.i))
+        .map(x => x.o);
+    }
+    function optName(id) { const x = S.findById('options', 'optionId', id); return x ? x.name : id; }
 
     function initFilter() {
       const cats = S.categories(true);
       $('#f-scope').innerHTML = '<option value="">すべて</option><option value="common">共通のみ</option>' + cats.map(c => '<option value="' + c.categoryId + '">' + esc(c.name) + '</option>').join('');
       $('#f-scope').addEventListener('change', render);
+      $('#f-kind').addEventListener('change', render);
     }
 
     function scopeCell(o) {
@@ -59,14 +73,18 @@
     }
 
     function render() {
-      const scope = $('#f-scope').value;
-      let arr = S.list('options');
+      const scope = $('#f-scope').value, kind = $('#f-kind').value;
+      let arr = sorted(S.list('options'));
       if (scope === 'common') arr = arr.filter(o => o.categoryIds == null);
       else if (scope) arr = arr.filter(o => Array.isArray(o.categoryIds) && o.categoryIds.indexOf(scope) >= 0);
-      if (!arr.length) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="6" style="text-align:center;padding:24px;color:#888">該当なし</td></tr>'; return; }
+      if (kind) arr = arr.filter(o => (kind === 'cover') === isCover(o));
+      if (!arr.length) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="7" style="text-align:center;padding:24px;color:#888">該当なし</td></tr>'; return; }
       $('#tbl').innerHTML = arr.map(o =>
-        '<tr>' +
-        '<td><strong>' + esc(o.name) + '</strong></td>' +
+        '<tr data-id="' + esc(o.optionId) + '">' +
+        '<td><strong>' + esc(o.name) + '</strong>' +
+          (o.description ? '<br><small style="color:#777">' + esc(o.description) + '</small>' : '') +
+          (Array.isArray(o.includes) && o.includes.length ? '<br><small style="color:#777" data-includes>含む品目: ' + o.includes.map(id => esc(optName(id))).join('・') + '</small>' : '') + '</td>' +
+        '<td><span class="chip' + (isCover(o) ? '' : ' chip-common') + '">' + kindLabel(o) + '</span></td>' +
         '<td>¥' + Number(o.price).toLocaleString() + '</td>' +
         '<td>' + unitLabel(o.priceType) + '</td>' +
         '<td>' + scopeCell(o) + '</td>' +
@@ -80,24 +98,38 @@
     function openModal(optionId) {
       const isNew = !optionId;
       const o = isNew
-        ? { optionId: '', name: '', price: '', priceType: 'per_day', categoryIds: null, active: true }
+        ? { optionId: '', name: '', price: '', priceType: 'per_day', categoryIds: null, kind: 'other', active: true }
         : Object.assign({}, S.findById('options', 'optionId', optionId));
       const cats = S.categories(true);
       const isCommon = o.categoryIds == null;
+      const cover = isCover(o);
+      // セット (家電セットなど) に含める品目の候補: 自分以外の装備オプション。
+      // いま含めている品目が一覧に無い (削除済みなど) 場合も、保存で消えないよう候補に残す
+      const incl = Array.isArray(o.includes) ? o.includes.map(String) : [];
+      const inclCands = sorted(S.list('options')).filter(x => x.optionId !== o.optionId && !isCover(x)).map(x => ({ id: x.optionId, name: x.name }));
+      incl.filter(id => id !== o.optionId && !inclCands.some(c => c.id === id))
+        .forEach(id => inclCands.push({ id: id, name: optName(id) === id ? id + ' (一覧に無い品目)' : optName(id) }));
 
       const html =
         '<div class="crud-modal-bg"></div><div class="crud-modal-card">' +
         '<div class="crud-modal-head"><h3>' + (isNew ? 'オプション追加' : '編集') + '</h3><button class="crud-close" type="button">×</button></div>' +
         '<div style="padding:6px 0">' +
           '<div class="crud-field"><label>名称 <span style="color:#c0392b">*</span></label><input type="text" id="o-name" value="' + esc(o.name) + '"></div>' +
+          '<div class="crud-field"><label>種類</label><select id="o-kind"><option value="other"' + (cover ? '' : ' selected') + '>装備オプション (他と一緒に選べる)</option><option value="cover"' + (cover ? ' selected' : '') + '>補償オプション (1つだけ選べる)</option></select></div>' +
+          '<div class="crud-field"><label>説明</label><input type="text" id="o-desc" maxlength="200" placeholder="例: 機種・型番、セットの内容" value="' + esc(o.description || '') + '"></div>' +
           '<div class="crud-field"><label>料金 (円) <span style="color:#c0392b">*</span></label><input type="number" id="o-price" value="' + (o.price || '') + '"></div>' +
-          '<div class="crud-field"><label>課金単位</label><select id="o-type"><option value="per_day"' + (o.priceType !== 'per_rental' ? ' selected' : '') + '>1日あたり</option><option value="per_rental"' + (o.priceType === 'per_rental' ? ' selected' : '') + '>1回</option></select></div>' +
+          '<div class="crud-field"><label>課金単位</label><select id="o-type"><option value="per_day"' + (o.priceType !== 'per_rental' ? ' selected' : '') + '>24時間あたり</option><option value="per_rental"' + (o.priceType === 'per_rental' ? ' selected' : '') + '>1回</option></select></div>' +
           '<div class="crud-field"><label>状態</label><select id="o-active"><option value="true"' + (o.active !== false ? ' selected' : '') + '>有効</option><option value="false"' + (o.active === false ? ' selected' : '') + '>無効</option></select></div>' +
           '<div class="crud-field" style="align-items:flex-start"><label style="padding-top:2px">適用範囲</label><div style="flex:1">' +
             '<label style="display:block;margin-bottom:6px"><input type="radio" name="o-scope" value="common"' + (isCommon ? ' checked' : '') + '> 共通 (全車両カテゴリ)</label>' +
             '<label style="display:block;margin-bottom:6px"><input type="radio" name="o-scope" value="specific"' + (!isCommon ? ' checked' : '') + '> カテゴリを指定</label>' +
             '<div id="cat-checks" class="chk-group" style="margin-top:6px;padding-left:18px' + (isCommon ? ';opacity:.4' : '') + '">' +
               cats.map(c => '<label><input type="checkbox" value="' + c.categoryId + '"' + (!isCommon && o.categoryIds.indexOf(c.categoryId) >= 0 ? ' checked' : '') + '> ' + esc(c.name) + (c.type === 'item' ? ' (物品)' : '') + '</label>').join('') +
+            '</div></div></div>' +
+          '<div class="crud-field" id="o-includes-wrap" style="align-items:flex-start' + (cover ? ';display:none' : '') + '"><label style="padding-top:2px">セットに含む品目</label><div style="flex:1">' +
+            '<small style="display:block;color:#777;margin-bottom:6px">セット (家電セットなど) のときだけ選びます。お客様は、セットと、ここで選んだ品目を同時には選べません (二重請求を防ぐため)。</small>' +
+            '<div id="o-includes" class="chk-group">' +
+              (inclCands.length ? inclCands.map(x => '<label><input type="checkbox" value="' + esc(x.id) + '"' + (incl.indexOf(x.id) >= 0 ? ' checked' : '') + '> ' + esc(x.name) + '</label>').join('') : '<span style="color:#888">候補がありません</span>') +
             '</div></div></div>' +
         '</div>' +
         '<div class="crud-modal-foot">' +
@@ -117,6 +149,9 @@
       modal.querySelectorAll('input[name="o-scope"]').forEach(r => r.addEventListener('change', () => {
         checks.style.opacity = modal.querySelector('input[name="o-scope"]:checked').value === 'common' ? '.4' : '1';
       }));
+      modal.querySelector('#o-kind').addEventListener('change', () => {
+        modal.querySelector('#o-includes-wrap').style.display = modal.querySelector('#o-kind').value === 'cover' ? 'none' : '';
+      });
 
       modal.querySelector('#o-save').addEventListener('click', () => {
         const name = modal.querySelector('#o-name').value.trim();
@@ -129,11 +164,21 @@
           categoryIds = [...checks.querySelectorAll('input:checked')].map(c => c.value);
           if (!categoryIds.length) { alert('適用するカテゴリを1つ以上選択してください'); return; }
         }
+        const kind = modal.querySelector('#o-kind').value;
         const obj = {
           optionId: isNew ? S.genId('OP', 'options', 'optionId') : o.optionId,
           name: name, price: Number(price), priceType: modal.querySelector('#o-type').value,
-          categoryIds: categoryIds, active: modal.querySelector('#o-active').value === 'true'
+          categoryIds: categoryIds, active: modal.querySelector('#o-active').value === 'true',
+          kind: kind,
+          // 補償は同じグループ ('cover') から1つだけ。装備にしたら補償のグループから外す
+          exclusiveGroup: kind === 'cover' ? (o.exclusiveGroup || 'cover') : (o.exclusiveGroup === 'cover' ? null : (o.exclusiveGroup || null))
         };
+        // 説明・セットの品目 (DB では extra.description / extra.includes)。画面に無い項目 (短時間料金・並び順など) は元の値のまま残る
+        const desc = modal.querySelector('#o-desc').value.trim();
+        if (desc || o.description != null) obj.description = desc || null;
+        const inclIds = kind === 'cover' ? [] : [...modal.querySelectorAll('#o-includes input:checked')].map(c => c.value);
+        if (inclIds.length) obj.includes = inclIds;
+        else if (o.includes != null) obj.includes = null;
         S.upsert('options', 'optionId', obj);
         close(); render();
       });

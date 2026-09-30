@@ -34,6 +34,16 @@ const KITCHEN = { id: 'K001', categoryId: 'cat-kitchen', priceHour: null, priceD
 const CDW = { id: 'OP101', name: '免責補償制度 (CDW)', price: 1650, priceShort: 1100, priceType: 'per_day', categoryIds: ['cat-rental'], exclusiveGroup: 'cover' };
 const PAP = { id: 'OP102', name: '安心保証コース (PAP)', price: 3300, priceShort: 2200, priceType: 'per_day', categoryIds: ['cat-rental'], exclusiveGroup: 'cover' };
 const KCDW = { id: 'OP201', name: '免責補償制度 (CDW)', price: 3300, priceShort: null, priceType: 'per_day', categoryIds: ['cat-kitchen'], exclusiveGroup: 'cover' };
+// 装備オプション (全車共通・24時間ごと・短時間料金なし)。家電セットは OP001〜OP009 を含む
+const equip = (id, name, price, extra) => Object.assign({ id, name, price, priceShort: null, priceType: 'per_day', categoryIds: null, exclusiveGroup: null }, extra || {});
+const APPLIANCES = [
+  equip('OP001', 'ポータブル冷蔵冷凍庫', 3300), equip('OP002', '電子レンジ', 2200), equip('OP003', 'サーキュレーター', 1100),
+  equip('OP004', 'ポータブル電源', 3300), equip('OP005', 'ドラムリール', 1100), equip('OP006', 'カセットコンロ', 1100),
+  equip('OP007', 'カセットボンベ', 1100), equip('OP008', '炊飯器', 2200), equip('OP009', '電気ケトル', 1100)
+];
+const [FRIDGE, MICROWAVE] = APPLIANCES;
+const APPLIANCE_SET = equip('OP010', '家電セット (上記9点まとめ)', 11000, { includes: APPLIANCES.map(o => o.id) });
+const PROMO_SET = equip('OP011', '集客セット', 1100);
 
 // 日本時間の日時 'YYYY-MM-DD HH:mm' → ISO (+09:00)
 const jst = s => s.replace(' ', 'T') + ':00+09:00';
@@ -165,6 +175,96 @@ describe('オプション (補償)', () => {
     const asset = { id: 'V001', category_id: 'cat-rental', price_hour: 1100, price_day: 7700, custom_fields: {} };
     const r = q(asset, '2026-10-05 10:00', '2026-10-05 13:00', { options: [row] });
     assert.equal(r.total, 3300 + 1100);
+  });
+});
+
+describe('オプション (装備・家電セット)', () => {
+  const opt = (r, id) => r.lines.find(l => l.code === 'option' && l.optionId === id);
+  test('装備 3時間 → 24時間料金 (短時間料金は無い): 冷蔵冷凍庫 3,300', () => {
+    const r = q(COMPACT, '2026-10-05 10:00', '2026-10-05 13:00', { options: [FRIDGE] });
+    assert.equal(r.ok, true);
+    assert.deepEqual([opt(r, 'OP001').label, opt(r, 'OP001').amount], ['ポータブル冷蔵冷凍庫 (24時間まで)', 3300]);
+    assert.equal(r.total, 3300 + 3300);
+  });
+  test('装備 24時間 = ×1 / 25時間 = ×2 / 48時間 = ×2 / 49時間 = ×3 (端数が6時間以内でも24時間料金)', () => {
+    const amount = (s, e) => opt(q(COMPACT, s, e, { options: [MICROWAVE] }), 'OP002').amount;
+    assert.equal(amount('2026-10-05 10:00', '2026-10-06 10:00'), 2200);
+    assert.equal(amount('2026-10-05 10:00', '2026-10-06 11:00'), 4400);
+    assert.equal(amount('2026-10-05 10:00', '2026-10-07 10:00'), 4400);
+    assert.equal(amount('2026-10-05 10:00', '2026-10-07 11:00'), 6600);
+    const r = q(COMPACT, '2026-10-05 10:00', '2026-10-06 11:00', { options: [MICROWAVE] });
+    assert.equal(opt(r, 'OP002').label, '電子レンジ (24時間 × 1 + 1時間)');
+  });
+  test('家電セット 25時間 = 11,000 × 2 = 22,000', () => {
+    const r = q(COMPACT, '2026-10-05 10:00', '2026-10-06 11:00', { options: [APPLIANCE_SET] });
+    assert.equal(r.ok, true);
+    assert.equal(opt(r, 'OP010').amount, 22000);
+    assert.equal(r.total, 7700 + 1100 + 22000);
+  });
+  test('全車共通: キッチンカーにも付けられる (時間貸しなしの車両でも24時間ごと)', () => {
+    const r = q(KITCHEN, '2026-10-05 10:00', '2026-10-05 15:00', { options: [APPLIANCE_SET, PROMO_SET] });
+    assert.equal(r.ok, true);
+    assert.equal(opt(r, 'OP010').amount, 11000);
+    assert.equal(opt(r, 'OP011').amount, 1100);
+    assert.equal(r.total, 22000 + 11000 + 1100);
+  });
+  test('割引 (学生・法人・二地域居住・守成クラブ) は基本料金だけ。装備の料金は変わらない', () => {
+    for (const type of ['student', 'corporate', 'dual_residence']) {
+      const r = q(COMPACT, '2026-10-05 10:00', '2026-10-06 10:00', { options: [APPLIANCE_SET], discountType: type });
+      assert.equal(r.ok, true, type);
+      assert.equal(r.discount, 1100, type);
+      assert.equal(opt(r, 'OP010').amount, 11000, type);
+      assert.equal(r.total, 7700 + 11000 - 1100, type);
+    }
+    const k = q(KITCHEN, '2026-10-05 10:00', '2026-10-06 10:00', { options: [APPLIANCE_SET], discountType: 'shusei_club' });
+    assert.equal(k.discount, 3000);
+    assert.equal(k.total, 22000 + 11000 - 3000);
+    // 割引額が基本料金を超えても、装備の料金までは引かない (上限は基本料金)
+    const rules = Object.assign({}, C.DEFAULT_RULES, { discounts: { big: { label: '大きな割引', amount: 50000, minHours: 24 } } });
+    const big = q(COMPACT, '2026-10-05 10:00', '2026-10-06 10:00', { options: [APPLIANCE_SET], discountType: 'big', rules });
+    assert.equal(big.discount, 7700);
+    assert.equal(big.total, 11000);
+  });
+  test('家電セット + セットに含まれる品目 → OPTION_CONFLICT (9品目すべて・選ぶ順番が逆でも)', () => {
+    for (const item of APPLIANCES) {
+      for (const options of [[APPLIANCE_SET, item], [item, APPLIANCE_SET]]) {
+        const r = q(COMPACT, '2026-10-05 10:00', '2026-10-06 10:00', { options });
+        assert.equal(r.ok, false, options.map(o => o.id).join('+'));
+        assert.deepEqual(r.errors, ['OPTION_CONFLICT'], options.map(o => o.id).join('+'));
+      }
+    }
+    // 複数の品目が重なってもエラーは1つ
+    const r = q(COMPACT, '2026-10-05 10:00', '2026-10-06 10:00', { options: [FRIDGE, MICROWAVE, APPLIANCE_SET] });
+    assert.deepEqual(r.errors, ['OPTION_CONFLICT']);
+  });
+  test('家電セット単独・家電セット + 集客セット・家電セット + CDW は選べる', () => {
+    const one = q(COMPACT, '2026-10-05 10:00', '2026-10-06 10:00', { options: [APPLIANCE_SET] });
+    assert.equal(one.ok, true);
+    assert.equal(one.total, 7700 + 11000);
+    const promo = q(COMPACT, '2026-10-05 10:00', '2026-10-06 10:00', { options: [APPLIANCE_SET, PROMO_SET] });
+    assert.equal(promo.ok, true);
+    assert.equal(promo.total, 7700 + 11000 + 1100);
+    const cover = q(COMPACT, '2026-10-05 10:00', '2026-10-06 10:00', { options: [CDW, APPLIANCE_SET] });
+    assert.equal(cover.ok, true);
+    assert.equal(cover.total, 7700 + 1650 + 11000);
+    // 家電セットに含まれない品目どうし (個別に全部) も選べる
+    const each = q(COMPACT, '2026-10-05 10:00', '2026-10-06 10:00', { options: APPLIANCES.concat([PROMO_SET]) });
+    assert.equal(each.ok, true);
+    assert.equal(each.total, 7700 + 16500 + 1100);
+  });
+  test('補償2つは従来どおり OPTION_CONFLICT (装備を一緒に選んでも)', () => {
+    const r = q(COMPACT, '2026-10-05 10:00', '2026-10-06 10:00', { options: [APPLIANCE_SET, CDW, PAP] });
+    assert.equal(r.ok, false);
+    assert.deepEqual(r.errors, ['OPTION_CONFLICT']);
+  });
+  test('includes が配列でなければ無視・自分自身を含めても衝突にしない・DB 行 (snake_case) でも判定する', () => {
+    const broken = Object.assign({}, APPLIANCE_SET, { includes: 'OP001' });
+    assert.equal(q(COMPACT, '2026-10-05 10:00', '2026-10-06 10:00', { options: [broken, FRIDGE] }).ok, true);
+    const self = Object.assign({}, APPLIANCE_SET, { includes: ['OP010'] });
+    assert.equal(q(COMPACT, '2026-10-05 10:00', '2026-10-06 10:00', { options: [self] }).ok, true);
+    const row = { id: 'OP010', name: '家電セット', price: 11000, price_short: null, price_type: 'per_day', category_ids: null, exclusive_group: null, includes: ['OP002'] };
+    const r = q(COMPACT, '2026-10-05 10:00', '2026-10-06 10:00', { options: [{ id: 'OP002', name: '電子レンジ', price: 2200, price_type: 'per_day' }, row] });
+    assert.deepEqual(r.errors, ['OPTION_CONFLICT']);
   });
 });
 
@@ -498,7 +598,11 @@ describe('js/pricing.js (既存画面向けアダプタ)', () => {
     ];
     const storeOptions = [
       { optionId: 'OP101', name: '免責補償制度 (CDW)', price: 1650, priceShort: 1100, priceType: 'per_day', categoryIds: ['cat-rental'], exclusiveGroup: 'cover', active: true },
-      { optionId: 'OP102', name: '安心保証コース (PAP)', price: 3300, priceShort: 2200, priceType: 'per_day', categoryIds: ['cat-rental'], exclusiveGroup: 'cover', active: true }
+      { optionId: 'OP102', name: '安心保証コース (PAP)', price: 3300, priceShort: 2200, priceType: 'per_day', categoryIds: ['cat-rental'], exclusiveGroup: 'cover', active: true },
+      // 装備 (store の形。includes は DB の extra.includes が展開されたもの)
+      { optionId: 'OP002', name: '電子レンジ', price: 2200, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true },
+      { optionId: 'OP010', name: '家電セット (上記9点まとめ)', price: 11000, priceShort: null, priceType: 'per_day', categoryIds: null, kind: 'other', exclusiveGroup: null, active: true,
+        includes: ['OP001', 'OP002', 'OP003', 'OP004', 'OP005', 'OP006', 'OP007', 'OP008', 'OP009'] }
     ];
     const ctx = vm.createContext({ console });
     vm.runInContext('var window = globalThis;', ctx);
@@ -510,7 +614,7 @@ describe('js/pricing.js (既存画面向けアダプタ)', () => {
     };
     vm.runInContext(readFileSync(CORE_PATH, 'utf8'), ctx, { filename: 'pricing-core.js' });
     vm.runInContext(readFileSync(ADAPTER_PATH, 'utf8'), ctx, { filename: 'pricing.js' });
-    return { P: ctx.SkyRentPricing, asset: storeAssets[0], kitchen: storeAssets[1], options: storeOptions };
+    return { P: ctx.SkyRentPricing, asset: storeAssets[0], kitchen: storeAssets[1], options: storeOptions.slice(0, 2), equipment: storeOptions.slice(2) };
   }
   const plain = v => JSON.parse(JSON.stringify(v));
 
@@ -570,6 +674,17 @@ describe('js/pricing.js (既存画面向けアダプタ)', () => {
     const { P } = loadAdapter(null);
     const r = P.quote({ assetId: 'V001', start: jst('2026-10-05 10:00'), end: jst('2026-10-05 13:00'), optionIds: ['OP101'] });
     assert.equal(r.total, 3300 + 1100);
+  });
+  test('store のオプション (includes 付き) のままで、家電セットと中の品目の同時選択を OPTION_CONFLICT にする', () => {
+    const { P, asset, equipment } = loadAdapter(null);
+    const period = { start: jst('2026-10-05 10:00'), end: jst('2026-10-06 10:00') };
+    const c = P.calculate(Object.assign({ asset, options: equipment }, period));
+    assert.equal(c.ok, false);
+    assert.deepEqual(plain(c.errors), ['OPTION_CONFLICT']);
+    const r = P.quote(Object.assign({ assetId: 'V001', optionIds: ['OP010', 'OP101'] }, period));
+    assert.equal(r.ok, true);
+    assert.equal(r.total, 7700 + 11000 + 1650);
+    assert.deepEqual(plain(P.quote(Object.assign({ assetId: 'V001', optionIds: ['OP002', 'OP010'] }, period)).errors), ['OPTION_CONFLICT']);
   });
   test('cancellationFee() は予約データから base と区分を補う', () => {
     const { P } = loadAdapter(null);

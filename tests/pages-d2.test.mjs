@@ -1,5 +1,6 @@
 /**
  * 担当D2 のページのテスト: 会員 (mypage.html)・問い合わせ (contact.html)・法務表示 (privacy / faq / guide / law)
+ *   + 装備オプションの案内 (faq / fleet / law / guide / index / company / contact の種類。料金は総合料金表どおり)
  *
  * 実行: node --test tests/pages-d2.test.mjs
  *
@@ -611,6 +612,161 @@ describe('法務・案内ページ (privacy / faq / guide / law)', { skip: NO_JS
       assert.ok(g.$('a[href="law.html#cancel"]'));
       assertClean(g, 'guide');
     } finally { g.close(); }
+  });
+});
+
+// =====================================================================
+// 装備オプション (2026-10 再開) の案内: 料金は総合料金表 (2026年6月改定版) どおり
+// =====================================================================
+describe('装備オプションの案内 (faq / fleet / law / guide / index / company / contact)', { skip: NO_JSDOM }, () => {
+  // [表示名, 機種・内容, 24時間あたりの料金]
+  const EQUIP = [
+    ['ポータブル冷蔵冷凍庫', 'アイリスオーヤマ IPD-4A-B', '¥3,300'],
+    ['電子レンジ', 'パナソニック NE-FL1C-W', '¥2,200'],
+    ['サーキュレーター', 'アイリスオーヤマ KCF-SDC15T-EC-W', '¥1,100'],
+    ['ポータブル電源', 'Jackery JE-1800A', '¥3,300'],
+    ['ドラムリール', '日動工業 NR-304D-S', '¥1,100'],
+    ['カセットコンロ', '岩谷産業 CB-ODX1-BK', '¥1,100'],
+    ['カセットボンベ', '岩谷産業 CB-250-OR', '¥1,100'],
+    ['炊飯器', 'タイガー魔法瓶 JPV-Y180KV', '¥2,200'],
+    ['電気ケトル', '象印マホービン CK-VB15 BM', '¥1,100'],
+    ['家電セット (上記9点まとめ)', 'ポータブル冷蔵冷凍庫〜電気ケトルの9点をまとめたセット', '¥11,000'],
+    ['集客セット', 'ホワイトボード・マグネット・ペン', '¥1,100']
+  ];
+  // 撤去時に事実と違うとして消した記述は戻さない
+  function assertNoWrongClaims(page, label) {
+    const t = text(page, 'body');
+    assert.doesNotMatch(t, /発電機|フライヤー|鉄板|のぼり旗/, label + ': 料金表に無い装備');
+    assert.doesNotMatch(t, /お電話またはマイページ|電話でのキャンセル|お電話でキャンセル/, label + ': 電話でのキャンセル');
+    assert.doesNotMatch(t, /車両・物品を探す/, label + ': 物品の単体レンタル');
+    assert.equal(page.$('a[href*="cat-appliance"], a[href*="cat-tool"]'), null, label + ': 家電・工具カテゴリへのリンク');
+  }
+
+  test('fleet.html: 目次と #opt-equip の表 (装備・機種・料金)・補償の後に装備', async () => {
+    const page = openPage('fleet.html');
+    try {
+      assert.equal(await page.ready(8000), true);
+      assert.match(page.$('meta[name="description"]').getAttribute('content'), /装備オプション/);
+      const toc = [...page.document.querySelectorAll('#toc-list a')].map(a => a.getAttribute('href'));
+      assert.ok(toc.indexOf('#opt-equip') > toc.indexOf('#opt-cover'), '目次: ' + toc.join(' '));
+      toc.forEach(h => assert.ok(page.$(h), 'リンク切れ: ' + h));
+      const rows = [...page.document.querySelectorAll('#equip-table tr')].slice(1).map(tr => [...tr.children].map(td => td.textContent.trim()));
+      deq(rows, EQUIP);
+      const h2 = [...page.document.querySelectorAll('.fleet-doc h2')].map(h => h.id);
+      assert.ok(h2.indexOf('opt-equip') === h2.indexOf('opt-cover') + 1, h2.join(' '));
+      const after = page.$('#equip-table').nextElementSibling.textContent;
+      assert.match(after, /車両のご予約に追加する形/);
+      assert.match(after, /装備だけのレンタルは行っておりません/);
+      assert.match(after, /セットに含まれる9点を個別に追加することはできません/);
+      assertNoWrongClaims(page, 'fleet');
+      assertClean(page, 'fleet');
+    } finally { page.close(); }
+  });
+
+  test('faq.html: Q15 に装備の表 (料金表どおり)・以降の番号を振り直し・ページ内リンク・チャイルドシートは貸し出さない', async () => {
+    const page = openPage('faq.html');
+    try {
+      assert.equal(await page.ready(8000), true);
+      const qs = [...page.document.querySelectorAll('.faq')];
+      const q15 = qs.find(d => d.querySelector('.q').textContent === 'Q15');
+      assert.ok(q15, 'Q15 が無い');
+      assert.match(q15.querySelector('summary').textContent, /装備のオプションにはどんなものがありますか/);
+      assert.equal(q15.id, 'q-equip');
+      assert.equal(q15.closest('.faq-list').previousElementSibling.id, 'q-price', '料金・お支払いの節に無い');
+      const rows = [...q15.querySelectorAll('tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim()));
+      deq(rows.map(r => r[1]), EQUIP.map(e => e[2]));
+      deq(rows.map(r => r[0].replace(/ \(ホワイトボード・マグネット・ペン\)$/, '')), EQUIP.map(e => e[0]));
+      assert.match(q15.textContent, /装備だけのレンタルは行っておりません/);
+      assert.match(q15.textContent, /家電セットをお選びの場合、セットに含まれる9点を個別に追加することはできません/);
+      // 前後の質問と番号
+      const titles = qs.map(d => d.querySelector('summary').textContent);
+      assert.match(titles[13], /^Q14学割や法人割引/);
+      assert.match(titles[15], /^Q16キャンセル料はかかりますか/);
+      assert.equal(qs.length, 35);
+      assert.match(titles[34], /^Q35補償はいつまでに申し込めばよいですか/);
+      // ページ内リンク (#q-...) は全部ある
+      [...page.document.querySelectorAll('a[href^="#"]')].forEach(a => assert.ok(page.$(a.getAttribute('href')), 'リンク切れ: ' + a.getAttribute('href')));
+      const seat = qs.find(d => /チャイルドシート/.test(d.querySelector('summary').textContent));
+      assert.match(seat.textContent, /チャイルドシートの貸し出しは行っておりません/);
+      assertNoWrongClaims(page, 'faq');
+      assertClean(page, 'faq');
+    } finally { page.close(); }
+  });
+
+  test('law.html: 事業内容・料金の概要・必要料金の表に装備 / 版は 2026-10 (キャンセル規定は 2026-08 のまま)', async () => {
+    const page = openPage('law.html');
+    try {
+      assert.equal(await page.ready(8000), true);
+      const biz = [...page.document.querySelectorAll('#business ~ table th')].find(th => th.textContent === '事業内容');
+      assert.match(biz.nextElementSibling.textContent, /キッチンカーの貸渡し、ならびに付随する装備品の貸出し$/);
+      assert.match(text(page, '#terms + table'), /装備オプション \(¥1,100〜¥11,000 \/ 24時間あたり\)/);
+      const row = page.$('#extra-equip');
+      assert.ok(row, '必要料金の表に装備の行が無い');
+      const cells = [...row.children].map(td => td.textContent.replace(/\s+/g, ' ').trim());
+      assert.equal(cells[0], '装備');
+      assert.match(cells[1], /装備オプション \(24時間あたり\)/);
+      EQUIP.forEach(e => assert.ok(cells[2].indexOf(e[0] + ' ' + e[2]) >= 0, '料金が無い: ' + e[0] + ' ' + e[2]));
+      assert.match(cells[2], /車両のご予約に追加する場合/);
+      // 版
+      assert.match(text(page, '#law-ver'), /版: 2026-10/);
+      assert.match(text(page, '#law-ver'), /キャンセル規定\) は 2026-08 版から変わっていません/);
+      assert.match(text(page, '#cancel-peak ~ .doc-note'), /キャンセル規定.*の版は 2026-08/);
+      assertNoWrongClaims(page, 'law');
+      assertClean(page, 'law-equip');
+    } finally { page.close(); }
+  });
+
+  test('guide / index / company / contact: 装備オプションの案内・お問い合わせの種類', async () => {
+    const g = openPage('guide.html');
+    try {
+      assert.equal(await g.ready(8000), true);
+      const t = text(g, 'main');
+      assert.match(t, /ポータブル電源や家電セットなどの装備オプションも、ご予約時に選択できます/);
+      assert.match(t, /装備・オプション品の数量と使い方の確認/);
+      assert.match(t, /スタッフと一緒に車両と装備品を確認し、精算して終了です/);
+      assert.match(t, /家電セットは¥11,000/);
+      assert.ok(g.$('a[href="fleet.html#opt-equip"]'));
+      assertNoWrongClaims(g, 'guide');
+      assertClean(g, 'guide-equip');
+    } finally { g.close(); }
+
+    const idx = openPage('index.html');
+    try {
+      assert.equal(await idx.ready(8000), true);
+      const t = text(idx, 'body');
+      assert.match(t, /装備もオプションも、まとめて一式。/);
+      assert.match(t, /オプションを選んで情報を入力/);
+      const faq = [...idx.document.querySelectorAll('.lp-faq .faq')].find(d => /装備オプションだけ追加できますか/.test(d.textContent));
+      assert.ok(faq, 'トップの FAQ に装備の質問が無い');
+      assert.match(faq.textContent, /車両のご予約に追加する形/);
+      assert.match(faq.textContent, /家電セット/);
+      assert.match(faq.textContent, /単体でのレンタルは行っておりません/);
+      const kitchen = [...idx.document.querySelectorAll('.lp-faq .faq')].find(d => /キッチンカーの営業に必要な設備/.test(d.textContent));
+      assert.match(kitchen.textContent, /車両ごとの設備は「車両と料金」のページでご確認ください/);
+      assertNoWrongClaims(idx, 'index');
+    } finally { idx.close(); }
+
+    const c = openPage('company.html');
+    try {
+      assert.equal(await c.ready(8000), true);
+      assert.match(text(c, 'main'), /装備オプションもご用意しており、車両のご予約に追加して/);
+      assertNoWrongClaims(c, 'company');
+      assertClean(c, 'company');
+    } finally { c.close(); }
+
+    // お問い合わせの種類はサーバーの許可リスト (INQUIRY_TOPICS) と同じ並び
+    const src = readFileSync(join(ROOT, 'supabase/functions/_shared/mail-templates.ts'), 'utf8');
+    const m = /INQUIRY_TOPICS[^=]*=\s*\[([\s\S]*?)\]/.exec(src);
+    const serverTopics = [...m[1].matchAll(/'([^']+)'/g)].map(x => x[1]);
+    const ct = openPage('contact.html?topic=' + encodeURIComponent('装備オプションについて'));
+    try {
+      assert.equal(await ct.ready(8000), true);
+      const opts = [...ct.document.querySelectorAll('#cf-topic option')].map(o => o.value).filter(Boolean);
+      deq(opts, serverTopics, '画面とサーバーの種類がずれている');
+      assert.equal(opts.indexOf('装備オプションについて'), opts.indexOf('キッチンカーのレンタルについて') + 1);
+      assert.equal(ct.$('#cf-topic').value, '装備オプションについて');
+      assertClean(ct, 'contact-equip');
+    } finally { ct.close(); }
   });
 });
 

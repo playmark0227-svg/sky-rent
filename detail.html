@@ -14,7 +14,17 @@
     .dt-suggest p { font-size: 12.5px; color: var(--color-muted); margin-bottom: 6px; }
     .dt-suggest button { display: block; width: 100%; text-align: left; margin-top: 6px; padding: 9px 12px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--ink); color: #fff; font-family: inherit; font-size: 12.5px; cursor: pointer; }
     .dt-suggest button:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .opt-row .on { min-width: 0; overflow-wrap: anywhere; }
     .opt-row .on small { display: block; font-size: 11.5px; color: var(--color-muted); line-height: 1.6; font-weight: 400; }
+    .opt-row .on small[hidden] { display: none; }
+    .opt-row .on small.opt-inset { color: var(--color-primary); font-weight: 700; }
+    .opt-row.is-disabled { cursor: not-allowed; }
+    .opt-row.is-disabled > input, .opt-row.is-disabled .op { opacity: .45; }
+    .opt-group-note { font-size: 12px; line-height: 1.7; color: var(--color-muted); margin: -2px 0 4px; }
+    @media (max-width: 480px) {
+      .opt-row { padding: 10px 2px; gap: 8px; font-size: 13.5px; }
+      .opt-row .op { font-size: 15px; }
+    }
   </style>
   <link rel="icon" type="image/png" sizes="32x32" href="images/brand/favicon-32.png">
   <link rel="apple-touch-icon" href="images/brand/apple-touch-icon.png">
@@ -117,15 +127,15 @@
 
   <footer class="site-footer"><div class="container"><div class="footer-bottom" style="border-top:none"><span data-i18n="footer.copyright">© 2026 グロースレンタカー</span><a href="index.html">← トップへ戻る</a></div></div></footer>
 
-  <script src="js/config.js?v=20260923"></script>
-  <script src="js/store.js?v=20260923"></script>
-  <script src="js/pricing-core.js?v=20260923"></script>
-  <script src="js/pricing.js?v=20260923"></script>
-  <script src="js/i18n.js?v=20260923"></script>
-  <script src="js/api.js?v=20260923"></script>
-  <script src="js/photos.js?v=20260923"></script>
-  <script src="js/backend.js?v=20260923"></script>
-  <script src="js/boot.js?v=20260923"></script>
+  <script src="js/config.js?v=20260930"></script>
+  <script src="js/store.js?v=20260930"></script>
+  <script src="js/pricing-core.js?v=20260930"></script>
+  <script src="js/pricing.js?v=20260930"></script>
+  <script src="js/i18n.js?v=20260930"></script>
+  <script src="js/api.js?v=20260930"></script>
+  <script src="js/photos.js?v=20260930"></script>
+  <script src="js/backend.js?v=20260930"></script>
+  <script src="js/boot.js?v=20260930"></script>
   <script type="text/x-deferred">
   (function () {
     'use strict';
@@ -155,7 +165,11 @@
       checkFailed:{ja:'空き状況を確認できませんでした。ご予約の確定時にあらためて確認します。',en:'Could not check availability now. It will be checked again when you confirm.'},
       suggest:{ja:'ご希望に近い、ご予約いただける日時 (同じ利用時間):',en:'Nearby available times (same duration):'},
       discountNote:{ja:'学生・法人などの割引は、次の画面で選べます。',en:'Discounts can be selected on the next page.'},
-      perDay:{ja:'/24時間',en:'/24h'}, perRental:{ja:'/1回',en:'/booking'}
+      perDay:{ja:'/24時間',en:'/24h'}, perRental:{ja:'/1回',en:'/booking'},
+      coverNote:{ja:'どれか1つだけ選べます。',en:'Choose one at most.'},
+      equipNoteAll:{ja:'全車共通。料金は24時間ごとです (短時間のご利用でも24時間分)。',en:'Available for all vehicles. Charged per 24 hours.'},
+      equipNote:{ja:'料金は24時間ごとです (短時間のご利用でも24時間分)。',en:'Charged per 24 hours.'},
+      inSet:{ja:n=>n+'に含まれています',en:n=>'Included in the '+n}
     };
     const tt = k => L[k][isEn()?'en':'ja'];
 
@@ -221,40 +235,92 @@
       $('#p-discount-note').textContent = tt('discountNote');
     }
 
+    // この車両に付けられるオプション (共通 + 専用。表示順は sort → 登録順)
+    function allOptions() {
+      const seen = {};
+      return options.common.concat(options.specific)
+        .filter(o => { if (!o || seen[o.optionId]) return false; seen[o.optionId] = true; return true; })
+        .map((o, i) => ({ o: o, i: i }))
+        .sort((a, b) => ((a.o.sort == null ? 99 : Number(a.o.sort)) - (b.o.sort == null ? 99 : Number(b.o.sort))) || (a.i - b.i))
+        .map(x => x.o);
+    }
+    // 補償 (kind='cover') かどうか。kind の無い古いデータは「補償の1つだけ選べるグループ」かで判断する
+    const isCover = o => o.kind ? o.kind === 'cover' : o.exclusiveGroup === 'cover';
+    // セット (家電セットなど) に含まれる品目の id
+    const includesOf = o => Array.isArray(o.includes) ? o.includes.map(String).filter(id => id !== o.optionId) : [];
+    // 「家電セット (上記9点まとめ)」→「家電セット」
+    const shortName = o => String(o.name || '').replace(/\s*[（(].*$/, '') || o.name;
+
     function renderOptions() {
       options = S.optionsForCategory(asset.categoryId);
       const area = $('#opt-area');
       const R = P.rules();
       const shortMax = Number(R.shortHoursMax) || 0;
-      let html = '';
-      function group(title, list) {
-        if (!list.length) return '';
-        return '<div class="opt-group-title">' + esc(title) + '</div>' + list.map(o => {
-          const unit = o.priceType === 'per_rental' ? tt('perRental') : tt('perDay');
-          const short = o.priceType !== 'per_rental' && o.priceShort != null && shortMax > 0
-            ? '<small>' + shortMax + '時間以内は ' + esc(yen(o.priceShort)) + '</small>' : '';
-          const desc = o.description ? '<small>' + esc(o.description) + '</small>' : '';
-          const checked = selectedOptions.some(x => x.optionId === o.optionId) ? ' checked' : '';
-          return '<label class="opt-row"><input type="checkbox" data-opt="' + esc(o.optionId) + '" data-group="' + esc(o.exclusiveGroup || '') + '"' + checked + '>' +
-            '<span class="on">' + esc(o.name) + desc + short + '</span>' +
-            '<span class="op">' + esc(yen(o.price)) + ' <small>' + unit + '</small></span></label>';
-        }).join('');
+      function row(o) {
+        const unit = o.priceType === 'per_rental' ? tt('perRental') : tt('perDay');
+        const short = o.priceType !== 'per_rental' && o.priceShort != null && shortMax > 0
+          ? '<small>' + shortMax + '時間以内は ' + esc(yen(o.priceShort)) + '</small>' : '';
+        const desc = o.description ? '<small>' + esc(o.description) + '</small>' : '';
+        const checked = selectedOptions.some(x => x.optionId === o.optionId) ? ' checked' : '';
+        return '<label class="opt-row" data-row="' + esc(o.optionId) + '"><input type="checkbox" data-opt="' + esc(o.optionId) + '" data-group="' + esc(o.exclusiveGroup || '') + '"' + checked + '>' +
+          '<span class="on">' + esc(o.name) + desc + short + '<small class="opt-inset" hidden></small></span>' +
+          '<span class="op">' + esc(yen(o.price)) + ' <small>' + unit + '</small></span></label>';
       }
-      html += group(I.t('detail.optCommon'), options.common);
-      html += group(I.t('detail.optSpecific'), options.specific);
-      area.innerHTML = html;
+      function group(kind, title, note, list) {
+        if (!list.length) return '';
+        return '<div class="opt-group" data-kind="' + kind + '"><div class="opt-group-title">' + esc(title) + '</div>' +
+          (note ? '<p class="opt-group-note">' + esc(note) + '</p>' : '') + list.map(row).join('') + '</div>';
+      }
+      // 補償オプション (1つだけ) を先に、装備オプション (24時間ごと) を後に出す
+      const all = allOptions();
+      const covers = all.filter(isCover), equips = all.filter(o => !isCover(o));
+      const coverNote = covers.some(o => o.exclusiveGroup) ? tt('coverNote') : '';
+      const equipNote = equips.every(o => o.categoryIds == null) ? tt('equipNoteAll') : tt('equipNote');
+      area.innerHTML = group('cover', I.t('detail.optCover'), coverNote, covers) +
+        group('equip', I.t('detail.optEquip'), equipNote, equips);
       area.querySelectorAll('[data-opt]').forEach(cb => cb.addEventListener('change', () => {
         // 同じグループ (補償など) は1つだけ選べる
         if (cb.checked && cb.dataset.group) {
           area.querySelectorAll('[data-opt]').forEach(o => { if (o !== cb && o.dataset.group === cb.dataset.group) o.checked = false; });
         }
-        recalcOptions(); recalc();
+        applyIncludes(); recalcOptions(); recalc();
       }));
+      applyIncludes();
+    }
+    // セット (家電セット) を選んでいる間は、セットに含まれる品目のチェックを外して選べないようにする
+    // (同じ品目を二重に請求しないため。セットを外すと、また選べるようになる)
+    function applyIncludes() {
+      const boxes = {};
+      document.querySelectorAll('#opt-area [data-opt]').forEach(cb => { boxes[cb.dataset.opt] = cb; });
+      const inSet = {};   // 品目の id → それを含む、選ばれているセット
+      allOptions().forEach(o => {
+        const cb = boxes[o.optionId];
+        if (!cb || !cb.checked) return;
+        includesOf(o).forEach(id => { if (!inSet[id]) inSet[id] = o; });
+      });
+      Object.keys(boxes).forEach(id => {
+        const cb = boxes[id], set = inSet[id];
+        const rowEl = cb.closest('.opt-row');
+        const note = rowEl ? rowEl.querySelector('.opt-inset') : null;
+        if (set) cb.checked = false;
+        cb.disabled = !!set;
+        if (rowEl) rowEl.classList.toggle('is-disabled', !!set);
+        if (note) { note.hidden = !set; note.textContent = set ? tt('inSet')(shortName(set)) : ''; }
+      });
+    }
+    // 引き継いだ選択 (予約途中の内容) に矛盾があれば直す: 同じグループ (補償) は最初の1つ、セットと中の品目はセットを残す
+    function normalizeChecks() {
+      const used = {};
+      document.querySelectorAll('#opt-area [data-opt]').forEach(cb => {
+        const g = cb.dataset.group;
+        if (!g || !cb.checked) return;
+        if (used[g]) cb.checked = false; else used[g] = true;
+      });
+      applyIncludes();
     }
     function recalcOptions() {
-      const ids = [...document.querySelectorAll('[data-opt]:checked')].map(c => c.dataset.opt);
-      const all = options.common.concat(options.specific);
-      selectedOptions = all.filter(o => ids.indexOf(o.optionId) >= 0);
+      const ids = [...document.querySelectorAll('#opt-area [data-opt]:checked')].map(c => c.dataset.opt);
+      selectedOptions = allOptions().filter(o => ids.indexOf(o.optionId) >= 0);
     }
 
     function initInputs() {
@@ -275,7 +341,8 @@
       let pending = null;
       try { pending = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null'); } catch (e) { pending = null; }
       if (pending && !pending.done && pending.assetId === asset.assetId && Array.isArray(pending.optionIds)) {
-        document.querySelectorAll('[data-opt]').forEach(cb => { cb.checked = pending.optionIds.indexOf(cb.dataset.opt) >= 0; });
+        document.querySelectorAll('#opt-area [data-opt]').forEach(cb => { cb.checked = pending.optionIds.indexOf(cb.dataset.opt) >= 0; });
+        normalizeChecks();
       }
     }
     // 出発日時を動かしたら、返却日時も同じ利用時間だけずらす (返却が出発より前にならないように)
@@ -376,7 +443,14 @@
         }
         if (my !== checkSeq) return;   // 入力が変わった後の古い結果は捨てる
         const reasons = (res && res.availability && res.availability.reasons) || [];
-        if (reasons.length) {
+        const qErrors = (res && res.quote && res.quote.ok === false && res.quote.errors) || [];
+        if (qErrors.length) {
+          // サーバーの料金計算で止まった (同時に選べないオプションなど。サーバーは DB の設定で判定する)
+          setAvail(false);
+          showReason(B.errorMessage(qErrors[0]));
+          $('#book-btn').disabled = true;
+          showCheck('');
+        } else if (reasons.length) {
           setAvail(false);
           showReason(B.errorMessage(reasons[0]));
           $('#book-btn').disabled = true;

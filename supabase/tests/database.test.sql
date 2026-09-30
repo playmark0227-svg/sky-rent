@@ -125,10 +125,69 @@ select throws_ok(
   'P0001', 'INVOICE_NOT_ALLOWED', '請求書払いは許可された会員だけ');
 
 -- ---------------------------------------------------------------------
+-- 装備オプション (総合料金表 2026年6月改定版)・法務文書の版
+-- ---------------------------------------------------------------------
+select is((select count(*)::int from public.options), 15, 'オプションは補償4 + 装備11');
+select results_eq(
+  $$select id, name, price, price_short, price_type, category_ids, kind, exclusive_group, active, sort, extra ->> 'description'
+      from public.options where kind = 'other' order by sort$$,
+  $$values ('OP001', 'ポータブル冷蔵冷凍庫',       3300,  null::int, 'per_day', null::text[], 'other', null::text, true, 11, 'アイリスオーヤマ IPD-4A-B'),
+           ('OP002', '電子レンジ',                 2200,  null, 'per_day', null, 'other', null, true, 12, 'パナソニック NE-FL1C-W'),
+           ('OP003', 'サーキュレーター',           1100,  null, 'per_day', null, 'other', null, true, 13, 'アイリスオーヤマ KCF-SDC15T-EC-W'),
+           ('OP004', 'ポータブル電源',             3300,  null, 'per_day', null, 'other', null, true, 14, 'Jackery JE-1800A'),
+           ('OP005', 'ドラムリール',               1100,  null, 'per_day', null, 'other', null, true, 15, '日動工業 NR-304D-S'),
+           ('OP006', 'カセットコンロ',             1100,  null, 'per_day', null, 'other', null, true, 16, '岩谷産業 CB-ODX1-BK'),
+           ('OP007', 'カセットボンベ',             1100,  null, 'per_day', null, 'other', null, true, 17, '岩谷産業 CB-250-OR'),
+           ('OP008', '炊飯器',                     2200,  null, 'per_day', null, 'other', null, true, 18, 'タイガー魔法瓶 JPV-Y180KV'),
+           ('OP009', '電気ケトル',                 1100,  null, 'per_day', null, 'other', null, true, 19, '象印マホービン CK-VB15 BM'),
+           ('OP010', '家電セット (上記9点まとめ)', 11000, null, 'per_day', null, 'other', null, true, 20, 'ポータブル冷蔵冷凍庫〜電気ケトルの9点をまとめたセット'),
+           ('OP011', '集客セット',                 1100,  null, 'per_day', null, 'other', null, true, 21, 'ホワイトボード・マグネット・ペン')$$,
+  '装備オプション11品目: 全車共通・24時間ごと (短時間料金なし)・補償の後に並ぶ');
+select is((select extra -> 'includes' from public.options where id = 'OP010'),
+  '["OP001","OP002","OP003","OP004","OP005","OP006","OP007","OP008","OP009"]'::jsonb, '家電セットは含まれる9品目を extra.includes に持つ');
+select is((select count(*)::int from public.options where extra ? 'includes'), 1, 'includes を持つのは家電セットだけ');
+select col_default_is('public', 'options', 'kind', 'other'::text, '種類を指定せずに追加したオプションは装備 (other) になる (補償は料金表の4件だけ)');
+
+select lives_ok(
+  $$select public.create_reservation_tx(jsonb_build_object(
+    'idempotency_key', 'k-equipment-00001', 'request_hash', 'x', 'asset_id', 'V001', 'option_ids', jsonb_build_array('OP101', 'OP010', 'OP011'),
+    'start_at', current_setting('t.base')::timestamptz + interval '70 days', 'end_at', current_setting('t.base')::timestamptz + interval '71 days',
+    'customer', jsonb_build_object('name', 'X', 'email', 'x@example.com', 'phone', '0'), 'total', 1))$$,
+  '装備オプションはレンタカーに付けられる (補償と一緒でもよい)');
+select lives_ok(
+  $$select public.create_reservation_tx(jsonb_build_object(
+    'idempotency_key', 'k-equipment-00002', 'request_hash', 'x', 'asset_id', 'K001', 'option_ids', jsonb_build_array('OP201', 'OP001', 'OP004'),
+    'start_at', current_setting('t.base')::timestamptz + interval '70 days', 'end_at', current_setting('t.base')::timestamptz + interval '71 days',
+    'customer', jsonb_build_object('name', 'X', 'email', 'x@example.com', 'phone', '0'), 'total', 1))$$,
+  '装備オプションはキッチンカーにも付けられる');
+
+select results_eq(
+  $$select id, version, effective_at from public.legal_documents where active order by id$$,
+  $$values ('cancel', '2026-08', '2026-08-01'::date), ('clause', '2026-08', '2026-08-01'::date),
+           ('law', '2026-10', '2026-10-01'::date), ('privacy', '2026-08', '2026-08-01'::date)$$,
+  '特定商取引法に基づく表記だけ 2026-10 版 (予約の同意の対象 = 約款・キャンセル規定・プライバシーポリシーは据え置き)');
+
+-- 公開カタログに出してよい extra の項目は説明と includes (配列のときだけ) — 社内用の項目を足しても出ない
+update public.options set extra = extra || '{"memo":"社内メモ","supplier":"仕入れ先"}'::jsonb where id = 'OP001';
+update public.options set extra = extra || '{"includes":"OP001"}'::jsonb where id = 'OP011';
+
+-- ---------------------------------------------------------------------
 -- 匿名 (anon)
 -- ---------------------------------------------------------------------
 set local role anon;
 set local request.jwt.claims to '{"role":"anon"}';
+select is((select jsonb_agg(o ->> 'id') from jsonb_array_elements(public.public_catalog() -> 'options') o),
+  '["OP101","OP102","OP201","OP202","OP001","OP002","OP003","OP004","OP005","OP006","OP007","OP008","OP009","OP010","OP011"]'::jsonb,
+  '公開カタログのオプションは15件、補償が先・装備が後 (sort 順)');
+select is((select o -> 'extra' -> 'includes' from jsonb_array_elements(public.public_catalog() -> 'options') o where o ->> 'id' = 'OP010'),
+  '["OP001","OP002","OP003","OP004","OP005","OP006","OP007","OP008","OP009"]'::jsonb, '公開カタログは家電セットの includes を返す');
+select is((select o -> 'extra' from jsonb_array_elements(public.public_catalog() -> 'options') o where o ->> 'id' = 'OP011'),
+  '{"description":"ホワイトボード・マグネット・ペン"}'::jsonb, '配列でない includes は公開カタログに出さない');
+select is((select jsonb_agg(distinct k order by k) from jsonb_array_elements(public.public_catalog() -> 'options') o, jsonb_object_keys(o -> 'extra') k),
+  '["description","includes"]'::jsonb, '公開カタログのオプションの extra は説明と includes だけ (社内用の項目は出さない)');
+select is((select jsonb_agg(k order by k) from jsonb_object_keys(public.public_catalog() -> 'options' -> 0) k),
+  '["active","category_ids","exclusive_group","extra","id","kind","name","price","price_short","price_type","sort","updated_at"]'::jsonb,
+  '公開カタログのオプションの列は増えていない');
 select throws_ok('select count(*) from public.reservations', '42501', null, '匿名は予約を読めない');
 select throws_ok('select count(*) from public.members', '42501', null, '匿名は会員を読めない');
 select throws_ok('select count(*) from public.inquiries', '42501', null, '匿名は問い合わせを読めない');

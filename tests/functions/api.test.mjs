@@ -175,7 +175,10 @@ function coreAsset(a) {
   return { id: a.id, categoryId: a.category_id, priceHour: a.price_hour, priceDay: a.price_day, customFields: a.custom_fields || {} };
 }
 function coreOption(o) {
-  return { id: o.id, name: o.name, price: o.price, priceShort: o.price_short, priceType: o.price_type, categoryIds: o.category_ids, exclusiveGroup: o.exclusive_group };
+  return {
+    id: o.id, name: o.name, price: o.price, priceShort: o.price_short, priceType: o.price_type, categoryIds: o.category_ids, exclusiveGroup: o.exclusive_group,
+    includes: o.extra && Array.isArray(o.extra.includes) ? o.extra.includes : null
+  };
 }
 
 /** 会員を作ってログインする (メール確認済み) */
@@ -254,7 +257,10 @@ describe('見積 (/api/quote)', () => {
       { assetId: 'V003', start: p27.start, end: p27.end, optionIds: ['OP101'], discountType: 'student' },             // 延長+補償+割引
       { assetId: 'K001', start: jstIso(2027, 6, 12, 21), end: jstIso(2027, 6, 14, 3), optionIds: ['OP201'], discountType: 'shusei_club' }, // 土日・夜間
       { assetId: 'V004', start: jstIso(2027, 5, 1, 9), end: jstIso(2027, 5, 3, 9), optionIds: ['OP102'] },           // 繁忙期
-      { assetId: 'V001', start: jstIso(2027, 6, 9, 10), end: jstIso(2027, 6, 10, 10), optionIds: [], discountType: 'shusei_club' } // 割引の条件外
+      { assetId: 'V001', start: jstIso(2027, 6, 9, 10), end: jstIso(2027, 6, 10, 10), optionIds: [], discountType: 'shusei_club' }, // 割引の条件外
+      { assetId: 'V001', start: jstIso(2027, 6, 9, 10), end: jstIso(2027, 6, 10, 11), optionIds: ['OP101', 'OP010', 'OP011'], discountType: 'student' }, // 家電セット+補償+集客セット (25時間)
+      { assetId: 'K001', start: jstIso(2027, 6, 9, 10), end: jstIso(2027, 6, 9, 13), optionIds: ['OP001', 'OP004', 'OP201'] },      // キッチンカーに装備 (3時間でも24時間料金)
+      { assetId: 'V003', start: jstIso(2027, 6, 9, 10), end: jstIso(2027, 6, 10, 10), optionIds: ['OP002', 'OP010'] }                // 家電セットと中の品目 (OPTION_CONFLICT)
     ];
     for (const c of cases) {
       const server = await quoteOf(c);
@@ -279,6 +285,34 @@ describe('見積 (/api/quote)', () => {
     r = await call('/api/quote', { body: { assetId: 'V001', start: s.start, end: s.end, optionIds: ['OP201'] } });
     assert.equal(r.status, 400);
     assert.equal(r.json.code, 'OPTION_INVALID');
+  });
+
+  test('公開カタログ: 装備オプション11品目 (全車共通・24時間ごと) と家電セットの中身 (extra.includes)', async () => {
+    const cat = await catalog();
+    const equipment = cat.options.filter((o) => o.kind === 'other');
+    assert.deepEqual(equipment.map((o) => [o.id, o.price]), [
+      ['OP001', 3300], ['OP002', 2200], ['OP003', 1100], ['OP004', 3300], ['OP005', 1100], ['OP006', 1100],
+      ['OP007', 1100], ['OP008', 2200], ['OP009', 1100], ['OP010', 11000], ['OP011', 1100]
+    ]);
+    assert.ok(equipment.every((o) => o.price_type === 'per_day' && o.price_short === null && o.category_ids === null && o.exclusive_group === null));
+    assert.ok(equipment.every((o) => typeof o.extra.description === 'string' && o.extra.description.length > 0), '説明 (型番) がある');
+    assert.deepEqual(cat.options.find((o) => o.id === 'OP010').extra.includes, ['OP001', 'OP002', 'OP003', 'OP004', 'OP005', 'OP006', 'OP007', 'OP008', 'OP009']);
+    // 補償が先・装備が後
+    assert.deepEqual(cat.options.slice(0, 4).map((o) => o.kind), ['cover', 'cover', 'cover', 'cover']);
+  });
+
+  test('家電セット + セットに含まれる品目: 見積は quote.errors に OPTION_CONFLICT (順番が逆でも)。家電セット + 補償は通る', async () => {
+    const s = futureSlot(24, { hh: 10 });
+    for (const optionIds of [['OP010', 'OP002'], ['OP009', 'OP010'], ['OP001', 'OP002', 'OP010', 'OP101']]) {
+      const r = await call('/api/quote', { body: { assetId: 'V001', start: s.start, end: s.end, optionIds } });
+      assert.equal(r.status, 200, JSON.stringify(r.json));
+      assert.equal(r.json.quote.ok, false, optionIds.join('+'));
+      assert.deepEqual(r.json.quote.errors, ['OPTION_CONFLICT'], optionIds.join('+'));
+    }
+    for (const optionIds of [['OP010'], ['OP010', 'OP011'], ['OP101', 'OP010'], ['OP001', 'OP002', 'OP011']]) {
+      const q = await quoteOf({ assetId: 'V001', start: s.start, end: s.end, optionIds });
+      assert.equal(q.ok, true, optionIds.join('+') + ' ' + JSON.stringify(q.errors));
+    }
   });
 });
 
@@ -399,6 +433,77 @@ describe('予約確定 (/api/reservations)', () => {
     assert.equal(r.json.quote.total, q.total);
     const { data } = await sr.from('reservations').select('id').eq('idempotency_key', idem);
     assert.equal(data.length, 0);
+  });
+
+  test('家電セット + セットに含まれる品目 → 400 OPTION_CONFLICT (順番が逆でも)・保存もメールもしない', async () => {
+    const s = futureSlot(24, { hh: 10 });
+    for (const optionIds of [['OP010', 'OP002'], ['OP002', 'OP010']]) {
+      const idem = key('conflict');
+      const email = mail('conflict');
+      // 画面が別の計算で出した金額 (家電セット + 電子レンジ) を送ってきても通さない
+      const r = await reserve({
+        assetId: 'V001', start: s.start, end: s.end, optionIds, idempotencyKey: idem,
+        customer: { name: '重複 三郎', kana: '', email, phone: '090-5555-6666', company: '' }
+      }, { expectedTotal: 7700 + 11000 + 2200 });
+      assert.equal(r.status, 400, JSON.stringify(r.json));
+      assert.equal(r.json.code, 'OPTION_CONFLICT');
+      assert.equal(r.json.message, '同時に選べないオプションが選ばれています。補償は1つまで、家電セットに含まれる品目は個別に追加できません。');
+      assert.deepEqual(r.json.quote.errors, ['OPTION_CONFLICT']);
+      assert.deepEqual(r.json.fields, { optionIds: '同時に選べないオプションが選ばれています。' });
+      const { data } = await sr.from('reservations').select('id').eq('idempotency_key', idem);
+      assert.equal(data.length, 0, '保存された');
+      assert.equal((await emailsTo(email)).length, 0, 'メールが送られた');
+    }
+    // 補償2つも従来どおり
+    const r = await reserve({ assetId: 'V001', start: s.start, end: s.end, optionIds: ['OP101', 'OP102'] }, { expectedTotal: 1 });
+    assert.equal(r.status, 400);
+    assert.equal(r.json.code, 'OPTION_CONFLICT');
+    assert.ok(r.json.fields && r.json.fields.optionIds);
+  });
+
+  test('家電セット + CDW + 集客セット → 合計・内訳・保存したオプション・メール (お客様・店舗) が正しい', async () => {
+    const s = futureSlot(26, { hh: 10 });  // 24時間 + 2時間 (装備は ×2、CDW は 24時間 + 短時間料金)
+    const email = mail('equip');
+    const optionIds = ['OP101', 'OP010', 'OP011'];
+    const r = await reserve({
+      assetId: 'V001', start: s.start, end: s.end, optionIds,
+      customer: { name: '装備 五郎', kana: 'ソウビ ゴロウ', email, phone: '090-7777-8888', company: '' }
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.json));
+    const { reservation } = r.json;
+    const lines = reservation.price.lines;
+    const amountOf = (id) => lines.find((l) => l.code === 'option' && l.optionId === id).amount;
+    assert.equal(amountOf('OP101'), 1650 + 1100);
+    assert.equal(amountOf('OP010'), 11000 * 2);
+    assert.equal(amountOf('OP011'), 1100 * 2);
+    assert.equal(reservation.price.base, 7700 + 2 * 1100);
+    // 割増 (土日祝など) は日によるので、DB のカタログで計算した値と比べる
+    const cat = await catalog();
+    const local = Core.quote({
+      asset: coreAsset(cat.assets.find((a) => a.id === 'V001')), start: s.start, end: s.end,
+      options: optionIds.map((id) => coreOption(cat.options.find((o) => o.id === id))), rules: cat.settings.pricing_rules
+    });
+    assert.equal(local.ok, true);
+    assert.equal(reservation.total, local.total);
+    assert.equal(reservation.total, lines.reduce((sum, l) => sum + l.amount, 0));
+
+    const { data: row } = await sr.from('reservations').select('option_ids, options, total').eq('id', reservation.id).single();
+    assert.deepEqual(row.option_ids, optionIds);
+    assert.deepEqual(row.options.map((o) => [o.optionId, o.name, o.price]), [
+      ['OP101', '免責補償制度 (CDW)', 1650], ['OP010', '家電セット (上記9点まとめ)', 11000], ['OP011', '集客セット', 1100]
+    ]);
+    assert.equal(row.total, local.total);
+
+    const optionLine = 'オプション: 免責補償制度 (CDW)、家電セット (上記9点まとめ)、集客セット';
+    const mine = await emailsTo(email);
+    assert.equal(mine.length, 1);
+    for (const needle of [optionLine, '家電セット (上記9点まとめ) (24時間 × 1 + 2時間)　¥22,000', '集客セット (24時間 × 1 + 2時間)　¥2,200',
+      '免責補償制度 (CDW) (24時間 × 1 + 2時間・短時間料金)　¥2,750', '合計 (税込)　¥' + local.total.toLocaleString('en-US')]) {
+      assert.ok(mine[0].text.includes(needle), 'お客様メールに「' + needle + '」がありません');
+    }
+    const shop = (await emailsAbout(reservation.id)).filter((e) => e.to.includes(SHOP_EMAIL));
+    assert.equal(shop.length, 1);
+    assert.ok(shop[0].text.includes(optionLine), '店舗宛てにオプションの一覧がありません');
   });
 
   test('必須の同意が無い・版が古い → CONSENT_REQUIRED (保存されない)', async () => {
@@ -731,8 +836,10 @@ describe('メール送信の失敗と再送 (worker)', () => {
     w = await call('/worker', { body: {}, token: ANON, headers: { 'x-worker-secret': 'wrong-secret-value-0000' } });
     assert.equal(w.status, 401);
 
-    // 再試行の時刻を今にして worker を実行 → 送信される
-    await sr.from('outbox').update({ next_attempt_at: new Date().toISOString() }).eq('ref_id', id).eq('status', 'failed');
+    // 再試行の時刻を過去にして worker を実行 → 送信される
+    //   (「今」にすると、Edge Function の実行環境 (Docker) の時計がこのマシンより数十ミリ秒遅いだけで
+    //    まだ期限前と判定されて拾われない。1分前にしておく)
+    await sr.from('outbox').update({ next_attempt_at: new Date(Date.now() - 60e3).toISOString() }).eq('ref_id', id).eq('status', 'failed');
     w = await call('/worker', { body: { refIds: [id] }, token: ANON, headers: { 'x-worker-secret': WORKER_SECRET } });
     assert.equal(w.status, 200, JSON.stringify(w.json));
     assert.ok(w.json.results.filter((x) => x.template !== 'gcal_sync').every((x) => x.status === 'sent'), JSON.stringify(w.json.results));

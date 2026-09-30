@@ -7,6 +7,7 @@
  *
  *   - デモモード: jsdom でページを開き、日本時間の扱い・見積の行・空きの理由と候補・最終確認画面の表示事項・
  *     同意・二重送信防止・完了画面を確かめる。
+ *     装備オプション: 補償 (先) と装備 (後) の分け方・家電セットと中の9品目は同時に選べない・確認画面の並び。
  *   - 本番モード: localStorage['sky-rent.configOverride'] でローカル Supabase + 起動中の Edge Functions に接続。
  *     予約を実際に確定し (PRICE_CHANGED → 再確認 → 確定 / メール送信失敗)、最後に API でキャンセルする。
  *     担当者の予定 (Google カレンダー) は /api/availability・/api/quote の応答を差し替えて確かめる
@@ -621,6 +622,254 @@ describe('D1 デモモード: 予約手続き (booking.html)', { skip: NO_JSDOM 
   });
 });
 
+// =====================================================================
+// 装備オプション (2026-10 再開): 補償と装備に分けた表示・家電セットと中の品目は同時に選べない
+// =====================================================================
+const EQUIP_IDS = ['OP001', 'OP002', 'OP003', 'OP004', 'OP005', 'OP006', 'OP007', 'OP008', 'OP009', 'OP010', 'OP011'];
+const SET_ITEMS = EQUIP_IDS.slice(0, 9);
+// 総合料金表 (2026年6月改定版) の24時間あたりの料金
+const EQUIP_PRICE = { OP001: 3300, OP002: 2200, OP003: 1100, OP004: 3300, OP005: 1100, OP006: 1100, OP007: 1100, OP008: 2200, OP009: 1100, OP010: 11000, OP011: 1100 };
+
+describe('D1 デモモード: 装備オプション (detail.html / booking.html)', { skip: NO_JSDOM }, () => {
+  const yenStr = n => '¥' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const groupIds = (page, kind) => page.$$('#opt-area .opt-group[data-kind="' + kind + '"] [data-opt]').map(c => c.dataset.opt);
+  const jstIsoOf = (page, sel) => page.window.SkyRentBackend.jst.fromInput(page.$(sel).value);
+
+  test('detail.html: 補償オプション (先) と装備オプション (後・11件) に分けて表示・型番・24時間ごとの料金', async () => {
+    const page = openPage('detail.html?id=V003');
+    try {
+      assert.equal(await page.ready(8000), true);
+      await waitFor(() => page.$$('[data-opt]').length >= 13, 3000);
+      const groups = page.$$('#opt-area .opt-group');
+      deq(groups.map(g => g.dataset.kind), ['cover', 'equip'], '補償 → 装備 の順になっていない');
+      deq(groups.map(g => g.querySelector('.opt-group-title').textContent), ['補償オプション', '装備オプション']);
+      deq(groupIds(page, 'cover'), ['OP101', 'OP102']);
+      deq(groupIds(page, 'equip'), EQUIP_IDS);
+      assert.match(groups[0].querySelector('.opt-group-note').textContent, /1つだけ/);
+      assert.match(groups[1].querySelector('.opt-group-note').textContent, /全車共通.*24時間ごと/);
+      // 名前・型番 (説明)・料金 /24時間
+      const row = id => page.$('#opt-area .opt-row[data-row="' + id + '"]');
+      assert.match(row('OP001').querySelector('.on').textContent, /ポータブル冷蔵冷凍庫.*アイリスオーヤマ IPD-4A-B/);
+      assert.match(row('OP004').querySelector('.on').textContent, /Jackery JE-1800A/);
+      assert.match(row('OP011').querySelector('.on').textContent, /集客セット.*ホワイトボード・マグネット・ペン/);
+      EQUIP_IDS.forEach(id => {
+        assert.equal(row(id).querySelector('.op').textContent, yenStr(EQUIP_PRICE[id]) + ' /24時間', id + ' の料金表示');
+        assert.equal(row(id).querySelector('.opt-inset').hidden, true);
+      });
+      // 装備には短時間料金が無い (補償の CDW には「6時間以内は」がある)
+      assert.match(row('OP101').textContent, /時間以内は ¥1,100/);
+      assert.doesNotMatch(row('OP001').textContent, /時間以内は/);
+
+      // 平日 10:00〜翌 11:00 (25時間) → 装備は 24時間 × 2 回分
+      const d = weekdayOffset(40, CORE);
+      setValue(page, '#p-start', jstInput(jstAt(d, 10)));
+      setValue(page, '#p-end', jstInput(jstAt(d + 1, 11)));
+      check(page, '[data-opt="OP004"]', true);
+      check(page, '[data-opt="OP011"]', true);
+      let lines = page.$$('#p-lines .pl').map(x => x.textContent);
+      assert.ok(lines.some(l => /ポータブル電源 \(24時間 × 1 \+ 1時間\)/.test(l) && l.indexOf('¥6,600') >= 0), 'ポータブル電源 ×2: ' + lines.join(' | '));
+      assert.ok(lines.some(l => /集客セット/.test(l) && l.indexOf('¥2,200') >= 0), '集客セット ×2: ' + lines.join(' | '));
+      // 6時間以内でも24時間分 (短時間料金なし)
+      setValue(page, '#p-end', jstInput(jstAt(d, 14)));
+      lines = page.$$('#p-lines .pl').map(x => x.textContent);
+      assert.ok(lines.some(l => /ポータブル電源 \(24時間まで\)/.test(l) && l.indexOf('¥3,300') >= 0), '4時間でも24時間分: ' + lines.join(' | '));
+      const q = page.window.SkyRentPricing.quote({ assetId: 'V003', start: jstIsoOf(page, '#p-start'), end: jstIsoOf(page, '#p-end'), optionIds: ['OP004', 'OP011'] });
+      assert.equal(page.text('#p-total'), yenStr(q.total));
+      assert.equal(page.$('#book-btn').disabled, false);
+      assertClean(page, 'detail-equip');
+    } finally { page.close(); }
+  });
+
+  test('detail.html: 家電セットを選ぶと9品目のチェックを外して選べなくする / 外すと元に戻る / 予約に進むとセットだけ送る', async () => {
+    const page = openPage('detail.html?id=V001');
+    try {
+      assert.equal(await page.ready(8000), true);
+      await waitFor(() => page.$$('[data-opt]').length >= 13, 3000);
+      const d = weekdayOffset(45, CORE);
+      setValue(page, '#p-start', jstInput(jstAt(d, 10)));
+      setValue(page, '#p-end', jstInput(jstAt(d + 1, 10)));
+      const box = id => page.$('[data-opt="' + id + '"]');
+      check(page, '[data-opt="OP001"]', true);
+      check(page, '[data-opt="OP008"]', true);
+      check(page, '[data-opt="OP011"]', true);
+      // 家電セットを選ぶ → 9品目は外れて無効・「家電セットに含まれています」
+      check(page, '[data-opt="OP010"]', true);
+      SET_ITEMS.forEach(id => {
+        assert.equal(box(id).checked, false, id + ' のチェックが外れない');
+        assert.equal(box(id).disabled, true, id + ' が選べてしまう');
+        const note = page.$('.opt-row[data-row="' + id + '"] .opt-inset');
+        assert.equal(note.hidden, false);
+        assert.equal(note.textContent, '家電セットに含まれています');
+        assert.ok(page.$('.opt-row[data-row="' + id + '"]').classList.contains('is-disabled'));
+      });
+      // セットに含まれない集客セット・補償はそのまま
+      assert.equal(box('OP011').checked, true);
+      assert.equal(box('OP011').disabled, false);
+      assert.equal(box('OP101').disabled, false);
+      let lines = page.$$('#p-lines .pl').map(x => x.textContent);
+      assert.ok(lines.some(l => /家電セット \(上記9点まとめ\) \(24時間 × 1\)/.test(l) && l.indexOf('¥11,000') >= 0), '家電セットの行: ' + lines.join(' | '));
+      assert.ok(!lines.some(l => /ポータブル冷蔵冷凍庫|炊飯器/.test(l)), 'セットの品目が二重に計上されている: ' + lines.join(' | '));
+      assert.equal(page.$('#p-reason').hidden, true, page.text('#p-reason'));
+      assert.equal(page.$('#book-btn').disabled, false);
+
+      // 予約に進む → 送るのはセットと集客セットだけ
+      page.$('#book-btn').click();
+      deq(JSON.parse(page.window.sessionStorage.getItem(PENDING)).optionIds, ['OP010', 'OP011']);
+
+      // セットを外す → 9品目はまた選べる (チェックは外れたまま)
+      check(page, '[data-opt="OP010"]', false);
+      SET_ITEMS.forEach(id => {
+        assert.equal(box(id).disabled, false, id + ' が選べるように戻らない');
+        assert.equal(box(id).checked, false);
+        assert.equal(page.$('.opt-row[data-row="' + id + '"] .opt-inset').hidden, true);
+        assert.ok(!page.$('.opt-row[data-row="' + id + '"]').classList.contains('is-disabled'));
+      });
+      check(page, '[data-opt="OP002"]', true);
+      lines = page.$$('#p-lines .pl').map(x => x.textContent);
+      assert.ok(lines.some(l => /電子レンジ/.test(l) && l.indexOf('¥2,200') >= 0));
+      assert.ok(!lines.some(l => /家電セット/.test(l)));
+      // 英語表示に切り替えても選択は残る・見出しは Coverage / Equipment
+      check(page, '[data-opt="OP010"]', true);
+      page.window.SkyRentI18n.setLang('en');
+      await sleep(20);
+      deq(page.$$('#opt-area .opt-group-title').map(x => x.textContent), ['Coverage', 'Equipment']);
+      assert.equal(box('OP010').checked, true);
+      assert.equal(box('OP001').disabled, true);
+      assert.match(page.text('.opt-row[data-row="OP001"] .opt-inset'), /^Included in the 家電セット$/);
+      assertClean(page, 'detail-set', true);
+    } finally { page.close(); }
+  });
+
+  test('detail.html: 引き継いだ選択に矛盾があれば直す (補償は1つ・セットと中の品目はセットを残す) / キッチンカーにも装備', async () => {
+    const d = weekdayOffset(50, CORE);
+    const start = jstAt(d, 10);
+    const pending = JSON.stringify({ assetId: 'V003', start: new Date(start).toISOString(), end: new Date(start + DAY).toISOString(), quantity: 1, optionIds: ['OP101', 'OP102', 'OP001', 'OP010', 'OP009', 'OP011'] });
+    const page = openPage('detail.html?id=V003&start=' + jstInput(start) + '&end=' + jstInput(start + DAY), { session: { [PENDING]: pending } });
+    try {
+      assert.equal(await page.ready(8000), true);
+      await waitFor(() => page.$$('[data-opt]').length >= 13, 3000);
+      const checked = page.$$('#opt-area [data-opt]:checked').map(c => c.dataset.opt);
+      deq(checked, ['OP101', 'OP010', 'OP011']);
+      assert.equal(page.$('[data-opt="OP001"]').disabled, true);
+      assert.equal(page.$('[data-opt="OP009"]').disabled, true);
+      assert.equal(page.$('#p-reason').hidden, true, '矛盾したまま: ' + page.text('#p-reason'));
+      assert.equal(page.$('#book-btn').disabled, false);
+      const lines = page.$$('#p-lines .pl').map(x => x.textContent);
+      assert.equal(lines.filter(l => /家電セット|電気ケトル|ポータブル冷蔵冷凍庫/.test(l)).length, 1, lines.join(' | '));
+      assertClean(page, 'detail-pending');
+    } finally { page.close(); }
+
+    // キッチンカー: 補償は OP201/OP202、装備は同じ11件
+    const k = openPage('detail.html?id=K001');
+    try {
+      assert.equal(await k.ready(8000), true);
+      await waitFor(() => k.$$('[data-opt]').length >= 13, 3000);
+      deq(groupIds(k, 'cover'), ['OP201', 'OP202']);
+      deq(groupIds(k, 'equip'), EQUIP_IDS);
+      assertClean(k, 'detail-kitchen');
+    } finally { k.close(); }
+  });
+
+  function pendingFor(assetId, startMs, hours, optionIds) {
+    return JSON.stringify({ assetId: assetId, start: new Date(startMs).toISOString(), end: new Date(startMs + hours * HOUR).toISOString(), quantity: 1, optionIds: optionIds });
+  }
+  function fillAndConfirm(page) {
+    setValue(page, '#f-name', 'テスト 装備');
+    setValue(page, '#f-email', 'equip@example.com');
+    setValue(page, '#f-phone', '090-1234-5678');
+    check(page, '#f-licconf', true);
+    page.$('#cust-form').dispatchEvent(new page.window.Event('submit', { cancelable: true, bubbles: true }));
+  }
+
+  test('booking.html: 確認画面に補償・装備を分けて並べる (件数が多くても)・料金の行・完了画面と予約データ', async () => {
+    const d = weekdayOffset(60, CORE);
+    const start = jstAt(d, 10);
+    const ids = ['OP011', 'OP102', 'OP001', 'OP002', 'OP003', 'OP004', 'OP005', 'OP006', 'OP007', 'OP008', 'OP009'];
+    const page = openPage('booking.html', { session: { [PENDING]: pendingFor('V001', start, 26, ids) } });
+    try {
+      assert.equal(await page.ready(8000), true);
+      await waitFor(() => page.$('#f-licconf'), 3000);
+      assert.equal(page.$('#input-error').hidden, true, page.text('#input-error'));
+      fillAndConfirm(page);
+      await waitFor(() => !page.$('#pane-confirm').hidden, 3000);
+      assert.equal(page.$('#pane-confirm').hidden, false, '確認画面に進まない: ' + page.text('#input-error'));
+      const ths = page.$$('#confirm-body .bk-table th').map(x => x.textContent);
+      assert.ok(ths.indexOf('補償オプション') >= 0 && ths.indexOf('装備オプション') > ths.indexOf('補償オプション'), ths.join(' | '));
+      const cells = page.$$('#confirm-body td[data-opt-group]');
+      assert.equal(cells.length, 2);
+      assert.match(cells[0].textContent, /安心保証コース \(PAP\)/);
+      // 装備は sort 順 (冷蔵冷凍庫 … 電気ケトル → 集客セット) で1行ずつ・型番つき
+      const names = cells[1].innerHTML.split('<br>').map(h => h.replace(/<[^>]+>/g, ''));
+      assert.equal(names.length, 10);
+      assert.match(names[0], /^ポータブル冷蔵冷凍庫 \(アイリスオーヤマ IPD-4A-B\)$/);
+      assert.match(names[9], /^集客セット/);
+      // 料金: 装備は 24時間 × 1 + 2時間 → 2回分
+      const q = page.window.SkyRentPricing.quote({ assetId: 'V001', start: new Date(start).toISOString(), end: new Date(start + 26 * HOUR).toISOString(), optionIds: ids });
+      assert.equal(q.ok, true, q.errors.join());
+      assert.equal(page.text('#confirm-total'), page.window.SkyRentPricing.yen(q.total));
+      const body = page.text('#confirm-body');
+      assert.ok(body.indexOf('ポータブル冷蔵冷凍庫 (24時間 × 1 + 2時間)') >= 0);
+      assert.equal(q.lines.filter(l => l.code === 'option').length, 11);
+      const equipSum = ids.filter(id => EQUIP_PRICE[id]).reduce((s, id) => s + EQUIP_PRICE[id] * 2, 0);
+      assert.equal(q.lines.filter(l => l.code === 'option' && EQUIP_PRICE[l.optionId]).reduce((s, l) => s + l.amount, 0), equipSum);
+      // 確定 → 完了画面の内訳・予約データのオプション
+      page.$$('#consent-box input[data-doc]').forEach(c => { c.checked = true; });
+      page.$('#btn-submit').click();
+      await waitFor(() => !page.$('#pane-done').hidden, 3000);
+      assert.equal(page.$('#pane-done').hidden, false, page.text('#confirm-error'));
+      const done = page.text('#done-detail');
+      ['ポータブル冷蔵冷凍庫', '電気ケトル', '集客セット', '安心保証コース'].forEach(n => assert.ok(done.indexOf(n) >= 0, '完了画面に ' + n + ' が無い'));
+      const r = page.window.SkyRentStore.list('reservations').slice(-1)[0];
+      deq(r.optionIds.slice().sort(), ids.slice().sort());
+      assert.equal(r.options.length, 11);
+      assert.equal(r.total, q.total);
+      assertClean(page, 'booking-equip');
+    } finally { page.close(); }
+  });
+
+  test('booking.html: 家電セットと中の品目が一緒に来たら理由と「オプションを選び直す」 / 確定時の OPTION_CONFLICT も同じ', async () => {
+    const start = jstAt(70, 10);
+    const page = openPage('booking.html', { session: { [PENDING]: pendingFor('V001', start, 24, ['OP010', 'OP001']) } });
+    try {
+      assert.equal(await page.ready(8000), true);
+      await waitFor(() => !page.$('#input-error').hidden, 3000);
+      const msg = page.window.SkyRentBackend.errorMessage('OPTION_CONFLICT');
+      assert.match(msg, /家電セットに含まれる品目は個別に追加できません/);
+      assert.match(page.text('#input-error'), /同時に選べないオプション/);
+      const a = page.$('#input-error a[data-act="reoption"]');
+      assert.ok(a, '「オプションを選び直す」が無い');
+      assert.equal(a.textContent, 'オプションを選び直す');
+      assert.match(a.getAttribute('href'), /^detail\.html\?id=V001&start=/);
+      // そのまま進もうとしても確認画面には進まない
+      fillAndConfirm(page);
+      await sleep(100);
+      assert.equal(page.$('#pane-confirm').hidden, true);
+      assert.match(page.text('#input-error'), /同時に選べないオプション/);
+      assert.ok(page.$('#input-error a[data-act="reoption"]'));
+      assertClean(page, 'booking-conflict');
+    } finally { page.close(); }
+
+    // 確定時にサーバーが OPTION_CONFLICT を返した場合 (例: 管理画面でセットの内容が変わった)
+    const page2 = openPage('booking.html', { session: { [PENDING]: pendingFor('V001', start, 24, ['OP010', 'OP011']) } });
+    try {
+      assert.equal(await page2.ready(8000), true);
+      await waitFor(() => page2.$('#f-licconf'), 3000);
+      const B = page2.window.SkyRentBackend;
+      fillAndConfirm(page2);
+      await waitFor(() => !page2.$('#pane-confirm').hidden, 3000);
+      assert.equal(page2.$('#pane-confirm').hidden, false, page2.text('#input-error'));
+      B.createReservation = async () => { const e = new Error(B.errorMessage('OPTION_CONFLICT')); e.code = 'OPTION_CONFLICT'; throw e; };
+      page2.$$('#consent-box input[data-doc]').forEach(c => { c.checked = true; });
+      page2.$('#btn-submit').click();
+      await waitFor(() => !page2.$('#confirm-error').hidden, 2000);
+      assert.match(page2.text('#confirm-error'), /家電セットに含まれる品目は個別に追加できません/);
+      assert.ok(page2.$('#confirm-error a[data-act="reoption"]'), '確定時のエラーに「オプションを選び直す」が無い');
+      assert.equal(page2.$('#confirm-error [data-act="back-input"]'), null, 'オプションを選べない入力画面へ戻そうとしている');
+      assertClean(page2, 'booking-conflict-submit');
+    } finally { page2.close(); }
+  });
+});
+
 describe('D1 デモモード: トップ (index.html / lp.js)', { skip: NO_JSDOM }, () => {
   test('SEO・テーマカラー・GA は skyrent:ready 後に SkyRentStore の settings.* から反映 / 検索パネルは日本時間', async () => {
     const page = openPage('index.html', {
@@ -942,5 +1191,131 @@ describe('D1 本番モード: ローカル Supabase + Edge Functions', { skip: N
         assertClean(page, 'live-status-' + status);
       } finally { page.close(); }
     }
+  });
+
+  // 装備オプション (DB の options: kind='other'・extra.description / extra.includes)
+  test('detail / booking (本番): 装備オプション11件を public_catalog から表示・家電セットで9品目を無効化・装備つきで確定 → キャンセル', async t => {
+    if (!up) return t.skip('ローカル Supabase / Edge Functions に接続できません');
+    const cat = await (await fetch(LOCAL_API + '/rest/v1/rpc/public_catalog', { method: 'POST', headers: { apikey: ANON_KEY, 'Content-Type': 'application/json' }, body: '{}' })).json();
+    const dbEquip = (cat.options || []).filter(o => o.kind === 'other').map(o => o.id);
+    deq(dbEquip, EQUIP_IDS, 'DB の装備オプションが11件でない (マイグレーション・seed を確認)');
+    const start = await freeSlot('V004', 25);
+    const page = openPage('detail.html?id=V004&start=' + jstInput(start) + '&end=' + jstInput(start + 25 * HOUR), { mode: 'live' });
+    try {
+      assert.equal(await page.ready(20000), true);
+      await waitFor(() => page.$$('#opt-area [data-opt]').length >= 13, 5000);
+      deq(page.$$('#opt-area .opt-group[data-kind="equip"] [data-opt]').map(c => c.dataset.opt), EQUIP_IDS);
+      deq(page.$$('#opt-area .opt-group[data-kind="cover"] [data-opt]').map(c => c.dataset.opt), ['OP101', 'OP102']);
+      assert.match(page.text('.opt-row[data-row="OP008"]'), /タイガー魔法瓶 JPV-Y180KV/);
+      check(page, '[data-opt="OP010"]', true);
+      SET_ITEMS.forEach(id => assert.equal(page.$('[data-opt="' + id + '"]').disabled, true, id + ' が選べてしまう (includes が画面に届いていない)'));
+      check(page, '[data-opt="OP011"]', true);
+      check(page, '[data-opt="OP101"]', true);
+      await waitFor(() => /確認しました/.test(page.text('#p-check')) || !page.$('#p-reason').hidden, 8000);
+      assert.equal(page.$('#p-reason').hidden, true, page.text('#p-reason'));
+      assert.equal(page.$('#book-btn').disabled, false);
+      page.$('#book-btn').click();
+      deq(JSON.parse(page.window.sessionStorage.getItem(PENDING)).optionIds, ['OP101', 'OP010', 'OP011']);
+      assertClean(page, 'live-detail-equip', true);
+    } finally { page.close(); }
+
+    // その内容で予約を確定 (サーバーの見積と画面の見積が同じ)
+    const tag = 'd1eq-' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+    const pending = JSON.stringify({ assetId: 'V004', start: new Date(start).toISOString(), end: new Date(start + 25 * HOUR).toISOString(), quantity: 1, optionIds: ['OP101', 'OP010', 'OP011'] });
+    const page2 = openPage('booking.html', { mode: 'live', session: { [PENDING]: pending } });
+    let lookupUrl = null;
+    try {
+      assert.equal(await page2.ready(20000), true);
+      await waitFor(() => page2.$('#f-licconf') && page2.$$('#consent-box input[data-doc]').length === 3, 5000);
+      const w = page2.window;
+      setValue(page2, '#f-name', 'テスト 装備');
+      setValue(page2, '#f-email', tag + '@example.com');
+      setValue(page2, '#f-phone', '090-0000-1234');
+      check(page2, '#f-licconf', true);
+      page2.$('#cust-form').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true }));
+      await waitFor(() => !page2.$('#pane-confirm').hidden || !page2.$('#input-error').hidden, 10000);
+      assert.equal(page2.$('#pane-confirm').hidden, false, '確認画面に進まない: ' + page2.text('#input-error'));
+      assert.equal(page2.$('#price-notice').hidden, true, 'サーバーの見積と画面の見積が違う');
+      const cells = page2.$$('#confirm-body td[data-opt-group]').map(x => x.textContent);
+      assert.match(cells[0], /免責補償制度/);
+      assert.match(cells[1], /家電セット.*集客セット/);
+      const shownTotal = page2.text('#confirm-total');
+      page2.$$('#consent-box input[data-doc]').forEach(c => { c.checked = true; });
+      page2.$('#btn-submit').click();
+      await waitFor(() => !page2.$('#pane-done').hidden || !page2.$('#confirm-error').hidden, 20000);
+      if (page2.$('#pane-done').hidden && /短時間に操作が集中/.test(page2.text('#confirm-error'))) return t.skip('レート制限 (他のテストと共有の IP) のため確定できませんでした');
+      assert.equal(page2.$('#pane-done').hidden, false, '完了画面にならない: ' + page2.text('#confirm-error'));
+      const id = page2.text('#done-id');
+      lookupUrl = page2.$('#lookup-url').value;
+      assert.match(page2.text('#done-detail'), /家電セット/);
+      const rows = await serviceSelect('reservations', 'select=id,total,option_ids,options&id=eq.' + id);
+      deq(rows[0].option_ids, ['OP101', 'OP010', 'OP011']);
+      assert.equal(w.SkyRentPricing.yen(rows[0].total), shownTotal);
+      // 家電セット ¥11,000 × 2 (25時間) が料金に入っている
+      assert.ok(rows[0].total >= 22000 + 2200, '装備の料金が入っていない: ' + rows[0].total);
+      assertClean(page2, 'live-booking-equip');
+    } finally {
+      page2.close();
+      if (lookupUrl) {
+        const c = await cancelViaApi(lookupUrl);
+        assert.equal(c && c.status, 200, 'テスト予約のキャンセルに失敗: ' + JSON.stringify(c && c.json));
+      }
+    }
+  });
+
+  test('booking.html (本番): 画面が家電セットの中身を知らなくても、サーバーが DB の includes で OPTION_CONFLICT にする → 「オプションを選び直す」', async t => {
+    if (!up) return t.skip('ローカル Supabase / Edge Functions に接続できません');
+    const start = jstAt(220 + Math.floor(Math.random() * 100), 10);
+    const pending = JSON.stringify({ assetId: 'V002', start: new Date(start).toISOString(), end: new Date(start + DAY).toISOString(), quantity: 1, optionIds: ['OP010', 'OP001'] });
+    // public_catalog の応答から家電セットの includes を消す (= クライアントの値は信用しないことを確かめる)
+    const page = openPage('booking.html', {
+      mode: 'live', session: { [PENDING]: pending },
+      fetchHook: async (url, init, next) => {
+        if (url.indexOf('/rest/v1/rpc/public_catalog') < 0) return null;
+        const j = await (await next()).json();
+        j.options = (j.options || []).map(o => o.id === 'OP010' ? Object.assign({}, o, { extra: Object.assign({}, o.extra, { includes: null }) }) : o);
+        return jsonResponse(j);
+      }
+    });
+    try {
+      assert.equal(await page.ready(20000), true);
+      await waitFor(() => page.$('#f-licconf') && page.$$('#consent-box input[data-doc]').length === 3, 5000);
+      assert.equal(page.$('#input-error').hidden, true, '画面だけでは矛盾が分からないはず: ' + page.text('#input-error'));
+      const w = page.window;
+      setValue(page, '#f-name', 'テスト 装備');
+      setValue(page, '#f-email', 'conflict-d1@example.com');
+      setValue(page, '#f-phone', '090-0000-1234');
+      check(page, '#f-licconf', true);
+      page.$('#cust-form').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true }));
+      await waitFor(() => !page.$('#pane-confirm').hidden || !page.$('#input-error').hidden, 10000);
+      if (/短時間に操作が集中/.test(page.text('#input-error'))) return t.skip('レート制限 (他のテストと共有の IP)');
+      assert.equal(page.$('#pane-confirm').hidden, true, 'サーバーが矛盾を止めていない');
+      assert.match(page.text('#input-error'), /家電セットに含まれる品目は個別に追加できません/);
+      assert.ok(page.$('#input-error a[data-act="reoption"]'));
+      assertClean(page, 'live-booking-conflict');
+    } finally { page.close(); }
+
+    // 詳細画面でも、サーバーの見積 (空き確認) が OPTION_CONFLICT なら理由を出して先へ進ませない
+    const d = openPage('detail.html?id=V002&start=' + jstInput(start) + '&end=' + jstInput(start + DAY), {
+      mode: 'live',
+      fetchHook: async (url, init, next) => {
+        if (url.indexOf('/rest/v1/rpc/public_catalog') < 0) return null;
+        const j = await (await next()).json();
+        j.options = (j.options || []).map(o => o.id === 'OP010' ? Object.assign({}, o, { extra: Object.assign({}, o.extra, { includes: null }) }) : o);
+        return jsonResponse(j);
+      }
+    });
+    try {
+      assert.equal(await d.ready(20000), true);
+      await waitFor(() => d.$$('#opt-area [data-opt]').length >= 13, 5000);
+      check(d, '[data-opt="OP010"]', true);
+      assert.equal(d.$('[data-opt="OP001"]').disabled, false, '画面は中身を知らないので選べる');
+      check(d, '[data-opt="OP001"]', true);
+      await waitFor(() => !d.$('#p-reason').hidden || /確認しました/.test(d.text('#p-check')), 8000);
+      if (/短時間に操作が集中/.test(d.text('#p-reason'))) return t.skip('レート制限 (他のテストと共有の IP)');
+      assert.match(d.text('#p-reason'), /家電セットに含まれる品目は個別に追加できません/);
+      assert.equal(d.$('#book-btn').disabled, true);
+      assertClean(d, 'live-detail-conflict');
+    } finally { d.close(); }
   });
 });

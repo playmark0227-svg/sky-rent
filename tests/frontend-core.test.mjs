@@ -210,6 +210,15 @@ async function serviceSelect(table, query) {
   return res.json();
 }
 
+// 装備オプション (総合料金表 2026年6月改定版。supabase/seed.sql と js/store.js の SEED_OPTIONS)
+const EQUIPMENT = [
+  ['OP001', 'ポータブル冷蔵冷凍庫', 3300], ['OP002', '電子レンジ', 2200], ['OP003', 'サーキュレーター', 1100],
+  ['OP004', 'ポータブル電源', 3300], ['OP005', 'ドラムリール', 1100], ['OP006', 'カセットコンロ', 1100],
+  ['OP007', 'カセットボンベ', 1100], ['OP008', '炊飯器', 2200], ['OP009', '電気ケトル', 1100],
+  ['OP010', '家電セット (上記9点まとめ)', 11000], ['OP011', '集客セット', 1100]
+];
+const EQUIPMENT_IDS = EQUIPMENT.map(e => e[0]);
+
 const NO_JSDOM = jsdom ? false : 'jsdom が見つかりません (npm install を実行してください)';
 
 // ---- 実スタッフ (二段階認証済み) を作るための小物 ----
@@ -486,6 +495,104 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
     } finally { page.close(); }
   });
 
+  test('デモのオプション: 補償4 + 装備11 (全車共通・24時間ごと)・家電セットと中の品目は同時に選べない', async () => {
+    const page = openPage('index.html');
+    try {
+      assert.equal(await page.ready(8000), true);
+      const w = page.window, S = w.SkyRentStore, B = w.SkyRentBackend;
+      assert.equal(S.DATA_VERSION, 8);
+      assert.equal(w.localStorage.getItem('sky-rent.dataVersion'), '8');
+      const opts = S.list('options');
+      deq(opts.map(o => o.optionId), ['OP101', 'OP102', 'OP201', 'OP202'].concat(EQUIPMENT_IDS));
+      const equipment = opts.filter(o => o.kind === 'other');
+      deq(equipment.map(o => [o.optionId, o.name, o.price]), EQUIPMENT);
+      assert.ok(equipment.every(o => o.priceType === 'per_day' && o.priceShort === null && o.categoryIds === null && o.exclusiveGroup === null && o.active === true),
+        '装備は全車共通・24時間ごと・短時間料金なし');
+      assert.ok(opts.every(o => typeof o.description === 'string' && o.description.length > 0), '説明 (型番など) がある');
+      assert.equal(S.findById('options', 'optionId', 'OP001').description, 'アイリスオーヤマ IPD-4A-B');
+      deq(S.findById('options', 'optionId', 'OP010').includes, EQUIPMENT_IDS.slice(0, 9));
+      assert.equal(opts.filter(o => Array.isArray(o.includes)).length, 1, 'includes を持つのは家電セットだけ');
+      // 全車共通: 一般レンタカー・キッチンカーのどちらにも出る
+      deq(S.optionsForCategory('cat-rental').common.map(o => o.optionId), EQUIPMENT_IDS);
+      deq(S.optionsForCategory('cat-kitchen').common.map(o => o.optionId), EQUIPMENT_IDS);
+      deq(S.optionsForCategory('cat-kitchen').specific.map(o => o.optionId), ['OP201', 'OP202']);
+
+      // 見積・予約 (デモ) もサーバーと同じ判定
+      const period = { assetId: 'V001', start: '2027-06-09T10:00', end: '2027-06-10T10:00' };
+      for (const optionIds of [['OP010', 'OP002'], ['OP002', 'OP010']]) {
+        const q = await B.quote(Object.assign({ optionIds }, period));
+        assert.equal(q.quote.ok, false);
+        deq(q.quote.errors, ['OPTION_CONFLICT']);
+      }
+      const bad = Object.assign({ optionIds: ['OP010', 'OP002'] }, period, {
+        idempotencyKey: 'equip-conflict-0123456789', customer: { name: '装備 太郎', kana: '', email: 'equip@example.com', phone: '090-0000-0000', company: '' },
+        paymentMethod: 'onsite', licenseConfirmed: true, note: '', expectedTotal: 7700 + 11000 + 2200
+      });
+      await assert.rejects(B.createReservation(bad), e => e.code === 'OPTION_CONFLICT' &&
+        e.message === '同時に選べないオプションが選ばれています。補償は1つまで、家電セットに含まれる品目は個別に追加できません。');
+      const good = await B.quote(Object.assign({ optionIds: ['OP101', 'OP010', 'OP011'] }, period));
+      assert.equal(good.quote.ok, true);
+      deq(good.quote.lines.filter(l => l.code === 'option').map(l => [l.optionId, l.amount]), [['OP101', 1650], ['OP010', 11000], ['OP011', 1100]]);
+      assert.equal(good.quote.total, 7700 + 1650 + 11000 + 1100);
+      assertClean(page, 'demo-options');
+    } finally { page.close(); }
+  });
+
+  test('DATA_VERSION 7 → 8: 予約・会員・編集したオプションは残し、装備オプションを足す / 6 以前は作り直す', async () => {
+    const T = '2026-12-01T01:00:00.000Z';
+    const myReservation = {
+      reservationId: 'R0099', assetId: 'V001', vehicleId: 'V001', assetName: '日産 ノート', vehicleName: '日産 ノート', categoryId: 'cat-rental',
+      locationId: 'loc-kitami', quantity: 1, customerName: '移行 太郎', customerEmail: 'migrate@example.com', customerPhone: '090', company: '',
+      memberId: null, start: T, end: '2026-12-02T01:00:00.000Z', optionIds: ['OP101'], options: [], payment: { method: 'onsite', status: 'unpaid' },
+      price: { total: 9350 }, couponId: null, status: 'confirmed', pointGranted: false, invoiceId: null, licenseConfirmed: true, note: '', createdAt: T
+    };
+    const myMember = { memberId: 'M009', name: '移行 会員', email: 'm9@example.com', password: 'Demo-1234', points: 4, coupons: [], pointHistory: [] };
+    // v7 のオプション: 補償4件 (説明文なし・CDW の料金を管理画面で変更済み) + 管理画面で追加したもの
+    const v7Options = [
+      { optionId: 'OP101', name: '免責補償制度 (CDW)', price: 1700, priceShort: 1100, priceType: 'per_day', categoryIds: ['cat-rental'], kind: 'cover', exclusiveGroup: 'cover', active: true },
+      { optionId: 'OP102', name: '安心保証コース (PAP)', price: 3300, priceShort: 2200, priceType: 'per_day', categoryIds: ['cat-rental'], kind: 'cover', exclusiveGroup: 'cover', active: true },
+      { optionId: 'OP201', name: '免責補償制度 (CDW)', price: 3300, priceShort: null, priceType: 'per_day', categoryIds: ['cat-kitchen'], kind: 'cover', exclusiveGroup: 'cover', active: true },
+      { optionId: 'OP202', name: '安心保証コース (PAP)', price: 6600, priceShort: null, priceType: 'per_day', categoryIds: ['cat-kitchen'], kind: 'cover', exclusiveGroup: 'cover', active: false },
+      { optionId: 'OP0001', name: 'スタッドレスタイヤ', price: 550, priceType: 'per_rental', categoryIds: null, active: true }
+    ];
+    const local = {
+      'sky-rent.dataVersion': '7', 'sky-rent.options': JSON.stringify(v7Options),
+      'sky-rent.reservations': JSON.stringify([myReservation]), 'sky-rent.members': JSON.stringify([myMember]),
+      'sky-rent.settings.points': JSON.stringify({ pointPerUse: 2, couponThreshold: 10, couponAmount: 1000, expiryMonths: 12 })
+    };
+    let page = openPage('index.html', { local });
+    try {
+      assert.equal(await page.ready(8000), true);
+      const w = page.window, S = w.SkyRentStore;
+      assert.equal(w.localStorage.getItem('sky-rent.dataVersion'), '8');
+      const opts = S.list('options');
+      deq(opts.map(o => o.optionId), ['OP101', 'OP102', 'OP201', 'OP202', 'OP0001'].concat(EQUIPMENT_IDS));
+      const cdw = S.findById('options', 'optionId', 'OP101');
+      assert.equal(cdw.price, 1700, '管理画面で変えた料金は残す');
+      assert.equal(cdw.description, '事故時の免責負担ゼロ (最大5万円)', '無い項目 (説明文) は補う');
+      assert.equal(S.findById('options', 'optionId', 'OP202').active, false, '無効にしたものは無効のまま');
+      deq(S.findById('options', 'optionId', 'OP0001'), v7Options[4]);
+      deq(S.findById('options', 'optionId', 'OP010').includes, EQUIPMENT_IDS.slice(0, 9));
+      // 予約・会員・設定は消さない (シードで上書きしない)
+      deq(S.list('reservations'), [myReservation]);
+      deq(S.list('members'), [myMember]);
+      assert.equal(S.pointSettings().pointPerUse, 2);
+      assertClean(page, 'v7-to-v8');
+    } finally { page.close(); }
+
+    // 6 以前 (家電を撤去した版など) は、これまでどおりシードで作り直す
+    page = openPage('index.html', { local: Object.assign({}, local, { 'sky-rent.dataVersion': '6' }) });
+    try {
+      assert.equal(await page.ready(8000), true);
+      const S = page.window.SkyRentStore;
+      assert.equal(page.window.localStorage.getItem('sky-rent.dataVersion'), '8');
+      deq(S.list('options').map(o => o.optionId), ['OP101', 'OP102', 'OP201', 'OP202'].concat(EQUIPMENT_IDS));
+      assert.equal(S.findById('options', 'optionId', 'OP101').price, 1650);
+      assert.equal(S.list('reservations').length, 18);
+      assertClean(page, 'v6-reseed');
+    } finally { page.close(); }
+  });
+
   test('エラーコード表 (契約書 §2) の日本語文がすべてある', async () => {
     const page = openPage('manage/login.html');
     try {
@@ -612,10 +719,15 @@ describe('本番モード: ローカル Supabase', { skip: NO_JSDOM || (SUPABASE
       assert.ok(B.client, 'supabase クライアントが作られていない');
       assert.equal(S.assets().length, 6);
       assert.equal(S.locations().length, 2);
-      assert.equal(S.list('options').length, 4);
+      assert.equal(S.list('options').length, 15);
       assert.equal(S.categories().length, 2);
       deq(S.getAsset('V003').customFields.bodyType, 'SUV');
       assert.equal(S.list('options').find(o => o.optionId === 'OP101').priceShort, 1100);
+      // 装備オプション: 公開カタログの extra (説明・セットの中身) が展開されて入る
+      deq(S.list('options').filter(o => o.kind === 'other').map(o => [o.optionId, o.name, o.price]), EQUIPMENT);
+      const applianceSet = S.list('options').find(o => o.optionId === 'OP010');
+      deq(applianceSet.includes, EQUIPMENT_IDS.slice(0, 9));
+      assert.equal(applianceSet.description, 'ポータブル冷蔵冷凍庫〜電気ケトルの9点をまとめたセット');
       assert.ok(S.read('settings.pricing_rules', null), '料金ルールが入っていない');
       assert.equal(S.list('legal').length, 4);
       // デモのシード (予約・会員) は入らない
@@ -686,7 +798,7 @@ describe('本番モード: ローカル Supabase', { skip: NO_JSDOM || (SUPABASE
       assert.equal(B.admin.can('settings.write'), true);
       assert.equal(S.assets().length, 6);
       assert.equal(S.locations().length, 2);
-      assert.equal(S.list('options').length, 4);
+      assert.equal(S.list('options').length, 15);
       assert.ok(S.read('settings.calendar', null), 'スタッフ専用の設定 (calendar) が読めていない');
       assert.ok(Array.isArray(S.list('notifications')));
       const cnt = await serviceSelect('reservations', 'select=id');
@@ -791,6 +903,9 @@ describe('本番モード: ローカル Supabase', { skip: NO_JSDOM || (SUPABASE
       // オプションの説明は extra.description ⇔ description
       const op = (await serviceSelect('options', 'select=*&id=eq.OP101'))[0];
       assert.equal(B.fromDb.option(op).description, op.extra.description);
+      // 家電セットの中身は extra.includes ⇔ includes
+      const setRow = (await serviceSelect('options', 'select=*&id=eq.OP010'))[0];
+      deq(B.fromDb.option(setRow).includes, EQUIPMENT_IDS.slice(0, 9));
       // 公開カタログ (plate 等が除かれた行) も、含まれている列は保たれる
       const cat = await (await fetch(LOCAL_API + '/rest/v1/rpc/public_catalog', {
         method: 'POST', headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json' }, body: '{}'
@@ -905,6 +1020,20 @@ describe('DB 行 ⇔ store の変換', { skip: NO_JSDOM }, () => {
       deq(rt(categoryRow, 'category'), categoryRow);
       const optionRow = { id: 'OPX', name: 'X', price: 100, price_short: null, price_type: 'per_rental', category_ids: null, kind: 'other', exclusive_group: null, active: true, sort: 1, extra: { description: '説明' } };
       deq(rt(optionRow, 'option'), optionRow);
+      // 家電セット: 説明と中身 (includes) は extra に入り、管理画面で名前・料金を直して保存しても消えない
+      const setRow = {
+        id: 'OP010', name: '家電セット (上記9点まとめ)', price: 11000, price_short: null, price_type: 'per_day', category_ids: null,
+        kind: 'other', exclusive_group: null, active: true, sort: 20,
+        extra: { description: 'ポータブル冷蔵冷凍庫〜電気ケトルの9点をまとめたセット', includes: EQUIPMENT_IDS.slice(0, 9) }
+      };
+      const setObj = B.fromDb.option(setRow);
+      deq(setObj.includes, setRow.extra.includes);
+      assert.equal(setObj.description, setRow.extra.description);
+      deq(rt(setRow, 'option'), setRow);
+      //   manage/options.html の保存は、フォームの項目だけの値を S.upsert (既存の行にマージ) する
+      const edited = Object.assign({}, setObj, { optionId: 'OP010', name: '家電セット', price: '12000', priceType: 'per_day', categoryIds: null, active: true });
+      const saved = JSON.parse(JSON.stringify(B.toDb.option(edited)));
+      deq(saved, Object.assign({}, setRow, { name: '家電セット', price: 12000 }));
       const locationRow = { id: 'loc-x', name: 'X店', name_en: 'X', tel: '0157-00-0000', address: '北見', hours: '9-18', holiday: '', sort: 3, active: true, extra: {} };
       deq(rt(locationRow, 'location'), locationRow);
     } finally { page.close(); }
@@ -1201,6 +1330,30 @@ describe('管理画面 (本番モード・偽クライアント)', { skip: NO_JS
       deq(businessKeys(w.localStorage), []);
       deq(page.errors, []);
       deq(page.resourceErrors, []);
+    } finally { page.close(); }
+  });
+
+  test('オプションの保存 (管理画面): 説明・家電セットの中身 (extra) を消さずに DB へ送る', async () => {
+    const db = fakeDb();
+    const setRow = {
+      id: 'OP010', name: '家電セット (上記9点まとめ)', price: 11000, price_short: null, price_type: 'per_day', category_ids: null,
+      kind: 'other', exclusive_group: null, active: true, sort: 20,
+      extra: { description: 'ポータブル冷蔵冷凍庫〜電気ケトルの9点をまとめたセット', includes: EQUIPMENT_IDS.slice(0, 9) }
+    };
+    db.options.push(setRow);
+    const log = [];
+    const page = openPage('manage/dashboard.html', { mode: 'fake', fakeClient: fakeClient(db, log) });
+    try {
+      assert.equal(await page.ready(8000), true);
+      const S = page.window.SkyRentStore;
+      deq(S.findById('options', 'optionId', 'OP010').includes, EQUIPMENT_IDS.slice(0, 9));
+      // manage/options.html の「保存」と同じ: フォームの項目だけを持つ値で upsert する
+      S.upsert('options', 'optionId', { optionId: 'OP010', name: '家電セット (9点)', price: 12000, priceType: 'per_day', categoryIds: null, active: true });
+      const upserts = () => log.filter(l => l.kind === 'from' && l.table === 'options' && l.op === 'upsert');
+      await waitFor(() => upserts().length >= 1, 2000);
+      assert.equal(upserts().length, 1, '変えた行だけ送る');
+      deq(upserts()[0].payload, Object.assign({}, setRow, { name: '家電セット (9点)', price: 12000 }));
+      deq(page.errors, []);
     } finally { page.close(); }
   });
 

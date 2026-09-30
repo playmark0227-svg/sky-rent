@@ -76,13 +76,13 @@
 
   <script src="partials.js"></script>
 
-  <script src="../js/config.js?v=20260923"></script>
-  <script src="../js/store.js?v=20260923"></script>
-  <script src="../js/pricing-core.js?v=20260923"></script>
-  <script src="../js/pricing.js?v=20260923"></script>
-  <script src="../js/api.js?v=20260923"></script>
-  <script src="../js/backend.js?v=20260923"></script>
-  <script src="../js/boot.js?v=20260923"></script>
+  <script src="../js/config.js?v=20260930"></script>
+  <script src="../js/store.js?v=20260930"></script>
+  <script src="../js/pricing-core.js?v=20260930"></script>
+  <script src="../js/pricing.js?v=20260930"></script>
+  <script src="../js/api.js?v=20260930"></script>
+  <script src="../js/backend.js?v=20260930"></script>
+  <script src="../js/boot.js?v=20260930"></script>
   <script type="text/x-deferred">
   (function () {
     'use strict';
@@ -276,6 +276,17 @@
       try { box.scrollIntoView({ block: 'nearest' }); } catch (err) { /* 無視 */ }
     }
 
+    // 予約のオプション (予約時の控え) を補償・装備に分ける。種類は今のオプション設定から引く (見つからなければ装備)
+    function optionGroups(r) {
+      const cover = [], equip = [];
+      (r.options || []).forEach(x => {
+        const cur = S.findById('options', 'optionId', x.optionId || x.id) || x;
+        const isCover = cur.kind ? cur.kind === 'cover' : cur.exclusiveGroup === 'cover';
+        (isCover ? cover : equip).push(x);
+      });
+      return [{ title: '補償オプション', list: cover }, { title: '装備オプション', list: equip }].filter(g => g.list.length);
+    }
+
     function openDetail(id) {
       const r = S.findById('reservations', 'reservationId', id) || allRows.find(x => x.reservationId === id);
       if (!r) return;
@@ -323,6 +334,7 @@
           ['借受人', '<strong>' + esc(r.customerName) + '</strong> 様' + (r.company ? ' / ' + esc(r.company) : '') + (r.memberId ? ' <span class="chip">会員 ' + esc(r.memberId) + '</span>' : '')],
           ['連絡先', esc(r.customerEmail || '-') + ' / ' + esc(r.customerPhone || '-')]
         ];
+        optionGroups(r).forEach(g => rows.push([g.title, g.list.map(o => esc(o.name)).join('<br>')]));
         if (c && c.type === 'vehicle') rows.push(['運転免許証', r.licenseConfirmed ? '<span class="chip">✓ 運転者全員の免許の確認に同意 (当日店頭で確認)</span>' : '<span style="color:#b56b00">未確認 (当日店頭で確認してください)</span>']);
         rows.push(['支払方法', esc(r.payment ? (S.PAYMENT_LABELS[r.payment.method] || '') : '') + ' / ' + (r.payment && r.payment.status === 'paid' ? '<span class="status status-paid">入金済</span>' : '<span class="status status-unpaid">未入金</span>')]);
         if (r.invoiceId) rows.push(['請求書', '<a href="invoices.html" class="detail-link">' + esc(r.invoiceId) + '</a>']);

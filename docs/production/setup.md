@@ -1,6 +1,6 @@
 # 本番環境の立ち上げ手順書
 
-更新日: 2026-09-23 / 対象: グロースレンタカー 予約サイト・管理画面 (本番モード)
+更新日: 2026-09-30 (装備オプションの追加手順 2-5) / 対象: グロースレンタカー 予約サイト・管理画面 (本番モード)
 
 この手順書は、**エンジニアでない事業者の方が、上から順に作業すれば本番を立ち上げられる** ことを目標に書いています。
 画面の名前やボタンの位置は各サービスの更新で少し変わることがあります。見つからないときは、同じ意味の項目を探してください。
@@ -152,7 +152,7 @@ supabase db push --include-seed     # 本番に反映 (確認を聞かれたら 
 ```
 
 - `supabase/migrations/*.sql` の順にテーブル・権限 (RLS)・予約処理・定期ジョブが作られます。
-- `supabase/seed.sql` は **カタログと設定だけ** (拠点2・車両6台・補償オプション・料金ルール・法務文書の版) を入れます。架空の顧客や予約は入りません。
+- `supabase/seed.sql` は **カタログと設定だけ** (拠点2・車両6台・補償オプション・装備オプション11品目・料金ルール・法務文書の版) を入れます。架空の顧客や予約は入りません。
 - seed の拠点の住所・電話、車両のナンバー等は仮の値です。**公開前に管理画面で実際の値に直してください** (10章)。
 
 ### 2-4. 確認
@@ -162,6 +162,7 @@ supabase db push --include-seed     # 本番に反映 (確認を聞かれたら 
 ```sql
 select id, name from public.locations;          -- 北見本店・釧路店 の2行
 select key from public.app_settings order by 1; -- billing, calendar, points, pricing_rules, site の5行
+select kind, count(*) from public.options group by kind; -- cover 4 (補償)・other 11 (装備)
 select jobname, schedule from cron.job;         -- skyrent-expire-points, skyrent-outbox-release の2行
 ```
 
@@ -175,6 +176,46 @@ select cron.schedule('skyrent-outbox-release', '*/10 * * * *', 'select public.ou
 > [!NOTE]
 > 以後、データベースの変更 (新しい migration) を反映するときも `supabase db push` を使います。
 > **`supabase db reset` は本番では絶対に実行しないでください** (データが消えます)。
+
+### 2-5. 既に seed を入れた本番に装備オプションを追加する (2026-09-30 の更新)
+
+2026-09-30 に装備オプション11品目 (ポータブル冷蔵冷凍庫〜集客セット) を復活しました。
+**これから 2-3 を行う場合は、この節は不要です** (seed に含まれています)。
+2-3 を 2026-09-30 より前に済ませた本番では、seed は入れ直さず、次の順に追加します。
+
+1. 新しい migration (`20260930000100_equipment_options.sql`。予約画面に家電セットの中身を渡すための変更) を反映します。
+   ```bash
+   supabase db push --dry-run    # 20260930000100_equipment_options.sql だけが表示されることを確認
+   supabase db push
+   ```
+2. Edge Functions を公開し直します (料金計算とエラーの文言が変わったため)。
+   ```bash
+   supabase functions deploy api admin worker
+   ```
+3. ダッシュボードの **SQL Editor** で、`supabase/seed.sql` の「装備オプション」の `insert into public.options … on conflict (id) do nothing;`
+   (OP001〜OP011 の1文) をそのまま貼り付けて実行します。
+   既にある行は変わらないので、2回実行しても重複しません。
+4. 同じく SQL Editor で、特定商取引法に基づく表記 (`law.html`) の版を上げます (本文の事業内容・料金が変わったため。
+   予約時に同意をいただく文書ではないので、お客様の同意には影響しません)。
+   ```sql
+   -- 古い版を公開終了にして、2026-10 版を公開中にする (2回実行しても同じ結果になります)
+   update public.legal_documents set active = false where id = 'law' and active and version <> '2026-10';
+   insert into public.legal_documents (id, version, title, url, effective_at)
+     values ('law', '2026-10', '特定商取引法に基づく表記', 'law.html', '2026-10-01')
+     on conflict (id, version) do update set active = true;
+   ```
+5. 公開サイトのファイル (GitHub Pages) を最新にします (`detail.html` などの画面が変わっています)。
+6. 確認します。
+   ```sql
+   select id, name, price from public.options where kind = 'other' order by sort;  -- OP001〜OP011 の11行
+   select id, version from public.legal_documents where active order by id;       -- law だけ 2026-10
+   ```
+   予約サイトの車両詳細に「装備オプション」が出て、家電セットにチェックを入れると中の9品目が選べなくなれば完了です。
+
+> [!NOTE]
+> 管理画面の **各種管理 → オプション管理** からも1品ずつ追加できます (種類「装備オプション」・説明 (型番)・
+> 「セットに含む品目」を入力できます)。ただし11品目をまとめて正しい ID・並び順で入れるには、上の手順3 (SQL) が確実です。
+> 入れた後の料金・説明の変更や、貸し出さない品目を「無効」にする操作は管理画面でできます。
 
 ---
 
@@ -486,6 +527,7 @@ Supabase 標準のメール送信は、ごく少数のテスト用です。**本
 - 予約画面の空き表示は Google の結果を最大5分キャッシュします。**予約確定の瞬間には必ず Google に直接確認** するので、確定後に重なることはありません。
 - 担当者の予定の件名・内容はお客様には表示されません (「予定あり」の時間帯だけを使います)。
 - 書き込む予定の説明には予約番号・車両・お名前・日時・管理画面の予約一覧へのリンクが入ります。**お客様の電話番号やメールアドレスは書き込みません。**
+  ご選択のオプション (補償・装備) も書き込みません (プライバシーポリシーに書いた登録項目に無いため)。貸し出す装備は管理画面の予約一覧で確認してください。
 - 担当者が異動・退職したら、その人のカレンダーを管理画面から外し、本人に共有を解除してもらいます。
 
 ---
@@ -668,7 +710,8 @@ node scripts/create-admin.mjs --email owner@skyward-growth.com --name "藤本 �
 
 - [ ] 拠点: 名称・住所・電話・営業時間・定休日が正しい (seed の仮の値を直した)
 - [ ] 車両: 実車だけが「公開」になっている。ナンバー・定員・料金・写真・車検/点検日が正しい
-- [ ] 補償オプション・割引・繁忙期・会社情報 (サイト設定)・振込先 (請求書払いを使う場合) が正しい
+- [ ] 補償オプション・装備オプション (品目・料金)・割引・繁忙期・会社情報 (サイト設定)・振込先 (請求書払いを使う場合) が正しい
+- [ ] 装備オプション: 実際に貸し出せる品目だけが「有効」になっている (在庫数は管理していないため、同じ品目の予約が重なっても止まりません。[現状監査 §10.5](current-state-audit.md#105-実装で新たに置いた業務ルール-要確認))
 - [ ] Google カレンダー: 全拠点で接続テストが `events`、モードと受け渡し時間が運用と合っている
 
 ### セキュリティ・運用

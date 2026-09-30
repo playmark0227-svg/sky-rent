@@ -232,7 +232,7 @@ after(async () => {
 // =====================================================================
 describe('functions-1: お問い合わせの種類は決まった選択肢だけ・自動返信に送信者の文字列を載せない', () => {
   const TOPICS = ['ご予約について', 'ご予約の変更・キャンセル', '料金・お見積りについて', '法人利用・請求書払いについて',
-    'キッチンカーのレンタルについて', '忘れ物について', 'その他'];
+    'キッチンカーのレンタルについて', '装備オプションについて', '忘れ物について', 'その他'];
 
   test('報告の再現: 匿名で topic に URL → VALIDATION (保存もメールもしない)', async () => {
     const victim = 'phish-victim-' + RUN + '@example.com';
@@ -253,7 +253,7 @@ describe('functions-1: お問い合わせの種類は決まった選択肢だけ
     assert.equal((await mockEmails()).filter((e) => JSON.stringify(e).includes('evil-phish.example/login?v=' + RUN)).length, 0);
   });
 
-  test('一覧にない種類は URL が無くても拒否 / contact.html の7種類はすべて通る', async () => {
+  test('一覧にない種類は URL が無くても拒否 / contact.html の8種類はすべて通る', async () => {
     for (const topic of ['アカウント確認のお願い', 'ご予約について！', 'その他 evil.example', 'x'.repeat(61)]) {
       // service_role (レート制限なし) で入力検証だけを見る
       const r = await call('/api/inquiries', { token: 'service', body: { name: '検証', email: mail('topic'), topic, body: 'test', consent: { documents: [] } } });

@@ -297,13 +297,14 @@ async function waitForMail(to, ms = 15000) {
   return [];
 }
 
-async function createReservationTx(startIso, endIso, label) {
+async function createReservationTx(startIso, endIso, label, extra) {
   const p = {
     idempotency_key: 'b2-test-' + crypto.randomBytes(12).toString('hex'),
     request_hash: 'b2-test', asset_id: ASSET, start_at: startIso, end_at: endIso,
     customer: { name: 'テスト ' + label, kana: 'テスト', email: 'b2-cust-' + RAND + '@example.com', phone: CUSTOMER_PHONE, company: '' },
     payment_method: 'onsite', license_confirmed: true, option_ids: [], options: [], price: {}, total: 1000,
-    note: '', consent: {}, emails: []
+    note: '', consent: {}, emails: [],
+    ...(extra || {})
   };
   const { data, error } = await svc.rpc('create_reservation_tx', { p });
   if (error) throw new Error('create_reservation_tx: ' + error.message);
@@ -697,6 +698,25 @@ describe('予約の書き込み (§3.3 gcal_sync)', () => {
     assert.match(res.error, /権限|共有/);
 
     assert.equal((await denoCall('processGcalJob', { payload: { reservation_id: 'R-NOPE-' + RAND } })).status, 'skipped');
+  });
+
+  it('オプション (補償・家電セットなどの装備) は予定に載せない (プライバシーポリシーで登録すると書いた項目は予約番号・車両・お名前・日時だけ)', async (t) => {
+    if (!need(t)) return;
+    await setCalendar({ mode: 'handover' }, [CAL_A]);
+    const optionIds = ['OP101', 'OP010', 'OP011'];
+    const names = ['免責補償制度 (CDW)', '家電セット (上記9点まとめ)', '集客セット'];
+    const id = await createReservationTx(at(38, 10), at(39, 12), '装備', {
+      option_ids: optionIds,
+      options: optionIds.map((optionId, i) => ({ optionId, name: names[i], price: 0, priceType: 'per_day' }))
+    });
+    assert.deepEqual(await denoCall('processGcalJob', { payload: { reservation_id: id } }), { status: 'sent' });
+    const evs = (await ourEvents(CAL_A, id)).filter(e => e.status !== 'cancelled');
+    assert.equal(evs.length, 2);
+    for (const e of evs) {
+      const sent = JSON.stringify(e);
+      for (const n of names) assert.ok(!sent.includes(n), 'オプション名を送らない: ' + n);
+      assert.ok(!e.description.includes('オプション'), e.description);
+    }
   });
 });
 
