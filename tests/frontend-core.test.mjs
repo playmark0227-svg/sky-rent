@@ -389,18 +389,6 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
     } finally { page.close(); }
   });
 
-  test('manage/employees.html (crud.js: デモは既定行を localStorage に保存)', async () => {
-    const page = openPage('manage/employees.html');
-    try {
-      assert.equal(await page.ready(8000), true);
-      assert.equal(page.document.querySelectorAll('#tbl tr').length, 4);
-      const saved = JSON.parse(page.window.localStorage.getItem('sky-rent.employees'));
-      assert.equal(saved.length, 4);
-      assertBooted(page, 'employees');
-      assertClean(page, 'employees');
-    } finally { page.close(); }
-  });
-
   test('manage/site-settings.html (settings.js: store 経由で保存・フォームに無い項目は残す)', async () => {
     const page = openPage('manage/site-settings.html', {
       local: { 'sky-rent.settings.site': JSON.stringify({ siteName: '保存済みの名前', shopName: 'サーバー側で使う値' }) }
@@ -1316,64 +1304,6 @@ function fakeClient(db, log) {
 }
 
 describe('管理画面 (本番モード・偽クライアント)', { skip: NO_JSDOM }, () => {
-  test('employees.html: 本番は「スタッフ・権限」への案内だけ出し、一覧 (デモの既定行) を表示も保存もしない', async () => {
-    const db = fakeDb();
-    const log = [];
-    const page = openPage('manage/employees.html', { mode: 'fake', fakeClient: fakeClient(db, log) });
-    try {
-      assert.equal(await page.ready(8000), true);
-      const w = page.window, S = w.SkyRentStore, B = w.SkyRentBackend;
-      assert.equal(S.live, true);
-      assert.equal(B.admin.staff.role, 'admin');
-      assert.equal(B.admin.can('staff.write'), true);
-      assert.equal(page.document.getElementById('emp-live-notice').hidden, false, '案内が出ない');
-      assert.equal(page.document.getElementById('emp-list').hidden, true, '一覧が出ている');
-      assert.equal(page.document.getElementById('emp-staff-link').hidden, false);
-      await sleep(100);
-      assert.equal(log.filter(l => l.table === 'app_collections' && l.op !== 'select').length, 0, '既定行が保存された');
-      deq(businessKeys(w.localStorage), []);
-      // 全データが入っている
-      assert.equal(S.findById('reservations', 'reservationId', 'R00001').assetName, 'マツダ CX-5');
-      assert.equal(S.findById('reservations', 'reservationId', 'R00001').memberId, 'M00001');
-      assert.equal(S.getMember('M00001').points, 3);
-      assert.equal(S.notifications()[0].refId, 'R00001');
-      assert.equal(S.read('settings.site').shopName, 'グロースレンタカー');
-      assertClean(page, 'fake-employees');
-    } finally { page.close(); }
-  });
-
-  test('notices.html (crud.js): サーバーの一覧を表示し、デモの既定行を書かない / 保存は app_collections へ差分', async () => {
-    const db = fakeDb();
-    db.app_collections.push({ collection: 'notices', id: 'N001', sort: 0, data: { id: 'N001', date: '2026-09-01', title: '本番のお知らせ', category: 'お知らせ', expiry: '無期限', active: true } });
-    const log = [];
-    const page = openPage('manage/notices.html', { mode: 'fake', fakeClient: fakeClient(db, log) });
-    try {
-      assert.equal(await page.ready(8000), true);
-      const w = page.window;
-      // サーバーの 1 行だけ (既定の 5 行は出さない・書かない)
-      assert.equal(page.document.querySelectorAll('#tbl tr').length, 1);
-      assert.match(page.document.querySelector('#tbl').textContent, /本番のお知らせ/);
-      assert.equal(log.filter(l => l.table === 'app_collections' && l.op !== 'select').length, 0, '既定行が保存された');
-      deq(businessKeys(w.localStorage), []);
-
-      // crud.js から保存 → app_collections へ差分 upsert
-      const list = w.SkyRentCRUD.load('notices', []);
-      list.push({ id: 'N002', date: '2026-09-20', title: '追加のお知らせ', category: 'お知らせ', expiry: '-', active: true });
-      w.SkyRentCRUD.save('notices', list);
-      await waitFor(() => log.some(l => l.table === 'app_collections' && l.op === 'upsert'), 2000);
-      const up = log.find(l => l.table === 'app_collections' && l.op === 'upsert');
-      deq(up.payload.map(r => r.id), ['N002'], '変わった行だけ送る');
-      assert.equal(up.payload[0].collection, 'notices');
-      // 削除
-      w.SkyRentCRUD.save('notices', list.slice(1));
-      await waitFor(() => log.some(l => l.table === 'app_collections' && l.op === 'delete'), 2000);
-      const del = log.find(l => l.table === 'app_collections' && l.op === 'delete');
-      deq(del.filters, [['collection', 'eq', 'notices'], ['id', 'in', ['N001']]]);
-      deq(businessKeys(w.localStorage), []);
-      assertClean(page, 'fake-notices');
-    } finally { page.close(); }
-  });
-
   test('書込フック (カタログ・設定・会員・予約) とドメイン関数の差し替え・失敗時のトースト', async () => {
     const db = fakeDb();
     const log = [];

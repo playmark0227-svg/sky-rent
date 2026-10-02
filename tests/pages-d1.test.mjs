@@ -566,7 +566,7 @@ describe('D1 デモモード: 予約手続き (booking.html)', { skip: NO_JSDOM 
     } finally { page.close(); }
   });
 
-  test('会員: 情報の自動入力・請求書払い・クーポン (合計から差し引き)・完了画面にマイページ / 英語表示でも動く', async () => {
+  test('会員: 情報の自動入力・請求書払い・クーポン (合計から差し引き)・完了画面にマイページ / 英語を選んでいた端末も日本語で表示', async () => {
     const start = jstAt(50, 10);
     const page = openPage('booking.html', {
       session: { [PENDING]: pendingFor('V004', start, 24, []), 'sky-rent.memberSession': JSON.stringify({ memberId: 'M002' }) }
@@ -615,15 +615,17 @@ describe('D1 デモモード: 予約手続き (booking.html)', { skip: NO_JSDOM 
       assertClean(page, 'booking-member');
     } finally { page.close(); }
 
-    // 英語表示 (sky-rent.lang = en) でも JS エラーなく動く
+    // 英語表示はやめた: 以前に英語を選んだ端末 (sky-rent.lang = en) でも日本語で出す・切替ボタンは無い
     for (const path of ['booking.html', 'detail.html?id=V003', 'search.html']) {
       const p = openPage(path, { local: { 'sky-rent.lang': 'en' }, session: { [PENDING]: pendingFor('V003', jstAt(60, 10), 24, ['OP101']) } });
       try {
         assert.equal(await p.ready(8000), true, path);
         await sleep(50);
-        if (path === 'booking.html') assert.equal(p.text('#btn-submit'), 'Confirm this booking');
-        if (path === 'search.html') assert.match(p.text('#tz-note'), /JST/);
-        assertClean(p, 'en ' + path);
+        assert.equal(p.$('[data-lang-toggle]'), null, path + ': 言語の切替ボタンが残っている');
+        assert.equal(p.document.documentElement.lang, 'ja', path);
+        if (path === 'booking.html') assert.equal(p.text('#btn-submit'), '上記の内容で予約を確定する');
+        if (path === 'search.html') assert.match(p.text('#tz-note'), /日本時間/);
+        assertClean(p, 'ja ' + path);
       } finally { p.close(); }
     }
   });
@@ -735,14 +737,11 @@ describe('D1 デモモード: 装備オプション (detail.html / booking.html)
       lines = page.$$('#p-lines .pl').map(x => x.textContent);
       assert.ok(lines.some(l => /電子レンジ/.test(l) && l.indexOf('¥2,200') >= 0));
       assert.ok(!lines.some(l => /家電セット/.test(l)));
-      // 英語表示に切り替えても選択は残る・見出しは Coverage / Equipment
+      // 見出しは 補償オプション / 装備オプション (表示は日本語だけ)
       check(page, '[data-opt="OP010"]', true);
-      page.window.SkyRentI18n.setLang('en');
-      await sleep(20);
-      deq(page.$$('#opt-area .opt-group-title').map(x => x.textContent), ['Coverage', 'Equipment']);
+      deq(page.$$('#opt-area .opt-group-title').map(x => x.textContent), ['補償オプション', '装備オプション']);
       assert.equal(box('OP010').checked, true);
       assert.equal(box('OP001').disabled, true);
-      assert.match(page.text('.opt-row[data-row="OP001"] .opt-inset'), /^Included in the 家電セット$/);
       assertClean(page, 'detail-set', true);
     } finally { page.close(); }
   });

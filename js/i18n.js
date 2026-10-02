@@ -1,14 +1,14 @@
 /**
  * グロースレンタカー - 多言語対応 (i18n)
  *
- * 要件定義書 4.1「多言語対応」準拠: 日本語を基本とし、英語に対応。
- * 辞書にロケールを追加するだけで中国語・韓国語へ拡張可能な構造。
+ * 表示は日本語だけ (英語表示は 2026-10 にやめた。切替ボタンは無く、getLang() は常に 'ja')。
+ * 英語の辞書は残っているが使わない。
  *
  * 使い方:
  *   <span data-i18n="search.title"></span>            … textContent を差し替え
  *   <input data-i18n-placeholder="form.name">          … placeholder を差し替え
  *   SkyRentI18n.t('search.title')                      … JS から取得
- *   SkyRentI18n.setLang('en')                          … 言語切替 (localStorage に保持)
+ *   SkyRentI18n.setLang()                              … 何もしない (以前の英語の選択を消すだけ)
  */
 (function () {
   'use strict';
@@ -108,9 +108,10 @@
     // 将来: zh, ko をここに追加
   };
 
-  function getLang() { return localStorage.getItem(KEY) || 'ja'; }
-  function setLang(lang) {
-    localStorage.setItem(KEY, DICT[lang] ? lang : 'ja');
+  // 英語表示はやめた (2026-10)。以前に英語を選んだ端末でも日本語で表示する
+  function getLang() { return 'ja'; }
+  function setLang() {
+    try { localStorage.removeItem(KEY); } catch (e) { /* 保存できなくても表示は日本語 */ }
     apply();
     document.dispatchEvent(new CustomEvent('sky-rent:langchange', { detail: { lang: getLang() } }));
   }

@@ -27,7 +27,6 @@
       '<a href="search.html" class="nav-cta">予約する</a>' +
       // 言語トグルは i18n 対応 (data-i18n を持つ) ページだけに出す。
       // 翻訳の無いページで押せてしまうと「効かないボタン」になるため。
-      (document.querySelector('[data-i18n]') ? '<button class="lang-btn" data-lang-toggle type="button">EN</button>' : '') +
       '</nav></div></header>';
   }
 

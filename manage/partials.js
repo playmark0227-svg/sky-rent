@@ -23,7 +23,7 @@
   };
 
   // [リンク先, 表示名, 必要な権限, 'demo' = デモモードだけ出す]
-  //   従業員管理 (employees.html) は端末内のデモ用の一覧。本番のスタッフのアカウントと権限は「スタッフ・権限」で管理する
+  //   打ち合わせ (2026-10) で使うと決まった画面だけを並べる (使わない画面は削除した)
   const NAV = [
     {
       label: '予約管理',
@@ -33,7 +33,6 @@
         ['reservation-list.html', '予約一覧', 'read'],
         ['forms.html', '帳票出力 (貸渡証・貸渡簿)', 'read'],
         ['rental-ledger.html', '貸渡簿', 'read'],
-        ['reservation-cancellations.html', '予約キャンセル一覧', 'read'],
         ['shaken-list.html', '車検予約一覧', 'read'],
         ['inspection-list.html', '点検予約一覧', 'read'],
         ['inquiries.html', 'お問い合わせ', 'read']
@@ -42,49 +41,26 @@
     {
       label: '各種管理',
       items: [
-        ['categories.html', 'カテゴリ管理 (カスタム項目)', 'read'],
         ['vehicles.html', '車両・物品管理', 'read'],
         ['options.html', 'オプション管理', 'read'],
         ['members.html', '顧客・会員管理', 'read'],
         ['invoices.html', '請求書管理', 'read'],
-        ['customer-rates.html', '顧客料金種別管理', 'read'],
         ['price-plans.html', '料金プラン管理', 'read'],
         ['holidays.html', '定休日管理', 'read'],
         ['high-season.html', 'ハイシーズン管理', 'read']
       ]
     },
     {
-      label: '分析',
-      items: [
-        ['revenue.html', '売上集計', 'read'],
-        ['utilization.html', '車輌稼働率', 'read'],
-        ['ga-integration.html', 'GoogleAnalytics連携設定', 'settings.write']
-      ]
-    },
-    {
       label: '社内管理',
       items: [
         ['stores.html', '店舗管理', 'read'],
-        ['employees.html', '従業員管理', 'read', 'demo'],
-        ['rental-report.html', '貸渡実績報告書 (陸運局)', 'read'],
-        ['reports-print.html', '定期報告書類の印刷', 'read']
-      ]
-    },
-    {
-      label: '予約サイト設定',
-      items: [
-        ['site-settings.html', '予約サイト設定', 'settings.write'],
-        ['points.html', 'ポイント・クーポン設定', 'settings.write'],
-        ['content.html', 'コンテンツ管理', 'content.write'],
-        ['custom-pages.html', 'カスタムページ管理', 'content.write'],
-        ['notices.html', 'お知らせ管理', 'content.write'],
-        ['seo.html', 'SEO管理', 'settings.write'],
-        ['input-fields.html', '入力項目管理', 'settings.write']
+        ['rental-report.html', '貸渡実績報告書 (陸運局)', 'read']
       ]
     },
     {
       label: 'システム',
       items: [
+        ['site-settings.html', '予約サイト設定', 'settings.write'],
         ['mail-log.html', 'メール送信状況', 'outbox.read'],
         ['calendar.html', 'Googleカレンダー連携', 'settings.write'],
         ['staff.html', 'スタッフ・権限', 'staff.write'],
@@ -158,10 +134,6 @@
         </nav>
 
         <div class="topbar-right">
-          <div class="topbar-links">
-            <a href="billing.html">▶請求情報</a>
-            <a href="faq.html">▶よくあるご質問(FAQ)</a>
-          </div>
           <div class="topnav-item user-menu">
             <button class="topbar-user topnav-toggle" aria-haspopup="true" aria-expanded="false">
               <span id="topbar-staff-name">${escapeHtml(user ? user.name : '読み込み中…')}</span>

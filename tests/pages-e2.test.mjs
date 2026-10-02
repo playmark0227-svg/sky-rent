@@ -2,7 +2,7 @@
  * 担当E2: 管理画面の業務ページのテスト
  *   manage/inquiries.html / mail-log.html / calendar.html (新規)
  *   manage/reservation-list.html / members.html / dashboard.html (+ js/manage.js)
- *   manage/site-settings.html / ga-integration.html / high-season.html / contact.html
+ *   manage/site-settings.html / high-season.html / contact.html
  *   manage/options.html / forms.html (装備オプション: 種類・説明・家電セットの含む品目、帳票のオプション行)
  *
  * 実行: node --test tests/pages-e2.test.mjs
@@ -714,25 +714,6 @@ describe('E2 デモモード', { skip: NO_JSDOM }, () => {
       assertBooted(page, 'site-settings');
       assertClean(page, 'site-settings');
     } finally { page.close(); }
-  });
-
-  test('ga-integration.html: 既定値 (計測 ON) は未保存のときだけ・保存済みの OFF を上書きしない', async () => {
-    const p1 = openPage('manage/ga-integration.html');
-    try {
-      assert.equal(await p1.ready(8000), true);
-      assert.equal(p1.$('[data-setting="event.purchase"]').checked, true);
-      assert.equal(p1.$('[data-setting="event.viewItem"]').checked, true);
-      assert.equal(p1.$('[data-setting="event.search"]').checked, false);
-      assertClean(p1, 'ga-default');
-    } finally { p1.close(); }
-    const p2 = openPage('manage/ga-integration.html', { local: { 'sky-rent.settings.ga': JSON.stringify({ ga4Id: 'G-SAVED', 'event.purchase': false }) } });
-    try {
-      assert.equal(await p2.ready(8000), true);
-      assert.equal(p2.$('[data-setting="ga4Id"]').value, 'G-SAVED');
-      assert.equal(p2.$('[data-setting="event.purchase"]').checked, false, '保存済みの OFF が既定値で上書きされた');
-      assert.equal(p2.$('[data-setting="event.viewItem"]').checked, true);
-      assertClean(p2, 'ga-saved');
-    } finally { p2.close(); }
   });
 
   test('high-season.html: 繁忙期は pricing_rules.busyPeriods / 追加して保存すると料金に反映', async () => {
@@ -1829,7 +1810,7 @@ describe('E2 本番モード (偽クライアント)', { skip: NO_JSDOM }, () =>
     } finally { page.close(); }
   });
 
-  test('high-season / site-settings / ga-integration: サーバーの値を表示し、保存は他の項目を残す', async () => {
+  test('high-season / site-settings: サーバーの値を表示し、保存は他の項目を残す', async () => {
     const db = fakeDb();
     const log = [];
     const page = fakePage('manage/high-season.html', db, log);
@@ -1860,14 +1841,6 @@ describe('E2 本番モード (偽クライアント)', { skip: NO_JSDOM }, () =>
       assert.equal(p2.$('[data-setting="siteName"]').value, 'サーバーのサイト名');
       assertClean(p2, 'fake-site-settings');
     } finally { p2.close(); }
-
-    const p3 = fakePage('manage/ga-integration.html', fakeDb(), []);
-    try {
-      assert.equal(await p3.ready(8000), true);
-      assert.equal(p3.$('[data-setting="ga4Id"]').value, 'G-SERVER1');
-      assert.equal(p3.$('[data-setting="event.purchase"]').checked, false, 'サーバーの OFF を既定値で上書きした');
-      assertClean(p3, 'fake-ga');
-    } finally { p3.close(); }
 
     // 権限の無いスタッフは編集できない
     const db4 = fakeDb();
@@ -2296,7 +2269,7 @@ describe('E2 本番モード: ローカル Supabase + Edge Functions', { skip: N
     }
   });
 
-  test('dashboard / high-season / site-settings / ga-integration / contact: 本番でも壊れずサーバーの値を表示 (保存はしない)', async t => {
+  test('dashboard / high-season / site-settings / contact: 本番でも壊れずサーバーの値を表示 (保存はしない)', async t => {
     if (!ready) return t.skip(why);
     const page = livePage('manage/dashboard.html');
     try {
@@ -2316,7 +2289,7 @@ describe('E2 本番モード: ローカル Supabase + Edge Functions', { skip: N
       assertClean(hs, 'live-high-season');
     } finally { hs.close(); }
 
-    for (const p of ['manage/site-settings.html', 'manage/ga-integration.html', 'manage/contact.html']) {
+    for (const p of ['manage/site-settings.html', 'manage/contact.html']) {
       const pg = livePage(p);
       try {
         assert.equal(await pg.ready(20000), true, p);

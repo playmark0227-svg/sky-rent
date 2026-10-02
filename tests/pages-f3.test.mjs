@@ -3,7 +3,7 @@
  *   booking.html     … キャンセルの連絡先 (公式LINE / お問い合わせフォーム・当社が受け付けた日) /
  *                      確定時の CONSENT_REQUIRED は、エラーの documents / missing で同意欄を出し直す (再読み込みしない)
  *   mypage.html      … 確認メールを送った画面・期限切れリンクの画面に「確認メールを再送」(連打防止)
- *   manage/partials.js / employees.html … 本番は「従業員管理」を出さず「スタッフ・権限」へ一本化、お問合せ・手順書は「システム」
+ *   manage/partials.js … スタッフのアカウントは「スタッフ・権限」で管理、お問合せ・手順書は「システム」
  *   manage/profile.html … 本番はログイン中のスタッフの情報・パスワード変更・二段階認証の案内 (デモは従来どおり)
  *   manage/staff.html   … 各スタッフの「二段階認証をリセット」(自分以外・確認ダイアログ)
  *   manage/mail-log.html … 再送すると試行回数を 0 に戻して最初から送り直す案内
@@ -585,19 +585,7 @@ describe('F3 デモモード', { skip: NO_JSDOM }, () => {
     } finally { page.close(); }
   });
 
-  test('manage: デモは従来どおり (従業員管理の一覧・編集 / プロフィールの保存・バックアップ)', async () => {
-    const emp = openPage('manage/employees.html');
-    try {
-      assert.equal(await emp.ready(8000), true);
-      assert.equal(emp.$('#emp-live-notice').hidden, true, 'デモで本番の案内が出ている');
-      assert.ok(visible(emp.$('#btn-add')));
-      await waitFor(() => emp.$$('#tbl tr[data-idx]').length === 4, 2000);
-      assert.equal(emp.$$('#tbl .crud-edit').length, 4);
-      assert.match(emp.text('#tbl'), /山田 太郎/);
-      assert.ok(navHrefs(emp).indexOf('employees.html') >= 0, 'デモのメニューに従業員管理が無い');
-      assertClean(emp, 'demo-employees');
-    } finally { emp.close(); }
-
+  test('manage: デモは従来どおり (プロフィールの保存・バックアップ) / 削除した画面 (従業員管理など) はメニューに無い', async () => {
     const pf = openPage('manage/profile.html', { local: { 'sky-rent.settings.profile': JSON.stringify({ name: 'デモ 花子' }) } });
     try {
       assert.equal(await pf.ready(8000), true);
@@ -611,6 +599,8 @@ describe('F3 デモモード', { skip: NO_JSDOM }, () => {
       pf.$('[data-save]').click();
       assert.equal(JSON.parse(pf.window.localStorage.getItem('sky-rent.settings.profile')).name, 'デモ 次郎');
       assert.match(pf.text('a[href="profile.html"]'), /プロフィール編集/);
+      ['employees.html', 'points.html', 'revenue.html', 'utilization.html', 'categories.html', 'content.html', 'seo.html', 'billing.html', 'faq.html']
+        .forEach(h => assert.equal(navHrefs(pf).indexOf(h), -1, h + ' がメニューに残っている'));
       assertClean(pf, 'demo-profile');
     } finally { pf.close(); }
   });
@@ -620,35 +610,6 @@ describe('F3 デモモード', { skip: NO_JSDOM }, () => {
 // 本番モード (偽クライアント)
 // =====================================================================
 describe('F3 本番モード (偽クライアント)', { skip: NO_JSDOM }, () => {
-  test('employees.html: 「スタッフ・権限で管理します」と案内し、一覧の編集は出さない (管理者はリンク / それ以外は依頼の案内)', async () => {
-    for (const role of ['admin', 'store_staff']) {
-      const db = fakeDb(role);
-      const log = [];
-      const page = openPage('manage/employees.html', { mode: 'fake', fakeClient: fakeClient(db, log), fetch: fakeFunctions(db, log) });
-      try {
-        assert.equal(await page.ready(8000), true, role);
-        assert.ok(visible(page.$('#emp-live-notice')), role + ': 案内が出ない');
-        assert.match(page.text('#emp-live-notice'), /スタッフのアカウントと権限は「スタッフ・権限」で管理します/);
-        assert.ok(!visible(page.$('#emp-list')), role + ': デモの一覧が出ている');
-        assert.ok(!visible(page.$('#btn-add')), role + ': 追加ボタンが出ている');
-        assert.equal(page.$$('.crud-edit').length, 0, role + ': 編集リンクがある');
-        assert.ok(!visible(page.$('#emp-roles')), role + ': デモの権限の説明が出ている');
-        if (role === 'admin') {
-          assert.ok(visible(page.$('#emp-staff-link')));
-          assert.equal(page.$('#emp-staff-link').getAttribute('href'), 'staff.html');
-        } else {
-          assert.ok(!visible(page.$('#emp-staff-link')), '権限の無い役割にリンクを出している');
-          assert.match(page.text('#emp-live-notice'), /管理者にご依頼ください/);
-        }
-        // メニューに従業員管理は無い / 書き込みもしない
-        assert.equal(navHrefs(page).indexOf('employees.html'), -1);
-        assert.equal(log.filter(l => l.kind === 'from' && l.op !== 'select').length, 0, role + ': 書き込んだ');
-        deq(businessKeys(page.window.localStorage), []);
-        assertClean(page, 'fake-employees-' + role);
-      } finally { page.close(); }
-    }
-  });
-
   test('profile.html: ログイン中のスタッフ (名前・メール・役割・担当拠点・二段階認証) / パスワード変更 / デモ用の保存・バックアップは出さない', async () => {
     const db = fakeDb('store_staff');
     const log = [];

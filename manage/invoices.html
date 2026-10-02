@@ -52,19 +52,29 @@
         <tbody id="tbl"><tr class="empty"><td colspan="9">読み込み中...</td></tr></tbody>
       </table>
     </section>
+
+    <section class="card" style="padding:22px;margin-top:14px">
+      <strong class="card-section-title">請求書 振込先口座</strong>
+      <p style="font-size:12px;color:#777;margin-bottom:10px">ここで設定した口座情報が、発行する請求書に印字されます。</p>
+      <div class="form-row"><label for="b-bank">銀行・支店名</label><input type="text" class="form-input" id="b-bank"></div>
+      <div class="form-row"><label for="b-type">口座種別</label><select class="form-input" id="b-type" style="max-width:160px"><option>普通</option><option>当座</option></select></div>
+      <div class="form-row"><label for="b-no">口座番号</label><input type="text" class="form-input" id="b-no"></div>
+      <div class="form-row"><label for="b-holder">口座名義</label><input type="text" class="form-input" id="b-holder"></div>
+      <div class="form-actions"><button class="btn btn-primary" id="b-save">振込先を保存</button></div>
+    </section>
   </main>
 
   <div id="print-area"></div>
 
   <script src="partials.js"></script>
 
-  <script src="../js/config.js?v=20261006"></script>
-  <script src="../js/store.js?v=20261006"></script>
-  <script src="../js/pricing-core.js?v=20261006"></script>
-  <script src="../js/pricing.js?v=20261006"></script>
-  <script src="../js/api.js?v=20261006"></script>
-  <script src="../js/backend.js?v=20261006"></script>
-  <script src="../js/boot.js?v=20261006"></script>
+  <script src="../js/config.js?v=20261007"></script>
+  <script src="../js/store.js?v=20261007"></script>
+  <script src="../js/pricing-core.js?v=20261007"></script>
+  <script src="../js/pricing.js?v=20261007"></script>
+  <script src="../js/api.js?v=20261007"></script>
+  <script src="../js/backend.js?v=20261007"></script>
+  <script src="../js/boot.js?v=20261007"></script>
   <script type="text/x-deferred">
   (function () {
     const S = window.SkyRentStore;
@@ -236,9 +246,25 @@
       const unpay = modal.querySelector('#v-unpay'); if (unpay) unpay.addEventListener('click', () => { S.setInvoiceStatus(invoiceId, 'unpaid'); close(); render(); });
     }
 
+    // 振込先口座 (請求書に印字する)
+    function loadBank() {
+      const b = S.read('settings.billing', { bankName: '', accountType: '普通', accountNo: '', holder: '' });
+      $('#b-bank').value = b.bankName || ''; $('#b-type').value = b.accountType || '普通'; $('#b-no').value = b.accountNo || ''; $('#b-holder').value = b.holder || '';
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       $('#btn-add').addEventListener('click', openAdd);
       render();
+      loadBank();
+      // 振込先の変更は「設定の変更」の権限があるスタッフだけ (サーバーの app_settings と同じ)
+      if (!window.SkyRentBackend.admin.can('settings.write')) {
+        ['#b-bank', '#b-type', '#b-no', '#b-holder', '#b-save'].forEach(sel => { $(sel).disabled = true; });
+        $('#b-save').insertAdjacentHTML('afterend', '<span style="font-size:12px;color:#888;margin-left:8px">変更は管理者が行います</span>');
+      }
+      $('#b-save').addEventListener('click', () => {
+        S.write('settings.billing', { bankName: $('#b-bank').value.trim(), accountType: $('#b-type').value, accountNo: $('#b-no').value.trim(), holder: $('#b-holder').value.trim() });
+        window.SkyRentBackend.toast('振込先を保存しました', 'success');
+      });
     });
   })();
   </script>

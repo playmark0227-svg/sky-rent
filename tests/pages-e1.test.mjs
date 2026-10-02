@@ -492,9 +492,16 @@ describe('デモモード', { skip: NO_JSDOM }, () => {
     try {
       assert.equal(await page.ready(8000), true);
       const hrefs = navHrefs(page);
-      ['inquiries.html', 'mail-log.html', 'calendar.html', 'staff.html', 'audit.html', 'dashboard.html', 'site-settings.html', 'employees.html', 'contact.html'].forEach(h => {
+      ['inquiries.html', 'mail-log.html', 'calendar.html', 'staff.html', 'audit.html', 'dashboard.html', 'site-settings.html', 'contact.html'].forEach(h => {
         assert.ok(hrefs.indexOf(h) >= 0, h + ' がメニューに無い');
       });
+      // 打ち合わせで使わないと決まった画面 (2026-10 に削除) はメニューにもヘッダーにも無い
+      ['employees.html', 'points.html', 'content.html', 'custom-pages.html', 'notices.html', 'seo.html', 'input-fields.html', 'ga-integration.html',
+        'customer-rates.html', 'reservation-cancellations.html', 'revenue.html', 'utilization.html', 'reports-print.html', 'categories.html'].forEach(h => {
+        assert.equal(hrefs.indexOf(h), -1, h + ' がメニューに残っている');
+      });
+      assert.equal(page.$('a[href="billing.html"]'), null, '請求情報 (システムの月額) のリンクが残っている');
+      assert.equal(page.$('a[href="faq.html"]'), null, 'システムの FAQ のリンクが残っている');
       // システムについてのお問合せ・手順書は「システム」のグループに1つだけ
       const contact = page.document.querySelectorAll('.topnav-menu a[href="contact.html"]');
       assert.equal(contact.length, 1);
@@ -540,10 +547,10 @@ describe('本番モード (偽クライアント): メニューの権限・ス�
   test('partials.js: 役割ごとに権限の無いメニューを隠す・名前と役割・ログアウト', async () => {
     // 従業員管理 (デモ用の一覧) は本番ではどの役割にも出さない (スタッフ・権限に一本化)。お問合せ・手順書は全員
     const expect = {
-      admin: { show: ['staff.html', 'audit.html', 'calendar.html', 'mail-log.html', 'inquiries.html', 'site-settings.html', 'contact.html'], hide: ['employees.html'] },
-      store_staff: { show: ['mail-log.html', 'inquiries.html', 'content.html', 'dashboard.html', 'contact.html'], hide: ['staff.html', 'audit.html', 'calendar.html', 'site-settings.html', 'ga-integration.html', 'employees.html'] },
-      viewer: { show: ['dashboard.html', 'inquiries.html', 'members.html', 'contact.html'], hide: ['mail-log.html', 'staff.html', 'audit.html', 'calendar.html', 'site-settings.html', 'content.html', 'employees.html'] },
-      accounting: { show: ['mail-log.html', 'invoices.html', 'contact.html'], hide: ['staff.html', 'audit.html', 'calendar.html', 'content.html', 'employees.html'] }
+      admin: { show: ['staff.html', 'audit.html', 'calendar.html', 'mail-log.html', 'inquiries.html', 'site-settings.html', 'contact.html'], hide: [] },
+      store_staff: { show: ['mail-log.html', 'inquiries.html', 'dashboard.html', 'contact.html'], hide: ['staff.html', 'audit.html', 'calendar.html', 'site-settings.html'] },
+      viewer: { show: ['dashboard.html', 'inquiries.html', 'members.html', 'contact.html'], hide: ['mail-log.html', 'staff.html', 'audit.html', 'calendar.html', 'site-settings.html'] },
+      accounting: { show: ['mail-log.html', 'invoices.html', 'contact.html'], hide: ['staff.html', 'audit.html', 'calendar.html'] }
     };
     for (const role of Object.keys(expect)) {
       const db = fakeDb(role);
