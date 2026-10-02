@@ -11,7 +11,7 @@
   <meta property="og:site_name" content="グロースレンタカー">
   <meta property="og:type" content="website">
   <meta property="og:title" content="空き状況を検索 | グロースレンタカー">
-  <meta property="og:description" content="北海道 北見・釧路のレンタカー・キッチンカー。空き状況を検索して、Webでそのまま予約できます。">
+  <meta property="og:description" content="北海道 北見・釧路のレンタカー・キッチンカー・家電レンタル。空き状況を検索して、Webでそのまま予約できます。">
   <meta property="og:url" content="https://playmark0227-svg.github.io/sky-rent/search.html">
   <meta property="og:image" content="https://playmark0227-svg.github.io/sky-rent/images/brand/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
@@ -70,15 +70,15 @@
 
   <footer class="site-footer"><div class="container"><div class="footer-bottom" style="border-top:none"><span data-i18n="footer.copyright">© 2026 グロースレンタカー</span><a href="index.html">← トップへ戻る</a></div></div></footer>
 
-  <script src="js/config.js?v=20260930"></script>
-  <script src="js/store.js?v=20260930"></script>
-  <script src="js/pricing-core.js?v=20260930"></script>
-  <script src="js/pricing.js?v=20260930"></script>
-  <script src="js/i18n.js?v=20260930"></script>
-  <script src="js/api.js?v=20260930"></script>
-  <script src="js/photos.js?v=20260930"></script>
-  <script src="js/backend.js?v=20260930"></script>
-  <script src="js/boot.js?v=20260930"></script>
+  <script src="js/config.js?v=20261002"></script>
+  <script src="js/store.js?v=20261002"></script>
+  <script src="js/pricing-core.js?v=20261002"></script>
+  <script src="js/pricing.js?v=20261002"></script>
+  <script src="js/i18n.js?v=20261002"></script>
+  <script src="js/api.js?v=20261002"></script>
+  <script src="js/photos.js?v=20261002"></script>
+  <script src="js/backend.js?v=20261002"></script>
+  <script src="js/boot.js?v=20261002"></script>
   <script type="text/x-deferred">
   (function () {
     'use strict';
@@ -96,14 +96,18 @@
       s1: { ja: '検索', en: 'Search' }, s2: { ja: '車両を選択', en: 'Select' }, s3: { ja: '情報入力', en: 'Details' }, s4: { ja: '完了', en: 'Done' },
       'sort-rec': { ja: 'おすすめ順', en: 'Recommended' }, 'sort-asc': { ja: '料金が安い順', en: 'Price ↑' }, 'sort-desc': { ja: '料金が高い順', en: 'Price ↓' },
       results: { ja: (n, all) => n + ' 件の空きが見つかりました (全' + all + '件)', en: (n, all) => n + ' of ' + all + ' available' },
-      listed: { ja: n => n + ' 件の車両があります。日時を指定すると空き状況を表示します。', en: n => n + ' vehicle(s). Set dates to check availability.' },
+      listed: { ja: n => n + ' 件の車両・家電レンタルがあります。日時を指定すると空き状況を表示します。', en: n => n + ' result(s). Set dates to check availability.' },
       perday: { ja: '/24時間', en: '/24h' }, perhour: { ja: '〜/時', en: '〜/hr' },
       lic: { ja: '要免許', en: 'License req.' }, filterLabel: { ja: '絞り込み', en: 'Filter' }, any: { ja: '指定なし', en: 'Any' },
       over: { ja: '以上', en: '+' },
       badPeriod: { ja: '返却日時は出発日時より後にしてください。', en: 'Return time must be after pick-up time.' },
       past: { ja: '過去の日時はご予約いただけません。出発日時をご確認ください。', en: 'The pick-up time is in the past.' },
       tz: { ja: '日時は日本時間です。', en: 'All times are Japan Standard Time (JST).' },
-      details: { ja: '詳細・予約', en: 'Details & Book' }, view: { ja: '詳細を見る', en: 'View details' }
+      details: { ja: '詳細・予約', en: 'Details & Book' }, view: { ja: '詳細を見る', en: 'View details' },
+      // 家電レンタル (車両の付かない、家電だけのレンタル)
+      itemDetails: { ja: '家電を選んで予約', en: 'Choose appliances' },
+      itemPrice: { ja: p => '家電ごとに ' + p + '〜/24時間', en: p => 'From ' + p + ' per appliance / 24h' },
+      itemMeta: { ja: '車両は付きません・運転免許証は不要です', en: 'No vehicle included. No driver\'s license needed.' }
     };
     const tt = k => L[k][isEn() ? 'en' : 'ja'];
     const ms = v => core.toMs(v);
@@ -169,7 +173,16 @@
       });
     }
 
-    function priceLabel(a) {
+    // 家電レンタル: 借りる家電 (全カテゴリ共通の装備オプション) の最安値
+    function itemMinPrice(a) {
+      const o = S.optionsForCategory(a.categoryId);
+      const prices = o.common.concat(o.specific)
+        .filter(x => x && !(x.kind ? x.kind === 'cover' : x.exclusiveGroup === 'cover') && Number(x.price) > 0)
+        .map(x => Number(x.price));
+      return prices.length ? Math.min.apply(null, prices) : 0;
+    }
+    function priceLabel(a, isItem) {
+      if (isItem) { const min = itemMinPrice(a); return min ? tt('itemPrice')(P.yen(min)) : ''; }
       const day = a.priceDay ? P.yen(a.priceDay) + tt('perday') : '';
       if (a.priceHour) return P.yen(a.priceHour) + tt('perhour') + ' / ' + day;
       return day;
@@ -198,8 +211,10 @@
         categoryId: state.category, locationId: state.location,
         start: checkDates ? state.start : '', end: checkDates ? state.end : '', quantity: 1, filters: state.filters
       });
-      if (state.sort === 'asc') items.sort((a, b) => (a.priceDay || 0) - (b.priceDay || 0));
-      else if (state.sort === 'desc') items.sort((a, b) => (b.priceDay || 0) - (a.priceDay || 0));
+      // 家電レンタル (車両の料金が無い) は家電の最安値で並べる
+      const sortPrice = a => { const c = S.getCategory(a.categoryId); return c && c.type === 'item' ? itemMinPrice(a) : (a.priceDay || 0); };
+      if (state.sort === 'asc') items.sort((a, b) => sortPrice(a) - sortPrice(b));
+      else if (state.sort === 'desc') items.sort((a, b) => sortPrice(b) - sortPrice(a));
       else if (checkDates) items.sort((a, b) => (b.availability.ok ? 1 : 0) - (a.availability.ok ? 1 : 0));  // おすすめ順: 予約できる車両を先に
 
       const okCount = items.filter(a => a.availability.ok).length;
@@ -225,14 +240,13 @@
           const text = av.code ? B.errorMessage(av.code) : av.reason;
           if (text) reason = '<div class="meta" style="color:#ffb4a8;line-height:1.7">' + esc(text) + '</div>';
         }
-        else if (isItem && av.stock > 1) badge = '<span class="badge stock">' + esc(I.t('search.stock')) + ' ' + esc(av.remaining) + '</span>';
         else badge = '<span class="badge ok">' + esc(I.t('search.available')) + '</span>';
         const lic = a.requiredLicense ? ' <span class="badge lic">' + tt('lic') + '</span>' : '';
         const q = 'id=' + encodeURIComponent(a.assetId) + (state.start ? '&start=' + encodeURIComponent(J.toInput(state.start)) : '') + (state.end ? '&end=' + encodeURIComponent(J.toInput(state.end)) : '');
         const btn = !checkDates
           ? '<a class="btn btn-secondary" href="detail.html?' + q + '">' + tt('view') + '</a>'
           : av.ok
-            ? '<a class="btn btn-primary" href="detail.html?' + q + '">' + tt('details') + '</a>'
+            ? '<a class="btn btn-primary" href="detail.html?' + q + '">' + tt(isItem ? 'itemDetails' : 'details') + '</a>'
             : '<a class="btn btn-secondary" href="detail.html?' + q + '">' + (isEn() ? 'Other dates' : '別の日時を探す') + '</a>';
         return '<div class="asset-card ' + (!checkDates || av.ok ? 'ok' : 'ng') + '">' +
           '<div class="thumb">' + (window.SkyRentPhotos ? window.SkyRentPhotos.thumbHtml(a) : esc(a.image || '📦')) + '</div>' +
@@ -240,7 +254,8 @@
           '<div class="cat">' + esc(catName(cat)) + ' ・ ' + esc(loc ? (isEn() && loc.nameEn ? loc.nameEn : loc.name) : '') + '</div>' +
           '<div class="name">' + esc(assetName(a)) + lic + '</div>' +
           (badge ? '<div style="margin:2px 0">' + badge + '</div>' : '') + reason +
-          '<div class="price">' + esc(priceLabel(a)) + '</div>' +
+          (isItem ? '<div class="meta">' + esc(tt('itemMeta')) + '</div>' : '') +
+          '<div class="price">' + esc(priceLabel(a, isItem)) + '</div>' +
           '</div>' + btn + '</div>';
       }).join('');
     }

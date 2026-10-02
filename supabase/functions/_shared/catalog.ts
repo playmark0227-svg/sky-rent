@@ -85,9 +85,19 @@ export async function loadOptionsByIds(ids: string[]): Promise<OptionRow[]> {
   return (data || []) as OptionRow[];
 }
 
-export function coreAsset(a: AssetRow) {
+/** カテゴリの種類 ('vehicle' | 'item')。不明なら車両として扱う */
+export function categoryTypeOf(c: { type?: string | null } | null | undefined): 'vehicle' | 'item' {
+  return c && c.type === 'item' ? 'item' : 'vehicle';
+}
+
+/**
+ * pricing-core の asset。categoryType ('vehicle' | 'item') は料金の計算に使う
+ * (家電レンタル = 'item' は基本料金 0・割増なし・割引不可・家電を1つ以上)。
+ */
+export function coreAsset(a: AssetRow, categoryType: string = 'vehicle') {
   return {
-    id: a.id, categoryId: a.category_id, priceHour: a.price_hour, priceDay: a.price_day,
+    id: a.id, categoryId: a.category_id, categoryType: categoryType === 'item' ? 'item' : 'vehicle',
+    priceHour: a.price_hour, priceDay: a.price_day,
     customFields: a.custom_fields || {}
   };
 }
@@ -129,6 +139,8 @@ export type QuoteResult = {
   bundle: Bundle;
   options: OptionRow[];
   rules: any;
+  /** 'vehicle' | 'item' (家電レンタル) */
+  categoryType: 'vehicle' | 'item';
 };
 
 /**
@@ -148,12 +160,15 @@ export async function serverQuote(p: QuoteInput): Promise<QuoteResult> {
   if (!bundle.asset.active || !bundle.category.active || !bundle.location.active) {
     throw new ApiError('ASSET_UNAVAILABLE', 409);
   }
+  const categoryType = categoryTypeOf(bundle.category);
   const byId = new Map(options.map((o) => [o.id, o]));
   for (const id of p.optionIds) {
     const o = byId.get(id);
     if (!o || !o.active || (Array.isArray(o.category_ids) && o.category_ids.length &&
       !o.category_ids.includes(bundle.asset.category_id))) {
-      throw new ApiError('OPTION_INVALID', 400, undefined, { fields: { optionIds: 'この車両では選べないオプションが含まれています。' } });
+      throw new ApiError('OPTION_INVALID', 400,
+        categoryType === 'item' ? '選択されたオプションは家電レンタルではご利用いただけません。オプションを選び直してください。' : undefined,
+        { fields: { optionIds: categoryType === 'item' ? '家電レンタルでは選べないオプションが含まれています。' : 'この車両では選べないオプションが含まれています。' } });
     }
   }
   if (p.discountType) {
@@ -164,7 +179,7 @@ export async function serverQuote(p: QuoteInput): Promise<QuoteResult> {
   }
   const ordered = p.optionIds.map((id) => byId.get(id)!) as OptionRow[];
   const quote = Core.quote({
-    asset: coreAsset(bundle.asset),
+    asset: coreAsset(bundle.asset, categoryType),
     start: p.start,
     end: p.end,
     options: ordered.map(coreOption),
@@ -172,17 +187,20 @@ export async function serverQuote(p: QuoteInput): Promise<QuoteResult> {
     coupon: p.coupon ? { id: p.coupon.id, amount: p.coupon.amount } : null,
     rules
   });
-  return { quote, bundle, options: ordered, rules };
+  return { quote, bundle, options: ordered, rules, categoryType };
 }
 
-/** キャンセル料 (base は予約時の price.base。無ければ合計) */
+/**
+ * キャンセル料。元になる利用料金は pricing-core の cancellationBase:
+ *   車両 = 予約時の price.base (無ければ合計) / 家電レンタル (is_item) = 家電 (オプション) の料金の合計
+ */
 export function cancellationFor(
-  r: { status: string; start_at: string; price?: any; total?: number; category_id: string },
+  r: { status: string; start_at: string; price?: any; total?: number; category_id: string; is_item?: boolean | null },
   asset: AssetRow | null,
   rules: any,
   now: Date
 ) {
-  const base = r.price && Number.isFinite(Number(r.price.base)) ? Number(r.price.base) : Number(r.total || 0);
+  const base = Core.cancellationBase({ price: r.price, total: r.total, isItem: r.is_item === true }) as number;
   const cancellable = r.status === 'confirmed' && Date.parse(r.start_at) > now.getTime();
   const fee = Core.cancellationFee({
     asset: asset ? coreAsset(asset) : { categoryId: r.category_id, customFields: {} },
@@ -193,4 +211,29 @@ export function cancellationFor(
     rules
   });
   return { cancellable, fee: fee.fee as number, pct: fee.pct as number, label: fee.label as string, base, cls: fee.cls, busy: fee.busy };
+}
+
+// ---------------------------------------------------------------------
+// 家電の在庫 (options.stock)。判定は DB の関数 (service_role のみ実行可)
+// ---------------------------------------------------------------------
+/** その期間に貸し出せない (残り0) 有効なオプションの id。家電セットは中身のどれかが残り0なら含める */
+export async function loadUnavailableOptionIds(start: string, end: string, excludeReservationId?: string | null): Promise<string[]> {
+  const { data, error } = await adminClient().rpc('unavailable_option_ids', {
+    p_start: start, p_end: end, p_exclude: excludeReservationId || null
+  });
+  if (error) throw pgToApiError(error);
+  return Array.isArray(data) ? data.map(String) : [];
+}
+
+/**
+ * 選んだ家電 (セットは中身に展開) のうち、在庫を超えるものの id (家電セットを選んでいればセット自身も)。
+ * 空なら予約できる。最終判定は予約確定の DB の処理 (ロックを取ってから数える) で行う。
+ */
+export async function optionSoldOut(optionIds: string[], start: string, end: string, excludeReservationId?: string | null): Promise<string[]> {
+  if (!optionIds.length) return [];
+  const { data, error } = await adminClient().rpc('option_sold_out', {
+    p_option_ids: optionIds, p_period: '[' + start + ',' + end + ')', p_exclude: excludeReservationId || null
+  });
+  if (error) throw pgToApiError(error);
+  return Array.isArray(data) ? data.map(String) : [];
 }

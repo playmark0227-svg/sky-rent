@@ -31,7 +31,7 @@
   // (値を変えるときは seed.sql と両方を直す。tests/pricing.test.mjs で一致を検査)
   // ===================================================================
   const DEFAULT_RULES = deepFreeze({
-    version: '2026-06',
+    version: '2026-10',
     timezone: 'Asia/Tokyo',
     shortHoursMax: 6,
     weekendHolidayFee: 330,
@@ -44,6 +44,8 @@
       { name: '年末年始', from: '12-29', to: '01-03' }
     ],
     extraHolidays: [],
+    // 家電レンタル (categoryType = 'item') にも土日祝・夜間・繁忙期の割増をかけるか (既定: かけない)
+    itemSurcharges: false,
     discounts: {
       student:        { label: '学生割引',         amount: 1100, minHours: 24, proof: '学生証' },
       corporate:      { label: '法人割引',         amount: 1100, minHours: 24, proof: '社員証・法人名でのご予約' },
@@ -52,16 +54,18 @@
     },
     cancellation: {
       classOf: { 'コンパクト': 'compact', '軽トラック': 'compact', 'SUV': 'large', 'ミニバン': 'large' },
-      categoryClass: { 'cat-kitchen': 'kitchen' },
+      categoryClass: { 'cat-kitchen': 'kitchen', 'cat-appliance': 'item' },
       normal: {
         compact: [{ minDays: 3, pct: 0 }, { minDays: 1, pct: 30 }, { minDays: 0, pct: 50 }],
         large:   [{ minDays: 3, pct: 0 }, { minDays: 1, pct: 30 }, { minDays: 0, pct: 50 }],
-        kitchen: [{ minDays: 14, pct: 0 }, { minDays: 3, pct: 50 }, { minDays: 0, pct: 100 }]
+        kitchen: [{ minDays: 14, pct: 0 }, { minDays: 3, pct: 50 }, { minDays: 0, pct: 100 }],
+        item:    [{ minDays: 3, pct: 0 }, { minDays: 1, pct: 30 }, { minDays: 0, pct: 50 }]
       },
       busy: {
         compact: [{ minDays: 7, pct: 0 }, { minDays: 1, pct: 30 }, { minDays: 0, pct: 50 }],
         large:   [{ minDays: 7, pct: 0 }, { minDays: 1, pct: 30 }, { minDays: 0, pct: 50 }],
-        kitchen: [{ minDays: 14, pct: 0 }, { minDays: 7, pct: 20 }, { minDays: 3, pct: 30 }, { minDays: 1, pct: 50 }, { minDays: 0, pct: 100 }]
+        kitchen: [{ minDays: 14, pct: 0 }, { minDays: 7, pct: 20 }, { minDays: 3, pct: 30 }, { minDays: 1, pct: 50 }, { minDays: 0, pct: 100 }],
+        item:    [{ minDays: 7, pct: 0 }, { minDays: 1, pct: 30 }, { minDays: 0, pct: 50 }]
       },
       noShowPct: 100
     },
@@ -295,15 +299,27 @@
   // ===================================================================
   // 見積
   // ===================================================================
+  /** 家電レンタル (物品レンタルのカテゴリ) の車両・予約か (asset.categoryType / category_type = 'item') */
+  function isItemAsset(asset) {
+    return pick(asset, 'categoryType', 'category_type') === 'item';
+  }
+
   /**
    * @param {object} input {asset, start, end, options, discountType, coupon, rules}
+   *   asset.categoryType: 'vehicle' (既定) | 'item' (家電レンタル)
    *   options: [{id, name, price, priceShort, priceType, categoryIds, exclusiveGroup, includes}]
    *     includes = セットに含まれる品目の id の配列 (例: 家電セット → 冷蔵冷凍庫〜電気ケトルの9点)。無ければ null
    * @returns {object} Quote {ok, errors, hours, days, plan, lines:[{code,label,amount}], base,
    *                          subtotal, discount, couponDiscount, total, busy, rulesVersion}
    *   errors: INVALID_PERIOD (期間不正) / INVALID_ASSET (車両・料金なし) /
    *           OPTION_CONFLICT (同時に選べないオプション: 同じ補償の重複・セットとセットに含まれる品目) /
-   *           OPTION_NOT_APPLICABLE (この車両に付けられないオプション) / DISCOUNT_NOT_APPLICABLE (割引の条件外)
+   *           OPTION_NOT_APPLICABLE (この車両に付けられないオプション) / DISCOUNT_NOT_APPLICABLE (割引の条件外) /
+   *           ITEM_REQUIRED (家電レンタルで家電を1つも選んでいない)
+   *
+   * 家電レンタル (asset.categoryType = 'item'):
+   *   基本料金は 0 (料金の行は選んだ家電だけ。車両の料金が無くても INVALID_ASSET にしない)。
+   *   土日祝・夜間・繁忙期の割増はかけない (rules.itemSurcharges === true のときだけかける)。
+   *   割引 (基本料金にだけ効く) は使えない → DISCOUNT_NOT_APPLICABLE。クーポンは車両と同じ。
    */
   function quote(input) {
     input = input || {};
@@ -318,13 +334,14 @@
     };
 
     const asset = input.asset || null;
+    const item = isItemAsset(asset);
     const pH = positive(pick(asset, 'priceHour', 'price_hour'));
     const pD = positive(pick(asset, 'priceDay', 'price_day'));
     const catIdRaw = pick(asset, 'categoryId', 'category_id');
     const catId = catIdRaw != null ? String(catIdRaw) : null;
     const startMs = toMs(input.start), endMs = toMs(input.end);
 
-    if (!asset || (pH == null && pD == null)) errors.push('INVALID_ASSET');
+    if (!asset || (!item && pH == null && pD == null)) errors.push('INVALID_ASSET');
     if (!isFinite(startMs) || !isFinite(endMs) || endMs <= startMs) errors.push('INVALID_PERIOD');
     if (errors.length) return result;
 
@@ -333,9 +350,11 @@
     const n = Math.floor(h / 24);   // 24時間の単位数
     const r = h % 24;               // 端数の時間
 
-    // 1. 基本料金
+    // 1. 基本料金 (家電レンタルは 0。料金は家電の行だけ)
     let base, plan;
-    if (h < 24) {
+    if (item) {
+      base = 0; plan = 'daily';
+    } else if (h < 24) {
       const hourly = pH != null ? h * pH : null;
       if (hourly != null && (pD == null || hourly < pD)) {
         base = hourly; plan = 'hourly';
@@ -402,9 +421,13 @@
         if (inner !== s.id && seen[inner]) pushUnique(errors, 'OPTION_CONFLICT');
       });
     });
+    // 家電レンタルは、借りる家電 (オプション) を1つ以上
+    if (item && !lines.some(function (l) { return l.code === 'option'; })) pushUnique(errors, 'ITEM_REQUIRED');
 
     // 3・4. 繁忙期割増 / 土日祝割増 (利用期間が触れる暦日 = 開始日〜終了時刻の1ms前の日)
     //   367日あれば全ての月日と曜日を一巡するので、それ以上は調べない
+    //   家電レンタルは割増なし (rules.itemSurcharges === true のときだけ)。繁忙期かどうか (busy) は返す
+    const surcharges = !item || R.itemSurcharges === true;
     const d0 = dayIndex(startMs), d1 = Math.min(dayIndex(endMs - 1), d0 + 366);
     let busyPeriod = null, weekend = false;
     for (let i = d0; i <= d1 && !(busyPeriod && weekend); i++) {
@@ -418,7 +441,9 @@
     result.busy = !!busyPeriod;
     const busyFee = Math.max(0, num(R.busyFee) || 0);
     const weekendFee = Math.max(0, num(R.weekendHolidayFee) || 0);
-    if (busyPeriod) {
+    if (!surcharges) {
+      // 家電レンタル: 割増なし
+    } else if (busyPeriod) {
       if (busyFee > 0) lines.push({ code: 'busy', label: '繁忙期割増' + (busyPeriod.name ? ' (' + busyPeriod.name + ')' : ''), amount: busyFee });
     } else if (weekend && weekendFee > 0) {
       lines.push({ code: 'weekend', label: '土日祝割増', amount: weekendFee }); // 繁忙期のときは付けない
@@ -434,14 +459,15 @@
     const nightReturn = isNight(jstParts(endMs).hh);
     const nightCount = (nightPickup ? 1 : 0) + (nightReturn ? 1 : 0);
     const nightFee = Math.max(0, num(R.nightFee) || 0);
-    if (nightCount && nightFee > 0) {
-      const when = nightCount === 2 ? '貸出・返却 2回' : (nightPickup ? '貸出時' : '返却時');
+    if (surcharges && nightCount && nightFee > 0) {
+      const when = nightCount === 2 ? (item ? 'お受け取り・ご返却 2回' : '貸出・返却 2回')
+        : (nightPickup ? (item ? 'お受け取り時' : '貸出時') : (item ? 'ご返却時' : '返却時'));
       lines.push({ code: 'night', label: '夜間料金 (' + when + ')', amount: nightFee * nightCount });
     }
 
     const subtotal = lines.reduce(function (s, l) { return s + l.amount; }, 0);
 
-    // 6. 割引 (1つだけ。基本料金から)
+    // 6. 割引 (1つだけ。基本料金から。家電レンタルは基本料金が無いので使えない)
     let discount = 0;
     const type = input.discountType;
     if (type) {
@@ -449,7 +475,7 @@
       const d = Object.prototype.hasOwnProperty.call(discounts, type) ? discounts[type] : null;
       const minHours = d ? (num(d.minHours) || 0) : 0;
       const cats = d && Array.isArray(d.categoryIds) && d.categoryIds.length ? d.categoryIds.map(String) : null;
-      const applicable = !!d && h >= minHours && (!cats || (catId != null && cats.indexOf(catId) >= 0));
+      const applicable = !item && !!d && h >= minHours && (!cats || (catId != null && cats.indexOf(catId) >= 0));
       if (!applicable) {
         pushUnique(errors, 'DISCOUNT_NOT_APPLICABLE');
       } else {
@@ -490,9 +516,35 @@
   }
 
   /**
+   * キャンセル料の元になる「利用料金」(cancellationFee の base に渡す値)
+   *   車両       : 予約時の料金内訳の基本料金 (price.base。延長料金を含む)。無ければ合計 (total)
+   *   家電レンタル: 家電 (オプション) の料金の合計 (price.lines のうち code = 'option')。内訳が無ければ合計 (total)
+   * @param {object} input {price, total, categoryType?: 'vehicle'|'item', isItem?: boolean}
+   *   予約の行 (snake_case: is_item / category_type) のままでもよい
+   * @returns {number} 円
+   */
+  function cancellationBase(input) {
+    input = input || {};
+    const price = input.price && typeof input.price === 'object' ? input.price : null;
+    const item = input.isItem === true || input.is_item === true || isItemAsset(input);
+    if (item) {
+      const ls = price && Array.isArray(price.lines) ? price.lines
+        : (price && Array.isArray(price.breakdown) ? price.breakdown : null);
+      if (!ls) return Math.max(0, num(input.total) || 0);
+      return ls.reduce(function (s, l) {
+        return s + (l && l.code === 'option' ? Math.max(0, num(l.amount) || 0) : 0);
+      }, 0);
+    }
+    return price && isFinite(Number(price.base)) ? Number(price.base) : Number(input.total || 0);
+  }
+
+  /**
    * @param {object} input {asset, category:{id}, start, cancelAt, base, noShow?, rules}
+   *   base はキャンセル料の元になる利用料金 (cancellationBase で求める)
    * @returns {object} Fee {cls, busy, daysBefore, pct, fee, label}
    *   daysBefore = 貸出日 − 取消日 (日本時間の暦日差。当日 0 / 前日 1 / 前々日 2。貸出日を過ぎていれば負)
+   *   cls は rules.cancellation.categoryClass (カテゴリ → 区分。家電レンタル cat-appliance → item)、
+   *   無ければ車両の bodyType (classOf)、どちらも無ければ compact
    */
   function cancellationFee(input) {
     input = input || {};
@@ -562,6 +614,7 @@
     DEFAULT_RULES: DEFAULT_RULES,
     quote: quote,
     cancellationFee: cancellationFee,
+    cancellationBase: cancellationBase,
     isJapaneseHoliday: isJapaneseHoliday,
     holidayName: holidayName,
     jstParts: jstParts,

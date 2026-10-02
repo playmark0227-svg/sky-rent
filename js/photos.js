@@ -3,16 +3,20 @@
  *
  * 優先順位: asset.photo (実車写真) → カテゴリ既定写真 → 絵文字。
  * 実車写真は images/cars/ に配置 (2026年8月撮影・ナンバー処理済み)。
+ * 家電レンタル (cat-appliance) には既定写真が無く、絵文字 (asset.image = 🔌) を出す。
  */
 (function () {
   'use strict';
   const U = (id, w) => 'https://images.unsplash.com/' + id + '?auto=format&fit=crop&w=' + (w || 900) + '&q=70';
 
   // 実車写真がまだ無いカテゴリの暫定イメージ
+  //   家電レンタル (cat-appliance) は写真を用意していないので、外部の仮写真は使わず絵文字 (🔌) で表示する
   const CAT_PHOTOS = {
     'cat-rental':  U('photo-1449965408869-eaa3f722e40d'),
     'cat-kitchen': U('photo-1565123409695-7b5ef63a2efb')
   };
+  // 写真が無いときの絵文字 (asset.image が無いとき)
+  const CAT_EMOJI = { 'cat-appliance': '🔌' };
 
   // 資産IDごとの実車写真 (store.js の asset.photo が優先。ここは保険)
   const ASSET_PHOTOS = {
@@ -50,7 +54,7 @@
   function thumbHtml(asset) {
     const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const url = photoFor(asset);
-    const emoji = esc(asset && asset.image || '🚗');
+    const emoji = esc(asset && (asset.image || CAT_EMOJI[asset.categoryId]) || '🚗');
     if (!url) return emoji;
     return '<span class="thumb-emoji" aria-hidden="true">' + emoji + '</span>' +
       '<img src="' + esc(url) + '" alt="' + esc(asset.name || '') + '" loading="lazy" onerror="this.remove()">';

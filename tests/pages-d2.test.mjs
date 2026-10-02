@@ -634,12 +634,16 @@ describe('装備オプションの案内 (faq / fleet / law / guide / index / co
     ['集客セット', 'ホワイトボード・マグネット・ペン', '¥1,100']
   ];
   // 撤去時に事実と違うとして消した記述は戻さない
+  //   (2026-10-02 から家電だけのレンタル [cat-appliance] は取り扱う。工具・料金表に無い品目は取り扱わない)
   function assertNoWrongClaims(page, label) {
     const t = text(page, 'body');
     assert.doesNotMatch(t, /発電機|フライヤー|鉄板|のぼり旗/, label + ': 料金表に無い装備');
     assert.doesNotMatch(t, /お電話またはマイページ|電話でのキャンセル|お電話でキャンセル/, label + ': 電話でのキャンセル');
-    assert.doesNotMatch(t, /車両・物品を探す/, label + ': 物品の単体レンタル');
-    assert.equal(page.$('a[href*="cat-appliance"], a[href*="cat-tool"]'), null, label + ': 家電・工具カテゴリへのリンク');
+    assert.doesNotMatch(t, /車両・物品を探す/, label + ': 物品の単体レンタル (旧表記)');
+    assert.doesNotMatch(t, /装備だけのレンタルは行っておりません|単体でのレンタルは行っておりません/, label + ': 家電だけのレンタルを否定する旧記述');
+    assert.equal(page.$('a[href*="cat-tool"]'), null, label + ': 工具カテゴリへのリンク');
+    page.document.querySelectorAll('a[href*="cat-appliance"]').forEach(a =>
+      assert.equal(a.getAttribute('href'), 'search.html?category=cat-appliance', label + ': 家電レンタルへのリンク先'));
   }
 
   test('fleet.html: 目次と #opt-equip の表 (装備・機種・料金)・補償の後に装備', async () => {
@@ -655,9 +659,23 @@ describe('装備オプションの案内 (faq / fleet / law / guide / index / co
       const h2 = [...page.document.querySelectorAll('.fleet-doc h2')].map(h => h.id);
       assert.ok(h2.indexOf('opt-equip') === h2.indexOf('opt-cover') + 1, h2.join(' '));
       const after = page.$('#equip-table').nextElementSibling.textContent;
-      assert.match(after, /車両のご予約に追加する形/);
-      assert.match(after, /装備だけのレンタルは行っておりません/);
+      assert.match(after, /車両のご予約に追加してお貸しできるほか、車を借りずに家電だけをお借りいただくこともできます/);
       assert.match(after, /セットに含まれる9点を個別に追加することはできません/);
+      assert.match(after, /在庫には限りがあり/);
+      // 家電だけのレンタル (#appliance): 装備の後・目次・料金表どおり・条件・予約への導線
+      assert.ok(toc.indexOf('#appliance') > toc.indexOf('#opt-equip'), '目次: ' + toc.join(' '));
+      assert.equal(h2.indexOf('appliance'), h2.indexOf('opt-equip') + 1, h2.join(' '));
+      const arows = [...page.document.querySelectorAll('#appliance-table tr')].slice(1).map(tr => [...tr.children].map(td => td.textContent.trim()));
+      deq(arows, EQUIP.map(e => [e[0], e[2]]));
+      const terms = text(page, '#appliance-terms');
+      assert.match(terms, /北見本店/);
+      assert.match(terms, /配送は行っておりません/);
+      assert.match(terms, /運転免許証は不要/);
+      assert.match(terms, /割増はかかりません/);
+      assert.match(terms, /3日前まで無料、前々日・前日は30%、当日は50%/);
+      assert.ok(page.$('#appliance a[href="item-terms.html"], #appliance ~ p a[href="item-terms.html"]'), '物品レンタル規約へのリンク');
+      assert.ok(page.$('a[href="search.html?category=cat-appliance"]'), '家電レンタルの予約への導線');
+      assert.ok(page.$('a[href="law.html#cancel-item"]'));
       assertNoWrongClaims(page, 'fleet');
       assertClean(page, 'fleet');
     } finally { page.close(); }
@@ -676,14 +694,32 @@ describe('装備オプションの案内 (faq / fleet / law / guide / index / co
       const rows = [...q15.querySelectorAll('tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim()));
       deq(rows.map(r => r[1]), EQUIP.map(e => e[2]));
       deq(rows.map(r => r[0].replace(/ \(ホワイトボード・マグネット・ペン\)$/, '')), EQUIP.map(e => e[0]));
-      assert.match(q15.textContent, /装備だけのレンタルは行っておりません/);
+      assert.match(q15.textContent, /車を借りずに家電だけをお借りいただくこともできます/);
+      assert.ok(q15.querySelector('a[href="#q-appliance"]'), 'Q15 から家電レンタルの節へのリンク');
       assert.match(q15.textContent, /家電セットをお選びの場合、セットに含まれる9点を個別に追加することはできません/);
-      // 前後の質問と番号
+      // 前後の質問と番号 (2026-10-02: 家電レンタルの節 Q16〜Q20 を足して、以降を振り直し)
       const titles = qs.map(d => d.querySelector('summary').textContent);
       assert.match(titles[13], /^Q14学割や法人割引/);
-      assert.match(titles[15], /^Q16キャンセル料はかかりますか/);
-      assert.equal(qs.length, 35);
-      assert.match(titles[34], /^Q35補償はいつまでに申し込めばよいですか/);
+      assert.match(titles[15], /^Q16車を借りずに、家電だけを借りられますか/);
+      assert.equal(qs[15].closest('.faq-list').previousElementSibling.id, 'q-appliance', '家電レンタルの節に無い');
+      assert.match(titles[16], /^Q17家電だけを借りるときも、運転免許証は必要ですか/);
+      assert.match(qs[16].textContent, /運転免許証は必要ありません/);
+      assert.match(titles[17], /^Q18家電を届けてもらえますか/);
+      assert.match(qs[17].textContent, /配送は行っておりません。北見本店の店頭/);
+      assert.match(titles[18], /^Q19借りた家電を壊したり/);
+      assert.match(qs[18].textContent, /実費/);
+      assert.match(titles[19], /^Q20家電レンタルのキャンセル料はかかりますか/);
+      const itemFee = [...qs[19].querySelectorAll('tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim()));
+      deq(itemFee, [
+        ['7日前まで', '無料', '無料'],
+        ['6〜3日前', '無料', '¥3,300 (30%)'],
+        ['前々日・前日', '¥3,300 (30%)', '¥3,300 (30%)'],
+        ['当日', '¥5,500 (50%)', '¥5,500 (50%)'],
+        ['ご連絡のないキャンセル', '¥11,000 (100%)', '¥11,000 (100%)']
+      ]);
+      assert.match(titles[20], /^Q21キャンセル料はかかりますか/);
+      assert.equal(qs.length, 40);
+      assert.match(titles[39], /^Q40補償はいつまでに申し込めばよいですか/);
       // ページ内リンク (#q-...) は全部ある
       [...page.document.querySelectorAll('a[href^="#"]')].forEach(a => assert.ok(page.$(a.getAttribute('href')), 'リンク切れ: ' + a.getAttribute('href')));
       const seat = qs.find(d => /チャイルドシート/.test(d.querySelector('summary').textContent));
@@ -693,12 +729,12 @@ describe('装備オプションの案内 (faq / fleet / law / guide / index / co
     } finally { page.close(); }
   });
 
-  test('law.html: 事業内容・料金の概要・必要料金の表に装備 / 版は 2026-10 (キャンセル規定は 2026-08 のまま)', async () => {
+  test('law.html: 事業内容・料金の概要・必要料金の表に装備 / 家電レンタルの料金とキャンセル料 / 版は 2026-10 (キャンセル規定も 2026-10)', async () => {
     const page = openPage('law.html');
     try {
       assert.equal(await page.ready(8000), true);
       const biz = [...page.document.querySelectorAll('#business ~ table th')].find(th => th.textContent === '事業内容');
-      assert.match(biz.nextElementSibling.textContent, /キッチンカーの貸渡し、ならびに付随する装備品の貸出し$/);
+      assert.match(biz.nextElementSibling.textContent, /キッチンカーの貸渡し、ならびに付随する装備品の貸出し、家電 \(物品\) の賃貸 \(家電レンタル\)$/);
       assert.match(text(page, '#terms + table'), /装備オプション \(¥1,100〜¥11,000 \/ 24時間あたり\)/);
       const row = page.$('#extra-equip');
       assert.ok(row, '必要料金の表に装備の行が無い');
@@ -707,10 +743,24 @@ describe('装備オプションの案内 (faq / fleet / law / guide / index / co
       assert.match(cells[1], /装備オプション \(24時間あたり\)/);
       EQUIP.forEach(e => assert.ok(cells[2].indexOf(e[0] + ' ' + e[2]) >= 0, '料金が無い: ' + e[0] + ' ' + e[2]));
       assert.match(cells[2], /車両のご予約に追加する場合/);
-      // 版
+      // 家電レンタル (2026-10-02): 料金は家電の合計 (料金表どおり)・キャンセル料はコンパクトカーと同じ割合
+      const prows = [...page.document.querySelectorAll('#price-item-table tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim()));
+      deq(prows, EQUIP.map(e => [e[0], e[2]]));
+      assert.match(text(page, '#price-item ~ p'), /基本料金はありません/);
+      const crows = [...page.document.querySelectorAll('#cancel-item-table tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim()));
+      deq(crows, [
+        ['7日前以上', '無料', '無料'],
+        ['6日前〜3日前', '無料', '¥3,300 (30%)'],
+        ['前々日・前日', '¥3,300 (30%)', '¥3,300 (30%)'],
+        ['当日', '¥5,500 (50%)', '¥5,500 (50%)'],
+        ['無断キャンセル', '¥11,000 (100%)', '¥11,000 (100%)']
+      ]);
+      assert.ok(page.$('nav.toc a[href="#cancel-item"]'), '目次に家電レンタルのキャンセル料');
+      // 版 (キャンセル規定は家電レンタルの段階を足したので 2026-10)
       assert.match(text(page, '#law-ver'), /版: 2026-10/);
-      assert.match(text(page, '#law-ver'), /キャンセル規定\) は 2026-08 版から変わっていません/);
-      assert.match(text(page, '#cancel-peak ~ .doc-note'), /キャンセル規定.*の版は 2026-08/);
+      assert.match(text(page, '#law-ver'), /キャンセル規定\) は 2026-10 版/);
+      assert.match(text(page, '#cancel-ver'), /キャンセル規定.*の版は 2026-10 \(2026年10月1日施行\)/);
+      assert.doesNotMatch(text(page, 'main'), /2026-08 版から変わっていません/);
       assertNoWrongClaims(page, 'law');
       assertClean(page, 'law-equip');
     } finally { page.close(); }
@@ -736,11 +786,15 @@ describe('装備オプションの案内 (faq / fleet / law / guide / index / co
       const t = text(idx, 'body');
       assert.match(t, /装備もオプションも、まとめて一式。/);
       assert.match(t, /オプションを選んで情報を入力/);
-      const faq = [...idx.document.querySelectorAll('.lp-faq .faq')].find(d => /装備オプションだけ追加できますか/.test(d.textContent));
-      assert.ok(faq, 'トップの FAQ に装備の質問が無い');
-      assert.match(faq.textContent, /車両のご予約に追加する形/);
+      // 2026-10-02: 「装備だけの単体レンタルは行っていない」から「家電だけでも借りられる」に変わった
+      const faq = [...idx.document.querySelectorAll('.lp-faq .faq')].find(d => /車を借りずに、家電だけ借りられますか/.test(d.textContent));
+      assert.ok(faq, 'トップの FAQ に家電レンタルの質問が無い');
+      assert.match(faq.textContent, /家電だけでもお借りいただけます/);
       assert.match(faq.textContent, /家電セット/);
-      assert.match(faq.textContent, /単体でのレンタルは行っておりません/);
+      assert.match(faq.textContent, /北見本店/);
+      assert.match(faq.textContent, /運転免許証は不要/);
+      assert.match(faq.textContent, /車両のご予約に追加するオプションとしても/);
+      assert.ok(idx.$('a[href="search.html?category=cat-appliance"]'), 'トップから家電レンタルの検索への導線');
       const kitchen = [...idx.document.querySelectorAll('.lp-faq .faq')].find(d => /キッチンカーの営業に必要な設備/.test(d.textContent));
       assert.match(kitchen.textContent, /車両ごとの設備は「車両と料金」のページでご確認ください/);
       assertNoWrongClaims(idx, 'index');

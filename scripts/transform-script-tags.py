@@ -16,7 +16,7 @@ import pathlib
 import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-VER = '20260930'
+VER = '20261002'
 
 # 共通ライブラリ (この順で並べる)。optional は元々読み込んでいたページだけに残す
 CORE = [

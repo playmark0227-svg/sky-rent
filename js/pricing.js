@@ -13,12 +13,16 @@
  *                         p.options の代わりに p.optionIds、p.asset の代わりに p.assetId でも可 (store から引く)。
  *   cancellationFee(p)  … キャンセル料 {cls, busy, daysBefore, pct, fee, label}。
  *                         p = {reservation | asset/assetId + start (+ end), cancelAt?, base?, noShow?, category?, rules?}
- *                         cancelAt 省略時は現在時刻、base 省略時は予約の料金内訳 → 期間から再計算 → 24時間料金。
+ *                         cancelAt 省略時は現在時刻、base 省略時は cancellationBase(p)。
+ *   cancellationBase(p) … キャンセル料の元になる「利用料金」。p = {reservation} | {quote, asset}
+ *                         車両 = 基本料金 (予約の料金内訳の base → 期間から再計算 → 24時間料金)
+ *                         家電レンタル = 借りる家電 (オプション) の料金の合計 (基本料金は 0 なので base は使わない)
  *   rules()             … 現在の料金ルール (SkyRentStore の settings.pricing_rules → 無ければ DEFAULT_RULES の複製)。
  *   yen(n)              … '¥1,100' 形式の表示
  *
  * 料金ルールは SkyRentStore.read('settings.pricing_rules') (本番は backend が app_settings から読み込む)。
- * 取り扱いは車両のみのため数量は常に1台として計算する (quantity は互換のために受け取るだけ)。
+ * 数量は常に1台・1点として計算する (quantity は互換のために受け取るだけ)。
+ * 料金エンジンに渡す asset には categoryType ('vehicle' | 'item') を補う (カテゴリの type から。家電レンタルは 'item')。
  */
 (function () {
   'use strict';
@@ -54,6 +58,17 @@
     const S = store();
     return id != null && S && typeof S.getAsset === 'function' ? (S.getAsset(id) || null) : null;
   }
+  // カテゴリの type → 'item' (家電レンタル) | 'vehicle'。カテゴリが分からなければ車両
+  function categoryTypeOfId(categoryId) {
+    const S = store();
+    const cat = categoryId != null && S && typeof S.getCategory === 'function' ? S.getCategory(categoryId) : null;
+    return cat && cat.type === 'item' ? 'item' : 'vehicle';
+  }
+  // 料金エンジンに渡す asset (categoryType が無ければカテゴリから補う。store の値は書き換えない)
+  function withCategoryType(asset) {
+    if (!asset || typeof asset !== 'object' || asset.categoryType === 'item' || asset.categoryType === 'vehicle') return asset;
+    return Object.assign({}, asset, { categoryType: categoryTypeOfId(asset.categoryId != null ? asset.categoryId : asset.category_id) });
+  }
   function findOptions(ids) {
     const S = store();
     if (!Array.isArray(ids) || !S || typeof S.list !== 'function') return [];
@@ -68,7 +83,7 @@
     const c = p.coupon;
     const couponAmount = c ? Number(c.amount) : 0;
     return {
-      asset: p.asset || findAsset(p.assetId),
+      asset: withCategoryType(p.asset || findAsset(p.assetId)),
       start: p.start,
       end: p.end,
       options: Array.isArray(p.options) ? p.options : findOptions(p.optionIds),
@@ -98,34 +113,75 @@
     };
   }
 
-  /** キャンセル料 (予約データから足りない値を補って SkyRentPricingCore.cancellationFee を呼ぶ) */
-  function cancellationFee(p) {
-    p = p || {};
+  // 料金内訳 (Quote の lines / 予約の price.lines・price.breakdown) のうち、オプションの行の合計。内訳が無ければ null
+  //   (計算は SkyRentPricingCore.cancellationBase と同じ。サーバーのキャンセル料もこれを使う)
+  function optionLinesTotal(price) {
+    if (!price || typeof price !== 'object' || !(Array.isArray(price.lines) || Array.isArray(price.breakdown))) return null;
+    const c = core();
+    if (typeof c.cancellationBase === 'function') return c.cancellationBase({ price: price, categoryType: 'item' });
+    const lines = Array.isArray(price.lines) ? price.lines : price.breakdown;
+    return lines.reduce(function (s, l) { return s + (l && l.code === 'option' ? Math.max(0, Number(l.amount) || 0) : 0); }, 0);
+  }
+
+  // p から asset・カテゴリ ID・期間を引く (cancellationFee / cancellationBase 共通)
+  function cancelContext(p) {
     const r = p.reservation || null;
     const asset = p.asset || findAsset(p.assetId != null ? p.assetId : (r ? r.assetId : null));
-    const start = p.start != null ? p.start : (r ? r.start : null);
-    const end = p.end != null ? p.end : (r ? r.end : null);
-    const R = p.rules || currentRules();
-
     let category = p.category || null;
     if (category && category.id == null && category.categoryId != null) category = { id: category.categoryId };
     if (!category) {
       const catId = asset && asset.categoryId != null ? asset.categoryId : (r ? r.categoryId : null);
       if (catId != null) category = { id: catId };
     }
+    let type = asset && (asset.categoryType === 'item' || asset.categoryType === 'vehicle') ? asset.categoryType : null;
+    if (!type) type = categoryTypeOfId(category ? category.id : null);
+    return {
+      r: r, asset: asset, category: category, item: type === 'item',
+      start: p.start != null ? p.start : (r ? r.start : null),
+      end: p.end != null ? p.end : (r ? r.end : null),
+      rules: p.rules || currentRules()
+    };
+  }
+
+  /** キャンセル料の元になる「利用料金」 (車両 = 基本料金 / 家電レンタル = 借りる家電の料金の合計) */
+  function cancellationBase(p) {
+    p = p || {};
+    const x = cancelContext(p);
+    const r = x.r, asset = x.asset;
+    const snapPrice = p.quote || (r && r.price && typeof r.price === 'object' ? r.price : null);
+    if (x.item) {
+      // 家電レンタル: 予約の料金内訳 (または見積) のオプションの行 → 選んだ家電から再計算 → 合計
+      const fromLines = optionLinesTotal(snapPrice);
+      if (fromLines != null) return fromLines;
+      const ids = r ? (Array.isArray(r.optionIds) ? r.optionIds : (r.options || []).map(function (o) { return o && (o.optionId || o.id); })) : [];
+      if (asset && x.start != null && x.end != null && ids.length) {
+        const q = core().quote({ asset: withCategoryType(asset), start: x.start, end: x.end, options: findOptions(ids), rules: x.rules });
+        const t = optionLinesTotal(q);
+        if (t != null) return t;
+      }
+      return Math.max(0, Number((snapPrice && snapPrice.total) || (r && r.total)) || 0);
+    }
+    // 車両: 予約時の基本料金 → 期間から再計算 → 24時間料金
+    const snap = snapPrice ? Number(snapPrice.base) : NaN;
+    if (isFinite(snap) && snap >= 0) return snap;
+    if (asset && x.start != null && x.end != null) {
+      const q = core().quote({ asset: withCategoryType(asset), start: x.start, end: x.end, rules: x.rules });
+      return q.ok ? q.base : (Number(asset.priceDay) || 0);
+    }
+    return asset ? (Number(asset.priceDay) || 0) : 0;
+  }
+
+  /** キャンセル料 (予約データから足りない値を補って SkyRentPricingCore.cancellationFee を呼ぶ) */
+  function cancellationFee(p) {
+    p = p || {};
+    const x = cancelContext(p);
+    const asset = x.asset, start = x.start, category = x.category, R = x.rules;
 
     let base = p.base != null && p.base !== '' ? Number(p.base) : NaN;
-    if (!isFinite(base)) {
-      const snap = r && r.price && typeof r.price === 'object' ? Number(r.price.base) : NaN;
-      if (isFinite(snap) && snap >= 0) base = snap;
-      else if (asset && start != null && end != null) {
-        const q = core().quote({ asset: asset, start: start, end: end, rules: R });
-        base = q.ok ? q.base : (Number(asset.priceDay) || 0);
-      } else base = asset ? (Number(asset.priceDay) || 0) : 0;
-    }
+    if (!isFinite(base)) base = cancellationBase(p);
 
     return core().cancellationFee({
-      asset: asset || {},
+      asset: withCategoryType(asset) || {},
       category: category,
       start: start,
       cancelAt: p.cancelAt != null ? p.cancelAt : new Date(),
@@ -150,6 +206,7 @@
     calculate: calculate,
     quote: quote,
     cancellationFee: cancellationFee,
+    cancellationBase: cancellationBase,
     rules: rules,
     yen: yen,
     duration: duration,

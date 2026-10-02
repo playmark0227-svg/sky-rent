@@ -36,7 +36,7 @@
 
   <main class="main">
     <h1 class="page-title">帳票出力</h1>
-    <p class="page-note">予約を選び、レンタル種別に応じた帳票を発行します。車両レンタルは「貸渡証・車輌チェックシート・領収書」、物品レンタルは「物品貸出書・領収書」を出力できます。プレビュー後、ブラウザの印刷でA4出力できます。</p>
+    <p class="page-note">予約を選び、レンタル種別に応じた帳票を発行します。車両レンタルは「貸渡証・車輌チェックシート・領収書」、家電レンタル (家電だけのレンタル) は「物品貸出書・領収書」を出力できます。物品貸出書には借りる家電を1点ずつ (家電セットは中の品目に分けて) 並べます。プレビュー後、ブラウザの印刷でA4出力できます。</p>
 
     <section class="card filter-bar">
       <div class="filter-group"><label>期間</label><input type="date" id="f-from"> 〜 <input type="date" id="f-to"></div>
@@ -57,13 +57,13 @@
 
   <script src="partials.js"></script>
 
-  <script src="../js/config.js?v=20260930"></script>
-  <script src="../js/store.js?v=20260930"></script>
-  <script src="../js/pricing-core.js?v=20260930"></script>
-  <script src="../js/pricing.js?v=20260930"></script>
-  <script src="../js/api.js?v=20260930"></script>
-  <script src="../js/backend.js?v=20260930"></script>
-  <script src="../js/boot.js?v=20260930"></script>
+  <script src="../js/config.js?v=20261002"></script>
+  <script src="../js/store.js?v=20261002"></script>
+  <script src="../js/pricing-core.js?v=20261002"></script>
+  <script src="../js/pricing.js?v=20261002"></script>
+  <script src="../js/api.js?v=20261002"></script>
+  <script src="../js/backend.js?v=20261002"></script>
+  <script src="../js/boot.js?v=20261002"></script>
   <script type="text/x-deferred">
   (function () {
     const S = window.SkyRentStore;
@@ -74,7 +74,15 @@
     function today(){const d=new Date();const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'年'+p(d.getMonth()+1)+'月'+p(d.getDate())+'日';}
 
     let all = [];
-    function load() { all = S.list('reservations').slice().sort((a, b) => new Date(b.start) - new Date(a.start)); render(); }
+    // 帳票は予約だけ (貸出停止枠には借受人がいない)
+    function load() { all = S.list('reservations').filter(r => r.kind !== 'block').sort((a, b) => new Date(b.start) - new Date(a.start)); render(); }
+    // 家電レンタルは「窓口の名前: 借りる家電」
+    function targetText(r, isItem) {
+      const name = r.assetName || r.vehicleName || '';
+      if (!isItem) return name + (r.quantity > 1 ? ' ×' + r.quantity : '');
+      const items = (r.options || []).map(o => o && o.name).filter(Boolean);
+      return name + (items.length ? ': ' + items.join('・') : '');
+    }
 
     function render() {
       const from = $('#f-from').value, to = $('#f-to').value, st = $('#f-status').value, kw = $('#f-kw').value.trim().toLowerCase();
@@ -92,7 +100,7 @@
           : '<button class="btn btn-primary btnf" data-doc="loan" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">貸渡証</button> <button class="btn btn-gray btnf" data-doc="check" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">チェックシート</button> <button class="btn btn-gray btnf" data-doc="receipt" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">領収書</button>';
         return '<tr>' +
           '<td><code>' + esc(r.reservationId) + '</code></td>' +
-          '<td>' + esc(r.assetName || r.vehicleName) + (r.quantity > 1 ? ' ×' + r.quantity : '') + '</td>' +
+          '<td>' + esc(targetText(r, isItem)) + '</td>' +
           '<td>' + esc(cat ? cat.name : '') + '</td>' +
           '<td>' + esc(r.customerName) + '</td>' +
           '<td style="white-space:nowrap">' + fmtD(r.start) + '〜' + fmtD(r.end) + '</td>' +
@@ -175,17 +183,47 @@
         (amt >= 50000 ? '<div class="stamp-box">収入印紙</div>' : '<div></div>') +
         '<div style="text-align:right;font-size:12px">' + esc(st.name) + '<br>' + esc(st.address) + '<br>TEL: ' + esc(st.tel) + '</div></div></div>';
     }
-    function docItemLoan(r) { // 物品貸出書
+    // 家電レンタルで借りる家電を1点ずつ (家電セットは中の品目に分けて並べる)。
+    //   料金はその家電の行 (予約時の料金内訳の code 'option') の金額。セットはセットの料金を中の品目の行にまとめて出す
+    function loanItems(r) {
+      const lines = (r.price && (r.price.lines || r.price.breakdown)) || [];
+      const amountOf = id => { const l = lines.find(x => x && x.code === 'option' && x.optionId === id); return l ? Number(l.amount) || 0 : null; };
+      const out = [];
+      (r.options || []).filter(Boolean).forEach(x => {
+        const id = x.optionId || x.id;
+        const cur = currentOption(x) || {};
+        if (isCover(cur.optionId ? cur : x)) return;   // 補償は家電ではない (家電レンタルには付かない)
+        // セットの中身は予約時の控え (includes) を優先し、無ければ今のオプション設定から引く
+        const inner = Array.isArray(x.includes) && x.includes.length ? x.includes : (Array.isArray(cur.includes) ? cur.includes : []);
+        const amount = amountOf(id);
+        if (!inner.length) { out.push({ name: x.name, set: null, amount: amount, span: 1 }); return; }
+        const setName = String(x.name || '').replace(/\s*[（(].*$/, '') || x.name;
+        inner.forEach((y, i) => {
+          const o = S.findById('options', 'optionId', y);
+          out.push({ name: o ? o.name : y, set: setName, amount: amount, span: i === 0 ? inner.length : 0 });
+        });
+      });
+      return out;
+    }
+    function docItemLoan(r) { // 物品貸出書 (家電レンタル)
       const st = store(r), a = S.getAsset(r.assetId) || {};
+      const items = loanItems(r);
+      const yenCell = n => n == null ? '-' : '¥' + Number(n).toLocaleString();
+      const itemRows = items.length
+        ? items.map(it => '<tr><td>' + esc(it.name) + (it.set ? ' <small style="color:#666">(' + esc(it.set) + ')</small>' : '') + '</td>' +
+            '<td style="text-align:center">1</td><td style="text-align:center">□良 □要確認</td><td style="text-align:center">□良 □要確認</td>' +
+            (it.span ? '<td style="text-align:right"' + (it.span > 1 ? ' rowspan="' + it.span + '"' : '') + '>' + yenCell(it.amount) + (it.set ? '<br><small style="color:#666">' + esc(it.set) + '</small>' : '') + '</td>' : '') +
+            '</tr>').join('')
+        : '<tr><td>' + esc(a.name || r.assetName) + '</td><td style="text-align:center">' + (r.quantity || 1) + '</td><td style="text-align:center">□良 □要確認</td><td style="text-align:center">□良 □要確認</td><td style="text-align:right">' + yenCell((r.price && r.price.total) || 0) + '</td></tr>';
       return '<div class="doc"><h1>物 品 貸 出 書</h1><div class="meta">発行日: ' + today() + ' ／ 予約番号: ' + esc(r.reservationId) + '</div>' +
         '<div class="parties"><div class="party"><b>貸出人</b>' + esc(st.name) + '<br>' + esc(st.address) + '<br>TEL: ' + esc(st.tel) + '</div>' +
-        '<div class="party"><b>借受人</b>' + esc(r.customerName) + ' 様' + (r.company ? '<br>' + esc(r.company) : '') + '<br>TEL: ' + esc(r.customerPhone || '') + '</div></div>' +
-        '<table class="d-table"><thead><tr><th>品目名</th><th style="text-align:center">数量</th><th>貸出期間</th><th style="text-align:right">料金</th></tr></thead><tbody>' +
-        '<tr><td>' + esc(a.name || r.assetName) + '</td><td style="text-align:center">' + (r.quantity || 1) + '</td><td>' + fmtDT(r.start) + ' 〜 ' + fmtDT(r.end) + '</td><td style="text-align:right">¥' + ((r.price && r.price.total) || 0).toLocaleString() + '</td></tr>' +
-        (r.options || []).map(o => '<tr><td>' + esc(o.name) + ' (オプション)</td><td style="text-align:center">1</td><td>-</td><td style="text-align:right">-</td></tr>').join('') +
-        '<tr><td colspan="3" style="text-align:right;font-weight:700">合計 (税込)</td><td style="text-align:right;font-weight:700">¥' + ((r.price && r.price.total) || 0).toLocaleString() + '</td></tr>' +
-        '</tbody></table>' +
-        '<div class="notes"><b>注意事項</b><ul><li>返却期限を厳守してください。延滞の場合は延滞料金を申し受けます。</li><li>汚損・破損・紛失の際は実費をご負担いただきます。</li><li>第三者への転貸を禁じます。</li><li>ご使用前に動作をご確認ください。</li></ul></div>' +
+        '<div class="party"><b>借受人</b>' + esc(r.customerName) + ' 様' + (r.company ? '<br>' + esc(r.company) : '') + '<br>TEL: ' + esc(r.customerPhone || '') + '<br>本人確認書類: ＿＿＿＿＿＿ (□確認済)</div></div>' +
+        '<table class="d-table"><tr><th>お受け取り</th><td>' + fmtDT(r.start) + '</td><th>ご返却</th><td>' + fmtDT(r.end) + '</td></tr>' +
+        '<tr><th>受け取り・返却場所</th><td colspan="3">' + esc(st.name) + (st.address ? ' (' + esc(st.address) + ')' : '') + '</td></tr></table>' +
+        '<table class="d-table" data-loan-items><thead><tr><th>品目名</th><th style="text-align:center">数量</th><th style="text-align:center">お渡し時</th><th style="text-align:center">ご返却時</th><th style="text-align:right">料金</th></tr></thead><tbody>' +
+        itemRows + '</tbody></table>' +
+        '<table class="d-table"><thead><tr><th>料金内訳</th><th style="text-align:right">金額</th></tr></thead><tbody>' + priceRows(r) + '</tbody></table>' +
+        '<div class="notes"><b>注意事項</b><ul><li>お受け取りの際に本人確認書類 (運転免許証・保険証など) を確認します。</li><li>ご返却の日時を守ってください。遅れた場合は24時間ごとに追加の料金を申し受けます。</li><li>破損・紛失の際は、修理費または再調達費用の実費をご負担いただきます。</li><li>第三者への転貸を禁じます。</li><li>お渡しの際に、数と動作を一緒にご確認ください。</li></ul></div>' +
         '<div class="sign"><div class="box">貸出人 確認印</div><div class="box">借受人 署名</div></div></div>';
     }
 
@@ -216,7 +254,15 @@
     document.addEventListener('DOMContentLoaded', () => {
       $('#f-go').addEventListener('click', render);
       $('#f-kw').addEventListener('keypress', e => { if (e.key === 'Enter') render(); });
+      // 予約一覧の「帳票出力」から来たとき (forms.html?id=R0001): その予約に絞り、家電レンタルは物品貸出書をすぐ開く
+      const qid = new URLSearchParams(location.search).get('id');
+      if (qid) $('#f-kw').value = qid;
       load();
+      if (qid) {
+        const r = all.find(x => x.reservationId === qid);
+        const cat = r ? S.getCategory(r.categoryId) : null;
+        if (r && cat && cat.type === 'item') openDoc('itemloan', r.reservationId);
+      }
     });
   })();
   </script>

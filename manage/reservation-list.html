@@ -39,6 +39,8 @@
     .bk-form .crud-field input[type="datetime-local"] { max-width: 240px; }
     .bk-err { color: #c0392b; font-size: 12.5px; padding: 0 20px 10px; }
     .gc-line small { color: #888; }
+    .chip-item { background: #fff4e5; color: #8a4b00; }
+    .rl-items { color: #666; font-size: 11.5px; line-height: 1.6; }
   </style>
 </head>
 <body>
@@ -50,7 +52,7 @@
     <section class="card filter-bar">
       <div class="filter-group"><label>期間</label><input type="date" id="from"> 〜 <input type="date" id="to"></div>
       <div class="filter-group"><label>状態</label><select id="status-filter"><option value="">すべて</option><option value="confirmed">確定</option><option value="in_use">貸出中</option><option value="returned">返却済</option><option value="cancelled">キャンセル</option><option value="no_show">無断キャンセル</option></select></div>
-      <div class="filter-group"><label>種別</label><select id="kind-filter"><option value="">すべて</option><option value="rental">予約</option><option value="block">貸出停止枠 (整備・車検)</option></select></div>
+      <div class="filter-group"><label>種別</label><select id="kind-filter"><option value="">すべて</option><option value="rental">車両の予約</option><option value="item">家電レンタル (家電だけ)</option><option value="block">貸出停止枠 (整備・車検)</option></select></div>
       <div class="filter-group"><label>拠点</label><select id="loc-filter"></select></div>
       <div class="filter-group"><label>カテゴリ</label><select id="cat-filter"></select></div>
       <div class="filter-group"><label>キーワード</label><input type="text" id="keyword" placeholder="顧客名・対象・予約ID"></div>
@@ -76,13 +78,13 @@
 
   <script src="partials.js"></script>
 
-  <script src="../js/config.js?v=20260930"></script>
-  <script src="../js/store.js?v=20260930"></script>
-  <script src="../js/pricing-core.js?v=20260930"></script>
-  <script src="../js/pricing.js?v=20260930"></script>
-  <script src="../js/api.js?v=20260930"></script>
-  <script src="../js/backend.js?v=20260930"></script>
-  <script src="../js/boot.js?v=20260930"></script>
+  <script src="../js/config.js?v=20261002"></script>
+  <script src="../js/store.js?v=20261002"></script>
+  <script src="../js/pricing-core.js?v=20261002"></script>
+  <script src="../js/pricing.js?v=20261002"></script>
+  <script src="../js/api.js?v=20261002"></script>
+  <script src="../js/backend.js?v=20261002"></script>
+  <script src="../js/boot.js?v=20261002"></script>
   <script type="text/x-deferred">
   (function () {
     'use strict';
@@ -100,6 +102,31 @@
     function fmtDT(v) { return v ? B.jst.format(v, { weekday: false }) : ''; }
     function yen(n) { return P.yen(n); }
     function isBlock(r) { return r.kind === 'block'; }
+    // 家電レンタル (家電だけのレンタル) の予約か。同じ時間に何件でも入る (止めるのは家電ごとの在庫)
+    function isItem(r) {
+      if (r.isItem === true) return true;
+      const a = S.getAsset(r.assetId);
+      const c = S.getCategory(r.categoryId || (a && a.categoryId));
+      return !!(c && c.type === 'item');
+    }
+    function kindOf(r) { return isBlock(r) ? 'block' : (isItem(r) ? 'item' : 'rental'); }
+    // 予約で借りる家電 (予約時の控え) の名前
+    function itemNames(r) { return (r.options || []).map(o => o && o.name).filter(Boolean); }
+    // 家電セットは中の品目も添える (「家電セット (上記9点まとめ) — ポータブル冷蔵冷凍庫・…」)
+    function itemLines(r) {
+      return (r.options || []).filter(Boolean).map(o => {
+        const cur = S.findById('options', 'optionId', o.optionId || o.id) || {};
+        const inner = Array.isArray(cur.includes) ? cur.includes.map(id => { const x = S.findById('options', 'optionId', id); return x ? x.name : id; }) : [];
+        return esc(o.name) + (inner.length ? ' <small style="color:#888">(' + esc(inner.join('・')) + ')</small>' : '');
+      });
+    }
+    // キャンセル料の元になる利用料金: 家電レンタルは家電 (オプション) の料金の合計 (車両は pricing.js が基本料金を使う)
+    function itemCancelBase(r) {
+      const lines = (r.price && (r.price.lines || r.price.breakdown)) || [];
+      const opt = lines.filter(l => l && l.code === 'option');
+      if (opt.length) return opt.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
+      return (r.price && (Number(r.price.subtotal) || Number(r.price.total))) || Number(r.total) || 0;
+    }
     function totalOf(r) { return r.total != null ? (Number(r.total) || 0) : ((r.price && Number(r.price.total)) || 0); }
     function statusLabel(r) {
       if (isBlock(r)) return r.status === 'cancelled' ? '解除済み' : '停止中';
@@ -141,7 +168,7 @@
       if (from) { const f = ms(from + 'T00:00'); rows = rows.filter(r => ms(r.end) >= f); }
       if (to) { const t = ms(to + 'T00:00') + DAY; rows = rows.filter(r => ms(r.start) < t); }
       if (st) rows = rows.filter(r => r.status === st);
-      if (kind) rows = rows.filter(r => (isBlock(r) ? 'block' : 'rental') === kind);
+      if (kind) rows = rows.filter(r => kindOf(r) === kind);
       if (loc) rows = rows.filter(r => r.locationId === loc);
       if (cat) rows = rows.filter(r => r.categoryId === cat);
       if (kw) rows = rows.filter(r => [r.customerName, r.assetName, r.vehicleName, r.reservationId, r.staffNote].some(x => (x || '').toLowerCase().includes(kw)));
@@ -172,11 +199,15 @@
         const fee = (r.status === 'cancelled' || r.status === 'no_show') && r.cancelFee != null ? '<div class="rl-sub">キャンセル料 ' + yen(r.cancelFee) + '</div>' : '';
         const ev = r.gcalEvents || {};
         const gcal = ev.pickup || ev.return ? '<div class="rl-sub" title="担当者の Google カレンダーに登録済み">📅 カレンダー登録済み</div>' : '';
-        return '<tr>' +
+        const item = isItem(r);
+        const target = item
+          ? '<span class="chip chip-item">🔌 家電レンタル</span><div class="rl-items" data-items>' + esc(itemNames(r).join('・') || '-') + '</div>'
+          : esc(r.assetName || r.vehicleName) + (r.quantity > 1 ? ' ×' + esc(r.quantity) : '');
+        return '<tr' + (item ? ' data-item-res' : '') + '>' +
           '<td><code>' + esc(r.reservationId) + '</code></td>' +
           '<td>' + statusBadge(r) + gcal + '</td>' +
           '<td>' + esc(fmtDT(r.start)) + '</td><td>' + esc(fmtDT(r.end)) + '</td>' +
-          '<td>' + esc(r.assetName || r.vehicleName) + (r.quantity > 1 ? ' ×' + esc(r.quantity) : '') + '</td>' +
+          '<td>' + target + '</td>' +
           '<td>' + esc(c ? c.name : '') + '</td>' +
           '<td>' + esc(l ? l.name : '') + '</td>' +
           '<td>' + (r.memberId ? '👤 ' : '') + esc(r.customerName) + '</td>' +
@@ -296,6 +327,7 @@
       const canRes = B.admin.can('reservations.write');
       const canPay = B.admin.can('payments.write') || canRes;
       const canBlock = B.admin.can('blocks.write');
+      const item = !isBlock(r) && isItem(r);
 
       let actions = '';
       let rows;
@@ -312,11 +344,13 @@
       } else {
         if (canRes) {
           if (r.status === 'confirmed') {
-            actions += '<button type="button" class="btn btn-primary" id="act-inuse">🚗 貸出処理 (出発)</button>';
+            actions += item
+              ? '<button type="button" class="btn btn-primary" id="act-inuse">🔌 お受け取り処理 (お渡し)</button>'
+              : '<button type="button" class="btn btn-primary" id="act-inuse">🚗 貸出処理 (出発)</button>';
             actions += '<button type="button" class="btn btn-danger" id="act-cancel">キャンセル</button>';
             actions += '<button type="button" class="btn btn-noshow" id="act-noshow">無断キャンセル</button>';
           }
-          if (r.status === 'in_use') actions += '<button type="button" class="btn btn-primary" id="act-return" style="background:#1e8a4a">✅ 返却処理</button>';
+          if (r.status === 'in_use') actions += '<button type="button" class="btn btn-primary" id="act-return" style="background:#1e8a4a">' + (item ? '✅ ご返却処理' : '✅ 返却処理') + '</button>';
           if (r.status === 'no_show') {
             actions += '<button type="button" class="btn btn-gray" id="act-restore">確定に戻す</button>';
             actions += '<button type="button" class="btn btn-danger" id="act-cancel">キャンセル扱いに変更</button>';
@@ -327,14 +361,21 @@
         }
         rows = [
           ['状態', statusBadge(r)],
-          ['対象', '<strong>' + esc(r.assetName || r.vehicleName) + '</strong>' + (r.quantity > 1 ? ' × ' + esc(r.quantity) : '') + ' (' + esc(r.assetId) + ')'],
+          ['対象', '<strong>' + esc(r.assetName || r.vehicleName) + '</strong>' + (r.quantity > 1 ? ' × ' + esc(r.quantity) : '') + ' (' + esc(r.assetId) + ')' +
+            (item ? ' <span class="chip chip-item">家電レンタル (車両なし)</span>' : '')],
           ['カテゴリ', esc(c ? c.name : '')],
           ['拠点', esc(l ? l.name : '')],
-          ['期間', esc(fmtDT(r.start)) + ' 〜 ' + esc(fmtDT(r.end)) + ' <small style="color:#888">(' + days + '日間)</small>'],
+          [item ? 'お受け取り〜ご返却' : '期間', esc(fmtDT(r.start)) + ' 〜 ' + esc(fmtDT(r.end)) + ' <small style="color:#888">(' + days + '日間)</small>'],
           ['借受人', '<strong>' + esc(r.customerName) + '</strong> 様' + (r.company ? ' / ' + esc(r.company) : '') + (r.memberId ? ' <span class="chip">会員 ' + esc(r.memberId) + '</span>' : '')],
           ['連絡先', esc(r.customerEmail || '-') + ' / ' + esc(r.customerPhone || '-')]
         ];
-        optionGroups(r).forEach(g => rows.push([g.title, g.list.map(o => esc(o.name)).join('<br>')]));
+        if (item) {
+          // 借りる家電を1行ずつ (家電セットは中の品目も)。各品目1点
+          rows.push(['お借りになる家電', '<div data-item-list>' + (itemLines(r).map(x => x + ' ×1').join('<br>') || '-') + '</div>']);
+          rows.push(['本人確認', 'お受け取りの際に本人確認書類 (運転免許証・保険証など) を確認してください (運転免許の確認は不要)']);
+        } else {
+          optionGroups(r).forEach(g => rows.push([g.title, g.list.map(o => esc(o.name)).join('<br>')]));
+        }
         if (c && c.type === 'vehicle') rows.push(['運転免許証', r.licenseConfirmed ? '<span class="chip">✓ 運転者全員の免許の確認に同意 (当日店頭で確認)</span>' : '<span style="color:#b56b00">未確認 (当日店頭で確認してください)</span>']);
         rows.push(['支払方法', esc(r.payment ? (S.PAYMENT_LABELS[r.payment.method] || '') : '') + ' / ' + (r.payment && r.payment.status === 'paid' ? '<span class="status status-paid">入金済</span>' : '<span class="status status-unpaid">未入金</span>')]);
         if (r.invoiceId) rows.push(['請求書', '<a href="invoices.html" class="detail-link">' + esc(r.invoiceId) + '</a>']);
@@ -361,7 +402,7 @@
         '</div>' +
         '<div class="rd-msg" id="rd-msg" role="alert" data-id="' + esc(r.reservationId) + '" hidden></div>' +
         '<div class="crud-modal-foot" style="flex-wrap:wrap;gap:8px" id="rd-foot">' + actions +
-          '<span style="flex:1"></span>' + (isBlock(r) ? '' : '<a href="forms.html" class="btn btn-gray">帳票出力</a>') + '<button type="button" class="btn btn-gray crud-cancel">閉じる</button></div></div>';
+          '<span style="flex:1"></span>' + (isBlock(r) ? '' : '<a href="forms.html?id=' + encodeURIComponent(r.reservationId) + '" class="btn btn-gray">' + (item ? '帳票出力 (物品貸出書)' : '帳票出力') + '</a>') + '<button type="button" class="btn btn-gray crud-cancel">閉じる</button></div></div>';
 
       const m = openModal(html);
       const modal = m.modal;
@@ -380,8 +421,14 @@
         }
       }
       const on = (sel, fn) => { const el = modal.querySelector(sel); if (el) el.addEventListener('click', () => fn(el)); };
-      on('#act-inuse', b => { if (confirm('貸出処理を行いますか? (状態を「貸出中」に変更します)')) run(b, { status: 'in_use' }, { status: 'in_use' }, '予約 ' + id + ' を貸出中にしました。'); });
-      on('#act-return', b => { if (confirm('返却処理を行いますか?\n会員予約の場合はポイントが自動付与されます。')) run(b, { status: 'returned' }, { status: 'returned' }, '予約 ' + id + ' を返却済にしました。'); });
+      on('#act-inuse', b => {
+        const q = item ? 'お受け取り処理を行いますか? (家電をお渡しし、状態を「貸出中」に変更します)\n本人確認書類と、家電の数・動作を確認してください。' : '貸出処理を行いますか? (状態を「貸出中」に変更します)';
+        if (confirm(q)) run(b, { status: 'in_use' }, { status: 'in_use' }, '予約 ' + id + ' を貸出中にしました。');
+      });
+      on('#act-return', b => {
+        const q = item ? 'ご返却処理を行いますか?\n家電の数と動作を確認してください。会員予約の場合はポイントが自動付与されます。' : '返却処理を行いますか?\n会員予約の場合はポイントが自動付与されます。';
+        if (confirm(q)) run(b, { status: 'returned' }, { status: 'returned' }, '予約 ' + id + ' を返却済にしました。');
+      });
       on('#act-restore', b => { if (confirm('無断キャンセルを取り消して「確定」に戻しますか?')) run(b, { status: 'confirmed', cancelFee: null }, { status: 'confirmed', cancel_fee: 0 }, '予約 ' + id + ' を確定に戻しました。'); });
       on('#act-pay', b => run(b, { payment: Object.assign({}, r.payment, { status: 'paid' }) }, { payment_status: 'paid' }, '予約 ' + id + ' の入金を記録しました。'));
       on('#act-cancel', () => openFeePanel(r, 'cancel', modal, run));
@@ -404,11 +451,14 @@
     function openFeePanel(r, kind, modal, run) {
       const noShow = kind === 'no_show';
       let fee = null;
-      try { fee = P.cancellationFee({ reservation: r, noShow: noShow }); } catch (e) { fee = null; }
+      const item = isItem(r);
+      // 家電レンタルのキャンセル料は、家電 (オプション) の料金の合計をもとに計算する
+      const feeInput = item ? { reservation: r, noShow: noShow, base: itemCancelBase(r) } : { reservation: r, noShow: noShow };
+      try { fee = P.cancellationFee(feeInput); } catch (e) { fee = null; }
       const rule = fee ? fee.fee : 0;
       const total = totalOf(r);
       const max = Math.max(total, rule);
-      const clsName = { compact: 'コンパクト・SUV 等', large: '大型 (SUV・ミニバン)', kitchen: 'キッチンカー' };
+      const clsName = { compact: 'コンパクト・SUV 等', large: '大型 (SUV・ミニバン)', kitchen: 'キッチンカー', item: '家電レンタル' };
       const whenText = fee ? (fee.daysBefore < 0 ? '貸出日を過ぎています' : (fee.daysBefore === 0 ? '当日' : fee.daysBefore + '日前')) : '';
       const panel = modal.querySelector('#rd-panel');
       panel.innerHTML =
@@ -416,8 +466,8 @@
         '<h4>' + (noShow ? '無断キャンセルにする' : (r.status === 'no_show' ? 'キャンセル扱いに変更する' : 'この予約をキャンセルする')) + ' — キャンセル料の確認</h4>' +
         (fee ? '<table><tbody>' +
           '<tr><th>規定</th><td>' + esc(fee.label) + (noShow ? '' : ' <small style="color:#888">(' + esc(whenText) + (fee.busy ? '・繁忙期' : '') + ')</small>') + '</td></tr>' +
-          '<tr><th>車種区分</th><td>' + esc(clsName[fee.cls] || fee.cls) + '</td></tr>' +
-          '<tr><th>規定のキャンセル料</th><td><strong id="rd-rule">' + yen(rule) + '</strong> <small style="color:#888">(基本料金 × ' + esc(fee.pct) + '%)</small></td></tr>' +
+          '<tr><th>' + (item ? '区分' : '車種区分') + '</th><td>' + esc(clsName[fee.cls] || fee.cls) + '</td></tr>' +
+          '<tr><th>規定のキャンセル料</th><td><strong id="rd-rule">' + yen(rule) + '</strong> <small style="color:#888">(' + (item ? '家電の料金の合計' : '基本料金') + ' × ' + esc(fee.pct) + '%)</small></td></tr>' +
           '</tbody></table>'
           : '<p class="rd-err">キャンセル料を自動で計算できませんでした。金額を入力してください。</p>') +
         '<label class="rd-l" for="rd-fee">請求するキャンセル料</label>' +
@@ -479,13 +529,15 @@
 
     function openBlockForm() {
       const t = defaultTimes();
-      const assets = S.assets().slice().sort((a, b) => String(a.locationId).localeCompare(String(b.locationId)) || (a.sort || 99) - (b.sort || 99));
+      // 家電レンタルの受け取り窓口には停止枠を作れない (家電ごとの在庫はオプション管理で変える)
+      const assets = S.assets().filter(a => { const c = S.getCategory(a.categoryId); return !(c && c.type === 'item'); })
+        .slice().sort((a, b) => String(a.locationId).localeCompare(String(b.locationId)) || (a.sort || 99) - (b.sort || 99));
       const opts = assets.map(a => { const l = S.getLocation(a.locationId); return '<option value="' + esc(a.assetId) + '">' + esc((l ? l.name + ' / ' : '') + a.name + ' (' + a.assetId + ')') + (a.active === false ? ' [非公開]' : '') + '</option>'; }).join('');
       const html =
         '<div class="crud-modal-bg"></div><div class="crud-modal-card bk-form">' +
         '<div class="crud-modal-head"><h3>貸出停止枠 (整備・車検) の登録</h3><button class="crud-close" type="button" aria-label="閉じる">×</button></div>' +
         '<div style="padding:6px 0">' +
-          '<p style="padding:10px 20px 4px;font-size:12.5px;color:#555">指定した期間は、この車両の予約を受け付けなくなります (公開サイトでも「空きなし」と表示されます)。</p>' +
+          '<p style="padding:10px 20px 4px;font-size:12.5px;color:#555">指定した期間は、この車両の予約を受け付けなくなります (公開サイトでも「空きなし」と表示されます)。家電レンタルには停止枠を作れません。家電を貸し出せないときは、<a href="options.html" style="color:var(--link);text-decoration:underline">オプション管理</a>で家電ごとの在庫数を変えてください。</p>' +
           '<div class="crud-field"><label for="bk-asset">対象車両</label><select id="bk-asset">' + opts + '</select></div>' +
           '<div class="crud-field"><label for="bk-start">開始 (日本時間)</label><input type="datetime-local" id="bk-start" value="' + esc(t.start) + '"></div>' +
           '<div class="crud-field"><label for="bk-end">終了 (日本時間)</label><input type="datetime-local" id="bk-end" value="' + esc(t.end) + '"></div>' +

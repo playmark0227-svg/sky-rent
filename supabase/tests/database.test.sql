@@ -154,18 +154,24 @@ select lives_ok(
     'start_at', current_setting('t.base')::timestamptz + interval '70 days', 'end_at', current_setting('t.base')::timestamptz + interval '71 days',
     'customer', jsonb_build_object('name', 'X', 'email', 'x@example.com', 'phone', '0'), 'total', 1))$$,
   '装備オプションはレンタカーに付けられる (補償と一緒でもよい)');
+-- (家電の在庫は各1。上の家電セットと重ならない日にする)
 select lives_ok(
   $$select public.create_reservation_tx(jsonb_build_object(
     'idempotency_key', 'k-equipment-00002', 'request_hash', 'x', 'asset_id', 'K001', 'option_ids', jsonb_build_array('OP201', 'OP001', 'OP004'),
-    'start_at', current_setting('t.base')::timestamptz + interval '70 days', 'end_at', current_setting('t.base')::timestamptz + interval '71 days',
+    'start_at', current_setting('t.base')::timestamptz + interval '72 days', 'end_at', current_setting('t.base')::timestamptz + interval '73 days',
     'customer', jsonb_build_object('name', 'X', 'email', 'x@example.com', 'phone', '0'), 'total', 1))$$,
   '装備オプションはキッチンカーにも付けられる');
 
 select results_eq(
   $$select id, version, effective_at from public.legal_documents where active order by id$$,
-  $$values ('cancel', '2026-08', '2026-08-01'::date), ('clause', '2026-08', '2026-08-01'::date),
+  $$values ('cancel', '2026-10', '2026-10-01'::date), ('clause', '2026-08', '2026-08-01'::date),
+           ('item_clause', '2026-10', '2026-10-01'::date),
            ('law', '2026-10', '2026-10-01'::date), ('privacy', '2026-08', '2026-08-01'::date)$$,
-  '特定商取引法に基づく表記だけ 2026-10 版 (予約の同意の対象 = 約款・キャンセル規定・プライバシーポリシーは据え置き)');
+  '法務文書: キャンセル規定は 2026-10 版 (家電レンタルの段階を追加)・物品レンタル規約 (家電レンタルの同意) を追加。約款・プライバシーポリシーは据え置き');
+select results_eq(
+  $$select title, url from public.legal_documents where id = 'item_clause' and active$$,
+  $$values ('物品レンタル規約', 'item-terms.html')$$,
+  '物品レンタル規約のページ');
 
 -- 公開カタログに出してよい extra の項目は説明と includes (配列のときだけ) — 社内用の項目を足しても出ない
 update public.options set extra = extra || '{"memo":"社内メモ","supplier":"仕入れ先"}'::jsonb where id = 'OP001';
@@ -186,13 +192,13 @@ select is((select o -> 'extra' from jsonb_array_elements(public.public_catalog()
 select is((select jsonb_agg(distinct k order by k) from jsonb_array_elements(public.public_catalog() -> 'options') o, jsonb_object_keys(o -> 'extra') k),
   '["description","includes"]'::jsonb, '公開カタログのオプションの extra は説明と includes だけ (社内用の項目は出さない)');
 select is((select jsonb_agg(k order by k) from jsonb_object_keys(public.public_catalog() -> 'options' -> 0) k),
-  '["active","category_ids","exclusive_group","extra","id","kind","name","price","price_short","price_type","sort","updated_at"]'::jsonb,
-  '公開カタログのオプションの列は増えていない');
+  '["active","category_ids","exclusive_group","extra","id","kind","name","price","price_short","price_type","sort","stock","updated_at"]'::jsonb,
+  '公開カタログのオプションの列は在庫数 (stock) だけ増えた');
 select throws_ok('select count(*) from public.reservations', '42501', null, '匿名は予約を読めない');
 select throws_ok('select count(*) from public.members', '42501', null, '匿名は会員を読めない');
 select throws_ok('select count(*) from public.inquiries', '42501', null, '匿名は問い合わせを読めない');
 select throws_ok('select count(*) from public.assets', '42501', null, '匿名は車両表を直接読めない (カタログRPC経由のみ)');
-select is(jsonb_array_length(public.public_catalog() -> 'assets'), 6, '匿名でも公開カタログは読める');
+select is(jsonb_array_length(public.public_catalog() -> 'assets'), 7, '匿名でも公開カタログは読める (車両6台 + 家電レンタルの受け取り窓口)');
 select ok(not ((public.public_catalog() -> 'assets' -> 0) ? 'plate'), '公開カタログにナンバーを含めない');
 select ok(not ((public.public_catalog() -> 'settings') ? 'calendar'), '公開カタログにカレンダー設定 (担当者のカレンダーID) を含めない');
 select ok(not ((public.public_catalog() -> 'settings') ? 'billing'), '公開カタログに振込先を含めない');
@@ -600,6 +606,189 @@ select throws_ok($$select public.admin_adjust_points('22222222-2222-2222-2222-22
   'P0001', 'INVALID_DELTA', '1回のポイント調整は±100ptまで');
 select throws_ok($$select public.admin_adjust_points('22222222-2222-2222-2222-222222222222', 5, '')$$,
   'P0001', 'VALIDATION', 'ポイント調整には理由が必須');
+reset role;
+
+-- =====================================================================
+-- 家電レンタル (家電だけのレンタル) と家電の在庫 (20261002000100_item_rental)
+--   ここの予約は 120 日先 (上のテストの 300 日先・結合テストの 150〜390 日先と重ならない)
+-- =====================================================================
+select set_config('t.ib', (date_trunc('hour', now()) + interval '120 days')::text, true);
+-- 予約を作る (service_role 相当 = postgres)。返り値は予約の行 (jsonb)
+create function pg_temp.res_at(p_key text, p_asset text, p_opts text[], p_from interval, p_to interval) returns jsonb
+language sql as $$
+  select public.create_reservation_tx(jsonb_build_object(
+    'idempotency_key', 'k-item-' || p_key || '-0000000', 'request_hash', 'x', 'asset_id', p_asset,
+    'option_ids', to_jsonb(p_opts),
+    'start_at', current_setting('t.ib')::timestamptz + p_from, 'end_at', current_setting('t.ib')::timestamptz + p_to,
+    'customer', jsonb_build_object('name', '家電 ' || p_key, 'email', 'item-' || p_key || '@example.com', 'phone', '0'),
+    'total', 1)) -> 'reservation'
+$$;
+create function pg_temp.ib(p interval) returns timestamptz language sql as $$
+  select current_setting('t.ib')::timestamptz + p
+$$;
+
+-- ---- カタログ・料金ルール (seed) ----
+select results_eq(
+  $$select id, name, name_en, type, icon, sort, custom_field_defs, active from public.categories where id = 'cat-appliance'$$,
+  $$values ('cat-appliance', '家電レンタル', 'Appliance Rental', 'item', '🔌', 3, '[]'::jsonb, true)$$,
+  '家電レンタルのカテゴリ (物品レンタル)');
+select results_eq(
+  $$select id, category_id, location_id, name, name_en, capacity, price_hour, price_day, image, sort, active from public.assets where id = 'A001'$$,
+  $$values ('A001', 'cat-appliance', 'loc-kitami', '家電レンタル（北見本店）', 'Appliance Rental (Kitami)', null::int, null::int, 0, '🔌', 7, true)$$,
+  '家電レンタルの受け取り窓口 A001 (北見本店・基本料金 0)');
+select results_eq(
+  $$select id, stock from public.options order by sort, id$$,
+  $$values ('OP101', null::int), ('OP102', null), ('OP201', null), ('OP202', null),
+           ('OP001', 1), ('OP002', 1), ('OP003', 1), ('OP004', 1), ('OP005', 1), ('OP006', 1),
+           ('OP007', 1), ('OP008', 1), ('OP009', 1), ('OP010', null), ('OP011', 1)$$,
+  '在庫: 装備は各1・家電セットは中の9品目の在庫を使う (null)・補償は数えない (null)');
+select is((select value ->> 'version' from public.app_settings where key = 'pricing_rules'), '2026-10', '料金ルールは 2026-10 版');
+select is((select value #> '{cancellation,categoryClass,cat-appliance}' from public.app_settings where key = 'pricing_rules'),
+  '"item"'::jsonb, 'キャンセル料: 家電レンタルの区分は item');
+select is((select jsonb_build_array(value #> '{cancellation,normal,item}', value #> '{cancellation,busy,item}', value -> 'itemSurcharges')
+             from public.app_settings where key = 'pricing_rules'),
+  '[[{"minDays":3,"pct":0},{"minDays":1,"pct":30},{"minDays":0,"pct":50}],[{"minDays":7,"pct":0},{"minDays":1,"pct":30},{"minDays":0,"pct":50}],false]'::jsonb,
+  'キャンセル料の段階はコンパクトカーと同じ割合・家電レンタルに割増はかけない');
+select ok(exists (select 1 from jsonb_array_elements(public.public_catalog() -> 'assets') a where a ->> 'id' = 'A001'),
+  '公開カタログに家電レンタルの受け取り窓口が出る');
+
+-- ---- is_item の自動設定・窓口には同じ時間に何件でも入る ----
+select set_config('t.i1', pg_temp.res_at('i1', 'A001', array['OP002'], '0 hours', '24 hours') ->> 'id', true);
+select set_config('t.i2', pg_temp.res_at('i2', 'A001', array['OP008'], '0 hours', '24 hours') ->> 'id', true);
+select ok((select is_item from public.reservations where id = current_setting('t.i1')), 'is_item: 家電レンタルのカテゴリの予約は true (トリガー)');
+select ok(not (select is_item from public.reservations where id = current_setting('t.ra')), 'is_item: 車両の予約は false');
+update public.reservations set is_item = false where id = current_setting('t.i1');
+select ok((select is_item from public.reservations where id = current_setting('t.i1')), 'is_item: 直接書き換えてもカテゴリから正しい値に戻る');
+select is((select count(*)::int from public.reservations
+            where asset_id = 'A001' and status = 'confirmed' and period @> pg_temp.ib('1 hour')), 2,
+  '受け取り窓口 A001 には同じ時間に2件の予約が入る (車両の重なり禁止を掛けない)');
+select throws_ok($$select pg_temp.res_at('i0', 'A001', array[]::text[], '30 hours', '31 hours')$$,
+  'P0001', 'ITEM_REQUIRED', '家電レンタルは家電 (オプション) を1つ以上選ぶ');
+select throws_ok($$select pg_temp.res_at('ic', 'A001', array['OP101'], '30 hours', '31 hours')$$,
+  'P0001', 'OPTION_INVALID', '補償 (車両専用) は家電レンタルに付けられない');
+
+-- ---- 在庫1の家電が重なると OPTION_SOLD_OUT ----
+select throws_ok($$select pg_temp.res_at('i3', 'A001', array['OP002'], '12 hours', '36 hours')$$,
+  'P0001', 'OPTION_SOLD_OUT', '在庫1の電子レンジが貸出中の時間には、家電だけの予約を入れられない');
+select is(public.option_sold_out(array['OP002', 'OP003'], tstzrange(pg_temp.ib('12 hours'), pg_temp.ib('36 hours'))),
+  array['OP002'], '在庫の判定: 売り切れの家電の id だけを返す (空いている家電は含めない)');
+select is(public.option_sold_out(array['OP003'], tstzrange(pg_temp.ib('12 hours'), pg_temp.ib('36 hours'))),
+  '{}'::text[], '在庫の判定: 空いていれば空配列');
+-- 車両の予約のオプション × 家電だけの予約 (同じ在庫を使う)
+select throws_ok($$select pg_temp.res_at('v1', 'V003', array['OP008'], '20 hours', '30 hours')$$,
+  'P0001', 'OPTION_SOLD_OUT', '家電だけの予約で貸出中の炊飯器は、車両の予約のオプションにも付けられない');
+select set_config('t.v2', pg_temp.res_at('v2', 'V003', array['OP004'], '48 hours', '72 hours') ->> 'id', true);
+select ok(current_setting('t.v2') like 'R%', '車両の予約にポータブル電源を付けられる');
+select throws_ok($$select pg_temp.res_at('i4', 'A001', array['OP004'], '60 hours', '62 hours')$$,
+  'P0001', 'OPTION_SOLD_OUT', '車両の予約のオプションで貸出中のポータブル電源は、家電だけの予約でも借りられない');
+-- 家電セット × 中の品目
+select throws_ok($$select pg_temp.res_at('i5', 'A001', array['OP010'], '6 hours', '8 hours')$$,
+  'P0001', 'OPTION_SOLD_OUT', '中の品目 (電子レンジ・炊飯器) が貸出中なら家電セットは借りられない');
+select is(public.option_sold_out(array['OP010'], tstzrange(pg_temp.ib('6 hours'), pg_temp.ib('8 hours'))),
+  array['OP002', 'OP008', 'OP010'], '家電セットを選んだときは、売り切れの中の品目とセット自身の id を返す');
+select set_config('t.i6', pg_temp.res_at('i6', 'A001', array['OP010'], '100 hours', '124 hours') ->> 'id', true);
+select throws_ok($$select pg_temp.res_at('i7', 'V001', array['OP005'], '110 hours', '112 hours')$$,
+  'P0001', 'OPTION_SOLD_OUT', '家電セットを貸出中なら、中の品目 (ドラムリール) は単品でも借りられない (車両のオプションでも)');
+select lives_ok($$select pg_temp.res_at('i7b', 'V001', array['OP011'], '110 hours', '112 hours')$$,
+  'セットに含まれない家電 (集客セット) は借りられる');
+-- 重ならない時間なら通る (半開区間: 返却時刻ちょうどから)
+select set_config('t.i8', pg_temp.res_at('i8', 'A001', array['OP002'], '24 hours', '30 hours') ->> 'id', true);
+select ok(current_setting('t.i8') like 'R%', '返却時刻ちょうどからなら同じ家電を借りられる');
+
+-- ---- 在庫2なら同時に2台まで (同時に貸し出している数の最大で数える) ----
+update public.options set stock = 2 where id = 'OP003';
+select lives_ok($$select pg_temp.res_at('s1', 'A001', array['OP003'], '200 hours', '210 hours')$$, '在庫2: 1台目');
+select lives_ok($$select pg_temp.res_at('s2', 'A001', array['OP003'], '220 hours', '230 hours')$$, '在庫2: 別の時間の1台');
+select lives_ok($$select pg_temp.res_at('s3', 'A001', array['OP003'], '205 hours', '225 hours')$$,
+  '在庫2: 重なる予約が2件あっても、同時に貸し出すのが最大2台なら借りられる');
+select throws_ok($$select pg_temp.res_at('s4', 'A001', array['OP003'], '206 hours', '207 hours')$$,
+  'P0001', 'OPTION_SOLD_OUT', '在庫2: 同時に2台貸し出している時間には3台目を借りられない');
+select lives_ok($$select pg_temp.res_at('s5', 'A001', array['OP003'], '211 hours', '219 hours')$$,
+  '在庫2: 1台だけ貸し出している時間なら借りられる');
+update public.options set stock = null where id = 'OP003';
+select lives_ok($$select pg_temp.res_at('s6', 'A001', array['OP003'], '206 hours', '207 hours')$$,
+  '在庫を数えない (null) 家電は何台でも借りられる');
+update public.options set stock = 1 where id = 'OP003';
+
+-- ---- 日時変更 (admin_update_reservation)・キャンセル済み・スタッフの登録 ----
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"aaaaaaaa-0000-0000-0000-000000000001","role":"authenticated","aal":"aal2"}';
+select is((public.admin_update_reservation(current_setting('t.i1'),
+            jsonb_build_object('start', pg_temp.ib('1 hour'), 'end', pg_temp.ib('23 hours')))).start_at,
+  pg_temp.ib('1 hour'), '日時変更: 自分自身は数えない (元の時間と重なる時間へ動かせる)');
+select throws_ok(format($$select public.admin_update_reservation(%L, jsonb_build_object('start', %L::timestamptz, 'end', %L::timestamptz))$$,
+    current_setting('t.i8'), pg_temp.ib('20 hours'), pg_temp.ib('30 hours')),
+  'P0001', 'OPTION_SOLD_OUT', '日時変更でも在庫を確認する (電子レンジが貸出中の時間へは動かせない)');
+select is((select start_at from public.reservations where id = current_setting('t.i8')), pg_temp.ib('24 hours'),
+  '在庫切れで断られた日時変更では予約は変わらない');
+select is((public.admin_update_reservation(current_setting('t.i8'), '{"staff_note":"確認済み"}'::jsonb)).staff_note, '確認済み',
+  '日時を変えない更新では在庫を確認しない');
+select is((public.admin_update_reservation(current_setting('t.i1'), '{"status":"cancelled","notify":false}'::jsonb)).status, 'cancelled',
+  '家電レンタルの予約を取り消せる');
+reset role;
+select set_config('t.i9', pg_temp.res_at('i9', 'A001', array['OP002'], '2 hours', '4 hours') ->> 'id', true);
+select ok(current_setting('t.i9') like 'R%', 'キャンセル済みの予約の家電は数えない (同じ時間に借りられる)');
+select is(public.unavailable_option_ids(pg_temp.ib('2 hours'), pg_temp.ib('3 hours')),
+  array['OP002', 'OP008', 'OP010'], '見積用: その期間に貸し出せない家電 (家電セットは中身のどれかが残り0なら含める)');
+select is(public.unavailable_option_ids(pg_temp.ib('2 hours'), pg_temp.ib('3 hours'), current_setting('t.i9')),
+  array['OP008', 'OP010'], '見積用: 指定した予約 (変更中の自分) は数えない');
+select is(public.unavailable_option_ids(pg_temp.ib('300 hours'), pg_temp.ib('301 hours')), '{}'::text[],
+  '見積用: 何も貸し出していない時間は空配列');
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"aaaaaaaa-0000-0000-0000-000000000001","role":"authenticated","aal":"aal2"}';
+select throws_ok(format($$select public.admin_update_reservation(%L, '{"status":"confirmed"}'::jsonb)$$, current_setting('t.i1')),
+  'P0001', 'OPTION_SOLD_OUT', 'キャンセルからの戻しでも在庫を確認する (同じ時間に別の予約が電子レンジを借りている)');
+select throws_ok($$select public.admin_create_reservation(jsonb_build_object('kind', 'block', 'asset_id', 'A001',
+    'start_at', pg_temp.ib('400 hours'), 'end_at', pg_temp.ib('410 hours'), 'staff_note', '棚卸し'))$$,
+  'P0001', 'VALIDATION', '家電レンタルには貸出停止枠を作れない (家電ごとの在庫はオプション管理で変える)');
+select throws_ok($$select public.admin_create_reservation(jsonb_build_object('asset_id', 'A001', 'option_ids', jsonb_build_array('OP008'),
+    'customer_name', '電話予約', 'customer_email', 'tel@example.com', 'customer_phone', '0',
+    'start_at', pg_temp.ib('1 hour'), 'end_at', pg_temp.ib('2 hours')))$$,
+  'P0001', 'OPTION_SOLD_OUT', 'スタッフの予約登録でも在庫を確認する');
+select throws_ok($$select public.admin_create_reservation(jsonb_build_object('asset_id', 'A001',
+    'customer_name', '電話予約', 'customer_email', 'tel@example.com', 'customer_phone', '0',
+    'start_at', pg_temp.ib('1 hour'), 'end_at', pg_temp.ib('2 hours')))$$,
+  'P0001', 'ITEM_REQUIRED', 'スタッフの登録でも家電レンタルは家電を1つ以上');
+select is((public.admin_create_reservation(jsonb_build_object('asset_id', 'A001', 'option_ids', jsonb_build_array('OP009'),
+    'customer_name', '電話予約', 'customer_email', 'tel@example.com', 'customer_phone', '0',
+    'start_at', pg_temp.ib('1 hour'), 'end_at', pg_temp.ib('2 hours')))).is_item,
+  true, 'スタッフも家電レンタルの予約を登録できる (同じ時間でも別の家電なら入る)');
+select throws_ok(format($$select public.admin_update_reservation(%L, '{"asset_id":"A001"}'::jsonb)$$, current_setting('t.v2')),
+  'P0001', 'VALIDATION', '車両の予約を家電レンタルの窓口へ付け替えられない');
+select throws_ok(format($$select public.admin_update_reservation(%L, '{"asset_id":"V004"}'::jsonb)$$, current_setting('t.i8')),
+  'P0001', 'VALIDATION', '家電レンタルの予約を車両へ付け替えられない');
+-- 在庫の判定関数はスタッフでも直接呼べない (Edge Function と RPC の中からだけ)
+select throws_ok($$select public.option_sold_out(array['OP002'], tstzrange(now(), now() + interval '1 day'))$$,
+  '42501', null, 'ログイン中のスタッフも在庫の判定関数 (option_sold_out) を直接呼べない');
+select throws_ok($$select public.unavailable_option_ids(now(), now() + interval '1 day')$$,
+  '42501', null, 'ログイン中のスタッフも在庫の判定関数 (unavailable_option_ids) を直接呼べない');
+reset role;
+
+set local role anon;
+set local request.jwt.claims to '{"role":"anon"}';
+select throws_ok($$select public.option_sold_out(array['OP002'], tstzrange(now(), now() + interval '1 day'))$$,
+  '42501', null, '匿名は在庫の判定関数 (option_sold_out) を呼べない');
+select throws_ok($$select public.unavailable_option_ids(now(), now() + interval '1 day')$$,
+  '42501', null, '匿名は在庫の判定関数 (unavailable_option_ids) を呼べない');
+select is((select count(*)::int from public.public_busy_ranges(pg_temp.ib('-1 day'), pg_temp.ib('15 days')) where asset_id = 'A001'), 0,
+  '空き表示 (public_busy_ranges) に家電レンタルの予約は出ない');
+select ok((select count(*) from public.public_busy_ranges(pg_temp.ib('-1 day'), pg_temp.ib('15 days')) where asset_id = 'V003') >= 1,
+  '空き表示に車両の予約はこれまでどおり出る');
+reset role;
+
+-- ---- 車両の重なり禁止は従来どおり・カテゴリの種類の変更 ----
+select throws_ok($$select pg_temp.res_at('vv', 'V003', array[]::text[], '50 hours', '51 hours')$$,
+  'P0001', 'AVAILABILITY_CONFLICT', '車両の重なり禁止は従来どおり (家電の在庫とは別)');
+select ok((select pg_get_constraintdef(oid) from pg_constraint where conname = 'reservations_no_overlap') like '%NOT is_item%',
+  '重なり禁止の排他制約は家電レンタルの予約を除く');
+select throws_ok($$update public.categories set type = 'vehicle' where id = 'cat-appliance'$$,
+  'P0001', 'VALIDATION', '同じ時間に重なる予約がある家電レンタルのカテゴリは、車両レンタルに変えられない');
+select is((select type from public.categories where id = 'cat-appliance'), 'item', '断られた変更でカテゴリの種類は変わらない');
+
+-- ---- 会員の予約一覧に is_item ----
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated","aal":"aal1"}';
+select ok((public.member_reservations() -> 0) ? 'is_item', '会員の予約一覧に家電レンタルかどうか (is_item) が入る');
 reset role;
 
 select * from finish();

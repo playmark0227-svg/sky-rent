@@ -70,6 +70,18 @@
   }
 
   function locName(id) { const l = S.getLocation(id); return l ? l.name : ''; }
+  // 家電レンタル (家電だけのレンタル) は、準備する家電の名前も添える (例: 「家電レンタル（北見本店） — 電子レンジ・炊飯器」)
+  function assetLabel(r) {
+    const base = r.assetName || r.vehicleName || '';
+    let item = r.isItem === true;
+    if (!item) {
+      const a = S.getAsset(r.assetId);
+      const c = S.getCategory(r.categoryId || (a && a.categoryId));
+      item = !!(c && c.type === 'item');
+    }
+    const names = item ? (r.options || []).map(o => o && o.name).filter(Boolean) : [];
+    return names.length ? base + ' — ' + names.join('・') : base;
+  }
 
   function render(data) {
     $('#kpi-bookings').textContent = (data.bookings || []).length;
@@ -96,7 +108,7 @@
         '<table class="data-table" style="margin-top:8px"><thead><tr><th>予約ID</th><th>対象</th><th>拠点</th><th>借受人</th><th>要対応</th></tr></thead><tbody>' +
         un.map(r => {
           const label = r.status === 'confirmed' && Date.parse(r.start) < now ? '出発予定を超過 (貸出処理待ち)' : '返却予定を超過 (返却処理待ち)';
-          return '<tr><td><a href="reservation-list.html#' + encodeURIComponent(r.reservationId) + '" class="detail-link"><code>' + esc(r.reservationId) + '</code></a></td><td>' + esc(r.assetName || r.vehicleName) + '</td><td>' + esc(locName(r.locationId)) + '</td><td>' + esc(r.customerName) + '</td><td style="color:#c0392b">' + label + '</td></tr>';
+          return '<tr><td><a href="reservation-list.html#' + encodeURIComponent(r.reservationId) + '" class="detail-link"><code>' + esc(r.reservationId) + '</code></a></td><td>' + esc(assetLabel(r)) + '</td><td>' + esc(locName(r.locationId)) + '</td><td>' + esc(r.customerName) + '</td><td style="color:#c0392b">' + label + '</td></tr>';
         }).join('') +
         '</tbody></table>';
     } else {
@@ -106,9 +118,9 @@
 
     // テーブル
     const rentals = rows => (rows || []).filter(r => r.kind !== 'block');
-    fillTable('#tbl-bookings', rentals(data.bookings), 4, r => '<td>' + fmt(r.createdAt || r.start, 'date') + '</td><td>' + esc(r.assetName || r.vehicleName) + '</td><td>' + esc(locName(r.locationId)) + '</td><td>' + esc(r.customerName) + '</td>');
-    fillTable('#tbl-departures', rentals(data.departures), 5, r => '<td>' + fmt(r.start, 'time') + '</td><td>' + esc(r.assetName || r.vehicleName) + '</td><td>' + esc(locName(r.locationId)) + '</td><td>' + esc(r.customerName) + '</td><td><a href="reservation-list.html#' + encodeURIComponent(r.reservationId) + '" class="detail-link">詳細</a></td>');
-    fillTable('#tbl-returns', rentals(data.returns), 5, r => '<td>' + fmt(r.end, 'time') + '</td><td>' + esc(r.assetName || r.vehicleName) + '</td><td>' + esc(locName(r.locationId)) + '</td><td>' + esc(r.customerName) + '</td><td><a href="reservation-list.html#' + encodeURIComponent(r.reservationId) + '" class="detail-link">詳細</a></td>');
+    fillTable('#tbl-bookings', rentals(data.bookings), 4, r => '<td>' + fmt(r.createdAt || r.start, 'date') + '</td><td>' + esc(assetLabel(r)) + '</td><td>' + esc(locName(r.locationId)) + '</td><td>' + esc(r.customerName) + '</td>');
+    fillTable('#tbl-departures', rentals(data.departures), 5, r => '<td>' + fmt(r.start, 'time') + '</td><td>' + esc(assetLabel(r)) + '</td><td>' + esc(locName(r.locationId)) + '</td><td>' + esc(r.customerName) + '</td><td><a href="reservation-list.html#' + encodeURIComponent(r.reservationId) + '" class="detail-link">詳細</a></td>');
+    fillTable('#tbl-returns', rentals(data.returns), 5, r => '<td>' + fmt(r.end, 'time') + '</td><td>' + esc(assetLabel(r)) + '</td><td>' + esc(locName(r.locationId)) + '</td><td>' + esc(r.customerName) + '</td><td><a href="reservation-list.html#' + encodeURIComponent(r.reservationId) + '" class="detail-link">詳細</a></td>');
     fillTable('#tbl-shaken', data.shaken, 3, r => '<td>' + esc(r.expireDate) + '</td><td>' + esc(r.vehicleName) + '</td><td style="' + (r.daysLeft < 30 ? 'color:#c0392b;font-weight:700' : '') + '">' + esc(r.daysLeft) + '日</td>');
 
     renderActivity(data.notifications || []);

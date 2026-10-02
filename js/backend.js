@@ -69,6 +69,9 @@
     OPTION_NOT_APPLICABLE: '選択されたオプションはこの車両ではご利用いただけません。オプションを選び直してください。',
     OPTION_CONFLICT: '同時に選べないオプションが選ばれています。補償は1つまで、家電セットに含まれる品目は個別に追加できません。',
     DISCOUNT_NOT_APPLICABLE: '選択された割引はこのご予約には適用できません (利用時間・車種の条件をご確認ください)。',
+    // 家電レンタル
+    ITEM_REQUIRED: 'お借りになる家電を1つ以上お選びください。',
+    OPTION_SOLD_OUT: 'お選びの家電のうち、ご希望の日時はすでに貸し出し中のものがあります。別の日時か別の家電をお選びください。',
     MEMBER_NOT_ACTIVE: '会員情報を確認できませんでした。ログインし直してから、もう一度お試しください。',
     LAST_ADMIN: '最後の管理者は無効化・役割変更できません。先に別の管理者を追加してください。',
     INVALID_DELTA: '増減するポイント数と理由を入力してください (1回の調整は±100ポイントまで)。',
@@ -99,7 +102,8 @@
   // サーバー (Edge Function) がエラーに同梱する項目。Error にそのまま載せる
   //   fields: 入力不備の項目 / quote: 新しい見積 (PRICE_CHANGED) / cancellation: キャンセル料 (PRICE_CHANGED・NOT_CANCELLABLE)
   //   documents・missing: 同意が必要な文書と、足りない文書の id (CONSENT_REQUIRED)
-  const ERROR_EXTRA_KEYS = ['fields', 'quote', 'cancellation', 'documents', 'missing', 'status', 'requestId', 'detail'];
+  //   details: 詳細 (OPTION_SOLD_OUT は {optionIds: 貸し出し中の家電の id})
+  const ERROR_EXTRA_KEYS = ['fields', 'quote', 'cancellation', 'documents', 'missing', 'status', 'requestId', 'detail', 'details'];
 
   function makeError(code, message, extra) {
     const c = code || 'INTERNAL';
@@ -320,10 +324,12 @@
     },
     option: {
       // description・includes (セットに含まれる品目) などの列に無い項目は extra に入る (extra.description / extra.includes)
+      // stock: 同時に貸し出せる数 (null = 在庫を数えない。家電セットは null で中の品目の在庫を使う)
       idKey: 'optionId',
       cols: [['optionId', 'id'], ['name', 'name'], ['price', 'price', 'int'], ['priceShort', 'price_short', 'int'],
              ['priceType', 'price_type'], ['categoryIds', 'category_ids', 'textArray'], ['kind', 'kind'],
-             ['exclusiveGroup', 'exclusive_group'], ['active', 'active', 'bool'], ['sort', 'sort', 'int']]
+             ['exclusiveGroup', 'exclusive_group'], ['active', 'active', 'bool'], ['sort', 'sort', 'int'],
+             ['stock', 'stock', 'int']]
     }
   };
   // 旧画面 (api.js) が付け足す派生項目。DB へは送らない
@@ -393,7 +399,7 @@
       const price = row.price && typeof row.price === 'object' && !Array.isArray(row.price) ? clone(row.price) : {};
       if (price.total == null) price.total = total;
       const assetName = asset ? asset.name : '';
-      return {
+      const out = {
         reservationId: row.id, kind: row.kind || 'rental',
         assetId: row.asset_id, vehicleId: row.asset_id, assetName: assetName, vehicleName: assetName,
         categoryId: row.category_id, locationId: row.location_id, quantity: 1,
@@ -415,6 +421,9 @@
         licenseConfirmed: !!row.license_confirmed, createdAt: row.created_at, version: row.version,
         gcalEvents: row.gcal_events || {}
       };
+      // 家電レンタルの予約か (DB がカテゴリから決める列。読んだ行にあるときだけ)
+      if (hasOwn(row, 'is_item')) out.isItem = !!row.is_item;
+      return out;
     },
 
     coupon(row) {
@@ -508,7 +517,7 @@
     reservation(obj) {
       const pay = obj.payment || {};
       const total = obj.total != null ? obj.total : ((obj.price && obj.price.total) || 0);
-      return {
+      const row = {
         id: obj.reservationId, kind: obj.kind || 'rental',
         asset_id: obj.assetId, category_id: obj.categoryId, location_id: obj.locationId,
         start_at: obj.start, end_at: obj.end, status: obj.status,
@@ -525,6 +534,8 @@
         cancelled_at: obj.cancelledAt || null, cancelled_by: obj.cancelledBy || null,
         created_at: obj.createdAt, version: obj.version, gcal_events: obj.gcalEvents || {}
       };
+      if (obj.isItem !== undefined) row.is_item = !!obj.isItem;  // DB ではトリガーが決める (書き込みには使わない)
+      return row;
     },
 
     coupon(obj, userId) {
@@ -1604,11 +1615,26 @@
     return core ? core.DEFAULT_RULES : null;
   }
 
+  // 料金エンジンに渡す区分 'vehicle' | 'item' (カテゴリの type から)
+  function categoryTypeOf(asset) {
+    return S && typeof S.categoryTypeOf === 'function' ? S.categoryTypeOf(asset) : 'vehicle';
+  }
+  function isItemAsset(asset) { return categoryTypeOf(asset) === 'item'; }
+
+  // 予約時に同意が必要な文書の id (サーバーの requireConsent と同じ)
+  //   車両 = 貸渡約款・キャンセル規定・プライバシーポリシー / 家電レンタル = 物品レンタル規約・キャンセル規定・プライバシーポリシー
+  const CONSENT_DOCS = { vehicle: ['clause', 'cancel', 'privacy'], item: ['item_clause', 'cancel', 'privacy'] };
+  // asset: アセット (または ID)・予約 ({assetId, categoryId}) → 文書の id の配列 (新しい配列)
+  function consentDocIds(asset) { return CONSENT_DOCS[categoryTypeOf(asset)].slice(); }
+
   function computeQuote(asset, start, end, options, discountType, coupon) {
     const core = window.SkyRentPricingCore;
     if (core && typeof core.quote === 'function') {
       return core.quote({
-        asset: { id: asset.assetId, categoryId: asset.categoryId, priceHour: asset.priceHour, priceDay: asset.priceDay, customFields: asset.customFields || {} },
+        asset: {
+          id: asset.assetId, categoryId: asset.categoryId, categoryType: categoryTypeOf(asset),
+          priceHour: asset.priceHour, priceDay: asset.priceDay, customFields: asset.customFields || {}
+        },
         start: start, end: end,
         options: options.map(o => ({
           id: o.optionId, name: o.name, price: o.price, priceShort: o.priceShort == null ? null : o.priceShort,
@@ -1628,10 +1654,21 @@
     };
   }
 
+  // キャンセル料の元になる「利用料金」: 車両 = 基本料金 (予約時の price.base。無ければ合計) /
+  // 家電レンタル = 借りる家電 (オプション) の料金の合計 (基本料金は 0 なので price.base は使わない)
+  function cancellationBaseOf(r) {
+    if (isItemAsset({ assetId: r.assetId, categoryId: r.categoryId })) {
+      const P = window.SkyRentPricing;
+      if (P && typeof P.cancellationBase === 'function') return P.cancellationBase({ reservation: r });
+      return (r.price && (Number(r.price.subtotal) || Number(r.price.total))) || Number(r.total) || 0;  // pricing.js が無いとき
+    }
+    return r.price && r.price.base != null ? r.price.base : ((r.price && r.price.total) || 0);
+  }
+
   function cancellationFor(r, at) {
     const core = window.SkyRentPricingCore;
     const asset = S.getAsset(r.assetId) || { assetId: r.assetId, categoryId: r.categoryId, customFields: {} };
-    const base = r.price && r.price.base != null ? r.price.base : ((r.price && r.price.total) || 0);
+    const base = cancellationBaseOf(r);
     const cancellable = r.status === 'confirmed' && toMs(r.start) > at.getTime();
     let fee = { fee: 0, pct: 0, label: '' };
     if (core && typeof core.cancellationFee === 'function') {
@@ -1649,6 +1686,8 @@
     const loc = S.getLocation(r.locationId);
     return {
       id: r.reservationId, reservationId: r.reservationId, assetId: r.assetId, assetName: r.assetName,
+      categoryId: r.categoryId, categoryType: categoryTypeOf({ assetId: r.assetId, categoryId: r.categoryId }),
+      isItem: isItemAsset({ assetId: r.assetId, categoryId: r.categoryId }),
       locationId: r.locationId, locationName: loc ? loc.name : '', start: r.start, end: r.end, status: r.status,
       total: r.total != null ? r.total : ((r.price && r.price.total) || 0), price: r.price, options: r.options || [],
       optionIds: r.optionIds || [], paymentMethod: (r.payment || {}).method || 'onsite',
@@ -1677,19 +1716,33 @@
     if (!(toMs(p.end) > toMs(p.start))) throw makeError('INVALID_PERIOD');
     const quote = computeQuote(asset, p.start, p.end, findOptions(p.optionIds), p.discountType, demoCoupon(p.couponId));
     const av = S.availability(asset.assetId, p.start, p.end, 1);
+    // その期間に貸し出せない (残り0) 家電の id。選んだ家電が入っていれば OPTION_SOLD_OUT (サーバーの /api/quote と同じ)
+    const unavailable = S.unavailableOptionIds(p.start, p.end);
+    const optionsOk = !(Array.isArray(p.optionIds) ? p.optionIds : []).some(id => unavailable.indexOf(String(id)) >= 0);
     const reasons = [];
-    if (!av.ok) reasons.push(av.code || 'AVAILABILITY_CONFLICT');
+    if (!av.ok && !av.code) reasons.push('AVAILABILITY_CONFLICT');
+    if (!optionsOk) reasons.push('OPTION_SOLD_OUT');
+    if (!av.ok && av.code) reasons.push(av.code);
     return {
-      ok: true, quote: quote,
+      ok: true, quote: quote, categoryType: categoryTypeOf(asset),
       availability: {
-        vehicle: av.ok || !!av.code, staff: av.code !== 'STAFF_UNAVAILABLE', handover: av.code !== 'HANDOVER_CONFLICT', reasons: reasons
+        vehicle: av.ok || !!av.code, staff: av.code !== 'STAFF_UNAVAILABLE', handover: av.code !== 'HANDOVER_CONFLICT',
+        options: optionsOk, reasons: reasons
       },
+      unavailableOptionIds: unavailable,
       demo: true
     };
   }
 
   function requireFields(fields) {
     if (Object.keys(fields).length) throw makeError('VALIDATION', null, { fields: fields });
+  }
+  // 家電の在庫切れ (サーバーの 409 OPTION_SOLD_OUT と同じ形: details.optionIds・fields.optionIds)
+  function soldOutError(ids) {
+    return makeError('OPTION_SOLD_OUT', null, {
+      details: { optionIds: (ids || []).slice() },
+      fields: { optionIds: S.SOLD_OUT_FIELD }
+    });
   }
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -1701,7 +1754,9 @@
     if (!cust.name) fields.name = 'お名前を入力してください';
     if (!cust.email || !EMAIL_RE.test(cust.email)) fields.email = 'メールアドレスを正しく入力してください';
     if (!cust.phone) fields.phone = '電話番号を入力してください';
-    if (!p.licenseConfirmed) fields.licenseConfirmed = '運転免許証の確認にチェックしてください';
+    // 家電レンタルは運転免許の確認なし (本人確認書類はお受け取り時に確認)
+    const item = !!p.assetId && isItemAsset(p.assetId);
+    if (!p.licenseConfirmed && !item) fields.licenseConfirmed = '運転免許証の確認にチェックしてください';
     requireFields(fields);
 
     if (p.idempotencyKey) {
@@ -1710,14 +1765,21 @@
     }
     const q = demoQuote(p);
     const quote = q.quote;
-    if (quote.ok === false && quote.errors && quote.errors.length) throw makeError(quote.errors[0], null, { quote: quote });
+    if (quote.ok === false && quote.errors && quote.errors.length) {
+      const code = quote.errors[0];
+      throw makeError(code, null, { quote: quote, fields: code === 'ITEM_REQUIRED' ? { optionIds: MESSAGES.ITEM_REQUIRED } : null });
+    }
     if (p.expectedTotal != null && Number(p.expectedTotal) !== quote.total) throw makeError('PRICE_CHANGED', null, { quote: quote });
     const member = S.currentMember();
     if (p.paymentMethod === 'invoice' && !(member && member.invoiceAllowed)) throw makeError('INVOICE_NOT_ALLOWED');
-    const av = S.availability(p.assetId, p.start, p.end, 1);
-    if (!av.ok) throw makeError(av.code || 'AVAILABILITY_CONFLICT');
+    // 予約時点のオプション名・単価。家電セットは中身の id (includes) も残す (帳票で品目ごとに並べるため。サーバーと同じ)
+    const opts = findOptions(p.optionIds).map(o => Object.assign(
+      { optionId: o.optionId, name: o.name, price: o.price, priceType: o.priceType || 'per_day' },
+      Array.isArray(o.includes) && o.includes.length ? { includes: o.includes.slice() } : {}));
+    // 車両の重なり (家電レンタルは見ない) と、選んだ家電の在庫 (車両のオプションと家電だけの予約で共有)
+    const av = S.availability(p.assetId, p.start, p.end, 1, undefined, opts.map(o => o.optionId));
+    if (!av.ok) throw av.code === 'OPTION_SOLD_OUT' ? soldOutError(av.soldOut) : makeError(av.code || 'AVAILABILITY_CONFLICT');
 
-    const opts = findOptions(p.optionIds).map(o => ({ optionId: o.optionId, name: o.name, price: o.price, priceType: o.priceType || 'per_day' }));
     let r;
     try {
       r = S.createReservation({
@@ -1725,10 +1787,11 @@
         customerName: cust.name, customerEmail: cust.email, customerPhone: cust.phone, company: cust.company || '',
         memberId: member ? member.memberId : null, optionIds: opts.map(o => o.optionId), options: opts,
         paymentMethod: p.paymentMethod === 'invoice' ? 'invoice' : 'onsite',
-        price: Object.assign({}, quote, { breakdown: quote.lines }),
-        couponId: p.couponId || null, licenseConfirmed: !!p.licenseConfirmed, note: p.note || ''
+        price: Object.assign({ categoryType: item ? 'item' : 'vehicle' }, quote, { breakdown: quote.lines }),
+        couponId: p.couponId || null, licenseConfirmed: !!p.licenseConfirmed && !item, note: p.note || ''
       });
     } catch (e) {
+      if (e && e.code === 'OPTION_SOLD_OUT') throw soldOutError((e.details && e.details.optionIds) || []);
       throw makeError(/見つかりません/.test(String(e && e.message)) ? 'NOT_FOUND' : 'AVAILABILITY_CONFLICT');
     }
     const token = randomToken(18);
@@ -2022,19 +2085,25 @@
     return call('api', '/availability' + q, { method: 'GET' });
   }
 
+  // → {ok, quote, availability, unavailableOptionIds: その期間に貸し出せない (残り0) 家電の id}
   async function quote(p) {
     if (!LIVE) return demoQuote(p);
-    return call('api', '/quote', { body: p });
+    const json = await call('api', '/quote', { body: p });
+    if (json && typeof json === 'object' && !Array.isArray(json.unavailableOptionIds)) json.unavailableOptionIds = [];
+    return json;
   }
 
   async function createReservation(p) {
     if (!LIVE) return demoCreateReservation(p);
     const json = await call('api', '/reservations', { body: p });
-    // 同じタブで続けて検索したときに埋まって見えるよう、空き判定用の予約を足す
+    // 同じタブで続けて検索したときに埋まって見えるよう、空き判定用の予約を足す (借りた家電も在庫に数える)
     const r = json && json.reservation;
     if (r && r.assetId && r.start && r.end) {
       const list = S.list('reservations');
-      list.push({ reservationId: r.id, assetId: r.assetId, start: r.start, end: r.end, status: r.status || 'confirmed', _busy: true });
+      list.push({
+        reservationId: r.id, assetId: r.assetId, start: r.start, end: r.end, status: r.status || 'confirmed',
+        optionIds: Array.isArray(p && p.optionIds) ? p.optionIds.slice() : [], _busy: true
+      });
       S._hydrate({ reservations: list });
       const a = S.getAsset(r.assetId);
       if (availabilityData && a) {
@@ -2186,10 +2255,12 @@
     },
 
     // 貸出停止枠 (整備・車検など) p: {assetId, start, end, note}
+    //   家電レンタルの窓口には作れない (VALIDATION。家電ごとの在庫はオプション管理で変える。サーバーも同じ判定)
     async createBlock(p) {
       p = p || {};
       const a = S.getAsset(p.assetId);
       if (!a) throw makeError('NOT_FOUND');
+      if (isItemAsset(a)) throw makeError('VALIDATION', S.ITEM_BLOCK_MESSAGE, { fields: { assetId: S.ITEM_BLOCK_MESSAGE } });
       if (!(toMs(p.end) > toMs(p.start))) throw makeError('INVALID_PERIOD');
       const note = p.note || p.reason || '';
       if (!LIVE) {
@@ -2448,6 +2519,7 @@
     submitInquiry: submitInquiry,
     staffCheck: staffCheck,
     staffAvailabilityState: staffAvailabilityState,
+    consentDocIds: consentDocIds,
     jst: jst,
     auth: auth,
     member: member,

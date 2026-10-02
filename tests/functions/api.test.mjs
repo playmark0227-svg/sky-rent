@@ -341,7 +341,7 @@ describe('予約確定 (/api/reservations)', () => {
     assert.equal(row.license_confirmed, true);
     assert.equal(row.price.base, reservation.price.base);
     assert.ok(Array.isArray(row.price.lines) && row.price.lines.length >= 2);
-    assert.equal(row.price.rulesVersion, '2026-06');
+    assert.equal(row.price.rulesVersion, '2026-10');
     assert.deepEqual(row.option_ids, ['OP101']);
     // 照会キーは平文で保存しない (sha256 だけ)
     assert.equal(row.guest_token_hash, createHash('sha256').update(guestToken).digest('hex'));

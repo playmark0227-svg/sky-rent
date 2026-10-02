@@ -100,7 +100,9 @@
     // ---- 参照系 ----
     listCategories: () => delay(S.categories()),
     listLocations: () => delay(S.locations()),
-    listVehicles: (filter) => delay(S.assets(Object.assign({ activeOnly: true }, filter || {})).map(legacyAsset)),
+    // 車両だけ (家電レンタルの窓口は車両ではないので、車検・点検・稼働率・貸渡実績報告書などに出さない)
+    listVehicles: (filter) => delay(S.assets(Object.assign({ activeOnly: true }, filter || {}))
+      .filter(a => !S.isItemAsset(a)).map(legacyAsset)),
     listAssets: (filter) => delay(S.assets(filter || {}).map(legacyAsset)),
     getAsset: (id) => delay(legacyAsset(S.getAsset(id) || {})),
     listOptions: (categoryId) => delay(S.optionsForCategory(categoryId)),

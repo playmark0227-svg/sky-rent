@@ -21,6 +21,8 @@
     .opt-row.is-disabled { cursor: not-allowed; }
     .opt-row.is-disabled > input, .opt-row.is-disabled .op { opacity: .45; }
     .opt-group-note { font-size: 12px; line-height: 1.7; color: var(--color-muted); margin: -2px 0 4px; }
+    .opt-row.is-soldout .on small.opt-inset { color: #ffb4a8; }
+    .dt-item-info td { line-height: 1.8; }
     @media (max-width: 480px) {
       .opt-row { padding: 10px 2px; gap: 8px; font-size: 13.5px; }
       .opt-row .op { font-size: 15px; }
@@ -77,7 +79,7 @@
             </div>
           </div>
           <div id="d-license"></div>
-          <h3 class="mt24 mb8" data-i18n="detail.specs" style="font-size:15px">スペック・装備</h3>
+          <h3 class="mt24 mb8" id="specs-title" data-i18n="detail.specs" style="font-size:15px">スペック・装備</h3>
           <table class="spec-table" id="d-specs"></table>
         </div>
 
@@ -95,11 +97,11 @@
         <div class="p-card">
           <h3 style="font-size:16px" data-i18n="detail.estimate">料金見積り</h3>
           <div class="fg mt16" style="display:flex;flex-direction:column;gap:6px">
-            <label class="muted" for="p-start" style="font-size:12px;font-weight:700" data-i18n="search.start">出発日時 (受取)</label>
+            <label class="muted" for="p-start" id="p-start-label" style="font-size:12px;font-weight:700" data-i18n="search.start">出発日時 (受取)</label>
             <input type="datetime-local" id="p-start" style="padding:9px 10px;border:1px solid var(--color-border);border-radius:6px;font-family:inherit">
           </div>
           <div class="fg mt8" style="display:flex;flex-direction:column;gap:6px">
-            <label class="muted" for="p-end" style="font-size:12px;font-weight:700" data-i18n="search.end">返却日時</label>
+            <label class="muted" for="p-end" id="p-end-label" style="font-size:12px;font-weight:700" data-i18n="search.end">返却日時</label>
             <input type="datetime-local" id="p-end" style="padding:9px 10px;border:1px solid var(--color-border);border-radius:6px;font-family:inherit">
           </div>
           <p class="muted" id="p-tz" style="font-size:11.5px;margin-top:6px">日時は日本時間です。</p>
@@ -116,6 +118,7 @@
           </div>
           <p class="muted mt8" id="p-discount-note" style="font-size:12px"></p>
           <div class="mt8" id="p-avail"></div>
+          <div id="p-soldout" class="dt-check" role="status" hidden></div>
           <div id="p-reason" class="dt-reason" hidden></div>
           <div id="p-check" class="dt-check" hidden></div>
           <div id="p-suggest" class="dt-suggest" hidden></div>
@@ -127,15 +130,15 @@
 
   <footer class="site-footer"><div class="container"><div class="footer-bottom" style="border-top:none"><span data-i18n="footer.copyright">© 2026 グロースレンタカー</span><a href="index.html">← トップへ戻る</a></div></div></footer>
 
-  <script src="js/config.js?v=20260930"></script>
-  <script src="js/store.js?v=20260930"></script>
-  <script src="js/pricing-core.js?v=20260930"></script>
-  <script src="js/pricing.js?v=20260930"></script>
-  <script src="js/i18n.js?v=20260930"></script>
-  <script src="js/api.js?v=20260930"></script>
-  <script src="js/photos.js?v=20260930"></script>
-  <script src="js/backend.js?v=20260930"></script>
-  <script src="js/boot.js?v=20260930"></script>
+  <script src="js/config.js?v=20261002"></script>
+  <script src="js/store.js?v=20261002"></script>
+  <script src="js/pricing-core.js?v=20261002"></script>
+  <script src="js/pricing.js?v=20261002"></script>
+  <script src="js/i18n.js?v=20261002"></script>
+  <script src="js/api.js?v=20261002"></script>
+  <script src="js/photos.js?v=20261002"></script>
+  <script src="js/backend.js?v=20261002"></script>
+  <script src="js/boot.js?v=20261002"></script>
   <script type="text/x-deferred">
   (function () {
     'use strict';
@@ -153,13 +156,15 @@
 
     const L = {
       s1:{ja:'検索',en:'Search'}, s2:{ja:'車両を選択',en:'Select'}, s3:{ja:'情報入力',en:'Details'}, s4:{ja:'完了',en:'Done'},
+      s2item:{ja:'家電を選択',en:'Select'},
       plans:{ja:'料金プラン',en:'Pricing'},
       ph:{ja:'1時間ごと',en:'Per hour'}, pd:{ja:'24時間',en:'Per 24 hours'}, pw:{ja:'週貸し (7日〜)',en:'Weekly (7d+)'}, pm:{ja:'月貸し (30日〜)',en:'Monthly (30d+)'},
-      cap:{ja:'定員',en:'Capacity'}, plate:{ja:'ナンバー',en:'Plate'}, stock:{ja:'在庫数',en:'Stock'}, loc:{ja:'取扱拠点',en:'Location'}, cat:{ja:'カテゴリ',en:'Category'},
+      cap:{ja:'定員',en:'Capacity'}, plate:{ja:'ナンバー',en:'Plate'}, loc:{ja:'取扱拠点',en:'Location'}, cat:{ja:'カテゴリ',en:'Category'},
       avOk:{ja:'ご予約いただけます',en:'Available'}, avNg:{ja:'この日時はご予約いただけません',en:'Not available for this period'},
-      stockLeft:{ja:n=>'残り '+n,en:n=>n+' left'},
       invalid:{ja:'貸出日時と返却日時を入力してください (返却は貸出より後の日時)。',en:'Please set a valid period.'},
+      invalidItem:{ja:'お受け取りとご返却の日時を入力してください (ご返却はお受け取りより後の日時)。',en:'Please set a valid period.'},
       past:{ja:'過去の日時はご予約いただけません。出発日時をご確認ください。',en:'The pick-up time is in the past.'},
+      pastItem:{ja:'過去の日時はご予約いただけません。お受け取りの日時をご確認ください。',en:'The pick-up time is in the past.'},
       checking:{ja:'空き状況を確認しています…',en:'Checking availability…'},
       checked:{ja:'空き状況を確認しました。',en:'Availability confirmed.'},
       checkFailed:{ja:'空き状況を確認できませんでした。ご予約の確定時にあらためて確認します。',en:'Could not check availability now. It will be checked again when you confirm.'},
@@ -169,7 +174,21 @@
       coverNote:{ja:'どれか1つだけ選べます。',en:'Choose one at most.'},
       equipNoteAll:{ja:'全車共通。料金は24時間ごとです (短時間のご利用でも24時間分)。',en:'Available for all vehicles. Charged per 24 hours.'},
       equipNote:{ja:'料金は24時間ごとです (短時間のご利用でも24時間分)。',en:'Charged per 24 hours.'},
-      inSet:{ja:n=>n+'に含まれています',en:n=>'Included in the '+n}
+      inSet:{ja:n=>n+'に含まれています',en:n=>'Included in the '+n},
+      soldOut:{ja:'この日時は貸し出し中',en:'Not available for these dates'},
+      soldOutRemoved:{ja:n=>'ご希望の日時は貸し出し中のため、選択を外しました: '+n,en:n=>'Removed (not available for these dates): '+n},
+      // 家電レンタル (カテゴリ type 'item')
+      itemNote:{ja:'1つ以上お選びください。各品目1点ずつ、料金は24時間ごとです (短時間のご利用でも24時間分)。在庫に限りがあり、ご希望の日時に貸し出し中の家電は選べません。',en:'Choose at least one. One unit each, charged per 24 hours. Items already rented out for your dates cannot be selected.'},
+      itemRequired:{ja:'お借りになる家電を1つ以上お選びください。',en:'Please choose at least one appliance.'},
+      itemHint:{ja:'家電を選ぶと、料金を表示します。',en:'Choose appliances to see the price.'},
+      itemPrices:{ja:'家電の料金 (24時間あたり・税込)',en:'Appliance prices (per 24 hours, tax incl.)'},
+      iPlace:{ja:'お受け取り・ご返却',en:'Pick-up & return'},
+      iCar:{ja:'車両',en:'Vehicle'}, iCarV:{ja:'付きません (家電だけのお貸し出しです)',en:'Not included (appliances only)'},
+      iLic:{ja:'運転免許証',en:'Driver\'s license'}, iLicV:{ja:'不要です。お受け取りの際に本人確認書類 (運転免許証・保険証など) を確認します。',en:'Not required. Please bring an ID (driver\'s license, health insurance card, etc.).'},
+      iShip:{ja:'配送',en:'Delivery'}, iShipV:{ja:'行っておりません (店頭でのお受け取り・ご返却のみ)',en:'Not available (pick-up and return at the store only)'},
+      iFee:{ja:'料金',en:'Price'}, iFeeV:{ja:'家電ごとに24時間ごと (税込)。土日祝・夜間・繁忙期の割増はかかりません。',en:'Per appliance, per 24 hours (tax incl.). No weekend, night or peak surcharges.'},
+      iOther:{ja:'補償・割引',en:'Coverage / discounts'}, iOtherV:{ja:'補償オプションと割引 (学生・法人など) の対象外です。',en:'Coverage options and discounts do not apply.'},
+      iTerms:{ja:'規約',en:'Terms'}
     };
     const tt = k => L[k][isEn()?'en':'ja'];
 
@@ -180,7 +199,19 @@
 
     if (!asset) { document.addEventListener('DOMContentLoaded', () => { $('#notfound').hidden = false; }); return; }
     cat = S.getCategory(asset.categoryId);
-    const isItem = cat && cat.type === 'item';
+    // 家電レンタル (物品のカテゴリ)。車両は付かず、借りる家電をオプションから選ぶ
+    const isItem = !!(cat && cat.type === 'item');
+    // 料金エンジンに渡す車両 (家電レンタルは categoryType 'item': 基本料金なし・家電の選択が必須・割増なし)
+    function quoteAsset() { return Object.assign({}, asset, { categoryType: isItem ? 'item' : 'vehicle' }); }
+    // サーバーの文言が無い (古い backend.js など) ときの代わり
+    function codeText(code) {
+      const fallback = {
+        ITEM_REQUIRED: tt('itemRequired'),
+        OPTION_SOLD_OUT: 'お選びの家電のうち、ご希望の日時はすでに貸し出し中のものがあります。別の日時か別の家電をお選びください。'
+      };
+      const m = B.errorMessage(code);
+      return fallback[code] && m === B.errorMessage('INTERNAL') ? fallback[code] : m;
+    }
 
     // ---- 日時 (日本時間) ----
     // 明日の 10:00 (日本時間)
@@ -192,27 +223,37 @@
     function fromParam(v) { return v ? J.fromInput(v) : null; }
     const ms = v => core.toMs(v);
 
+    // 見出し・ラベルを家電レンタル向けの文言に替える (言語切替でも車両向けに戻らないよう data-i18n も替える)
+    function setLabel(sel, key) {
+      const el = $(sel);
+      if (!el) return;
+      el.setAttribute('data-i18n', key);
+      el.textContent = I.t(key);
+    }
+
     function renderStatic() {
-      document.querySelectorAll('[data-sk]').forEach(el => { el.textContent = tt(el.dataset.sk); });
+      document.querySelectorAll('[data-sk]').forEach(el => { el.textContent = tt(isItem && el.dataset.sk === 's2' ? 's2item' : el.dataset.sk); });
       const loc = S.getLocation(asset.locationId);
+      const locLabel = loc ? (isEn() && loc.nameEn ? loc.nameEn : loc.name) : '';
       $('#crumb').innerHTML = '<a href="index.html" style="color:var(--color-primary)">' + esc(I.t('nav.categories')) + '</a> › <a href="search.html?category=' + encodeURIComponent(asset.categoryId) + '" style="color:var(--color-primary)">' + esc(catName(cat)) + '</a> › ' + esc(assetName(asset));
       $('#d-image').innerHTML = window.SkyRentPhotos ? window.SkyRentPhotos.thumbHtml(asset) : esc(asset.image || '📦');
-      $('#d-cat').textContent = catName(cat) + ' ・ ' + (loc ? (isEn() && loc.nameEn ? loc.nameEn : loc.name) : '');
+      $('#d-cat').textContent = catName(cat) + ' ・ ' + locLabel;
       $('#d-name').textContent = assetName(asset);
       $('#d-loc').textContent = loc ? ((loc.address || '') + (loc.tel ? ' / ' + loc.tel : '') + (loc.hours ? ' / ' + loc.hours : '')) : '';
 
-      // 免許警告
-      if (asset.requiredLicense) {
+      // 免許警告 (車両のみ)
+      if (asset.requiredLicense && !isItem) {
         $('#d-license').innerHTML = '<div class="license-box"><strong>⚠ ' + esc(I.t('detail.license')) + '</strong>' + esc(asset.requiredLicense) + '</div>';
       } else { $('#d-license').innerHTML = ''; }
+
+      if (isItem) { renderItemStatic(loc, locLabel); return; }
 
       // スペック表 (共通 + カスタム項目)
       const rows = [];
       rows.push([tt('cat'), esc(catName(cat))]);
-      rows.push([tt('loc'), esc(loc ? (isEn() && loc.nameEn ? loc.nameEn : loc.name) : '')]);
+      rows.push([tt('loc'), esc(locLabel)]);
       if (asset.capacity) rows.push([tt('cap'), esc(asset.capacity) + (isEn() ? '' : '名')]);
       if (asset.plate) rows.push([tt('plate'), esc(asset.plate)]);
-      if (isItem) rows.push([tt('stock'), esc(asset.stock) + (isEn() ? ' units' : '点')]);
       (cat.customFieldDefs || []).forEach(def => {
         const v = (asset.customFields || {})[def.key];
         if (v == null || v === '') return;
@@ -235,17 +276,49 @@
       $('#p-discount-note').textContent = tt('discountNote');
     }
 
+    // 家電レンタル: 車両のスペック・時間料金の代わりに、受け取り場所と家電ごとの料金を案内する
+    function renderItemStatic(loc, locLabel) {
+      setLabel('#specs-title', 'detail.itemInfo');
+      setLabel('#p-start-label', 'search.pickup');
+      setLabel('#p-end-label', 'search.dropoff');
+      const place = esc(locLabel) + (loc && loc.address ? ' (' + esc(loc.address) + ')' : '') +
+        (loc && loc.hours ? '<br><small class="muted">' + (isEn() ? 'Hours ' : '営業時間 ') + esc(loc.hours) + '</small>' : '');
+      const rows = [
+        [tt('iPlace'), place],
+        [tt('iCar'), esc(tt('iCarV'))],
+        [tt('iLic'), esc(tt('iLicV'))],
+        [tt('iShip'), esc(tt('iShipV'))],
+        [tt('iFee'), esc(tt('iFeeV'))],
+        [tt('iOther'), esc(tt('iOtherV'))],
+        [tt('iTerms'), '<a href="item-terms.html" target="_blank" rel="noopener" style="color:var(--color-primary)">' + (isEn() ? 'Appliance rental terms (Japanese)' : '物品レンタル規約') + '</a>']
+      ];
+      $('#d-specs').classList.add('dt-item-info');
+      $('#d-specs').innerHTML = rows.map(r => '<tr><th>' + esc(r[0]) + '</th><td>' + r[1] + '</td></tr>').join('');
+
+      $('#price-title').textContent = tt('itemPrices');
+      $('#d-plans').innerHTML = allOptions().filter(o => !isCover(o)).map(o =>
+        '<tr data-price-row="' + esc(o.optionId) + '"><th>' + esc(o.name) + (o.description ? '<br><small class="muted" style="font-weight:400">' + esc(o.description) + '</small>' : '') + '</th>' +
+        '<td>' + esc(yen(o.price)) + ' <small class="muted">' + (o.priceType === 'per_rental' ? tt('perRental') : tt('perDay')) + '</small></td></tr>').join('');
+      $('#d-plan-note').textContent = isEn() ? 'Tax included. Short rentals are charged for 24 hours.' :
+        '税込。24時間に満たないご利用でも24時間分の料金です。家電セットをお選びの場合、セットに含まれる9点を個別に追加することはできません。';
+      $('#p-discount-note').textContent = '';
+    }
+
     // この車両に付けられるオプション (共通 + 専用。表示順は sort → 登録順)
     function allOptions() {
       const seen = {};
-      return options.common.concat(options.specific)
+      let list = options.common.concat(options.specific);
+      // 家電レンタルで一覧が空 (古いデータなど) のときは、全カテゴリ共通の装備から選べるようにする
+      if (isItem && !list.length) list = S.list('options').filter(o => o && o.active !== false && o.categoryIds == null && !isCover(o));
+      return list
         .filter(o => { if (!o || seen[o.optionId]) return false; seen[o.optionId] = true; return true; })
+        .filter(o => !isItem || !isCover(o))   // 家電レンタルに補償は無い
         .map((o, i) => ({ o: o, i: i }))
         .sort((a, b) => ((a.o.sort == null ? 99 : Number(a.o.sort)) - (b.o.sort == null ? 99 : Number(b.o.sort))) || (a.i - b.i))
         .map(x => x.o);
     }
     // 補償 (kind='cover') かどうか。kind の無い古いデータは「補償の1つだけ選べるグループ」かで判断する
-    const isCover = o => o.kind ? o.kind === 'cover' : o.exclusiveGroup === 'cover';
+    function isCover(o) { return o.kind ? o.kind === 'cover' : o.exclusiveGroup === 'cover'; }
     // セット (家電セットなど) に含まれる品目の id
     const includesOf = o => Array.isArray(o.includes) ? o.includes.map(String).filter(id => id !== o.optionId) : [];
     // 「家電セット (上記9点まとめ)」→「家電セット」
@@ -271,27 +344,58 @@
         return '<div class="opt-group" data-kind="' + kind + '"><div class="opt-group-title">' + esc(title) + '</div>' +
           (note ? '<p class="opt-group-note">' + esc(note) + '</p>' : '') + list.map(row).join('') + '</div>';
       }
-      // 補償オプション (1つだけ) を先に、装備オプション (24時間ごと) を後に出す
       const all = allOptions();
-      const covers = all.filter(isCover), equips = all.filter(o => !isCover(o));
-      const coverNote = covers.some(o => o.exclusiveGroup) ? tt('coverNote') : '';
-      const equipNote = equips.every(o => o.categoryIds == null) ? tt('equipNoteAll') : tt('equipNote');
-      area.innerHTML = group('cover', I.t('detail.optCover'), coverNote, covers) +
-        group('equip', I.t('detail.optEquip'), equipNote, equips);
+      if (isItem) {
+        // 家電レンタル: 借りる家電 (装備オプション) だけ。補償は出さない
+        area.innerHTML = group('equip', I.t('detail.optItem'), tt('itemNote'), all.filter(o => !isCover(o)));
+      } else {
+        // 補償オプション (1つだけ) を先に、装備オプション (24時間ごと) を後に出す
+        const covers = all.filter(isCover), equips = all.filter(o => !isCover(o));
+        const coverNote = covers.some(o => o.exclusiveGroup) ? tt('coverNote') : '';
+        const equipNote = equips.every(o => o.categoryIds == null) ? tt('equipNoteAll') : tt('equipNote');
+        area.innerHTML = group('cover', I.t('detail.optCover'), coverNote, covers) +
+          group('equip', I.t('detail.optEquip'), equipNote, equips);
+      }
       area.querySelectorAll('[data-opt]').forEach(cb => cb.addEventListener('change', () => {
         // 同じグループ (補償など) は1つだけ選べる
         if (cb.checked && cb.dataset.group) {
           area.querySelectorAll('[data-opt]').forEach(o => { if (o !== cb && o.dataset.group === cb.dataset.group) o.checked = false; });
         }
-        applyIncludes(); recalcOptions(); recalc();
+        applyDisabled(); recalcOptions(); recalc();
       }));
-      applyIncludes();
+      applyDisabled();
     }
-    // セット (家電セット) を選んでいる間は、セットに含まれる品目のチェックを外して選べないようにする
-    // (同じ品目を二重に請求しないため。セットを外すと、また選べるようになる)
-    function applyIncludes() {
+
+    // ---- 在庫 (貸し出し中の家電) ----
+    // soldOut: この日時に貸し出せない家電の id。デモは store が数え、本番はサーバーの見積 (unavailableOptionIds) を使う。
+    //   セットは中の品目のどれかが貸し出し中なら、セットも選べない
+    let soldOut = [];
+    let serverSoldOut = null;   // 本番: {key: 期間, ids}
+    function expandSoldOut(ids) {
+      const set = {};
+      (ids || []).forEach(id => { set[String(id)] = true; });
+      allOptions().forEach(o => { if (includesOf(o).some(id => set[id])) set[o.optionId] = true; });
+      return Object.keys(set);
+    }
+    function soldOutFor(start, end) {
+      if (B.live) return serverSoldOut && serverSoldOut.key === start + '|' + end ? serverSoldOut.ids : [];
+      if (typeof S.unavailableOptionIds !== 'function') return [];
+      try { return (S.unavailableOptionIds(start, end) || []).map(String); } catch (e) { console.warn('在庫を確認できませんでした', e); return []; }
+    }
+
+    // 選べない家電の表示とチェック:
+    //   貸し出し中 (在庫切れ) … チェックを外して選べなくする「この日時は貸し出し中」
+    //   セット (家電セット) を選んでいる間の中の品目 … チェックを外して選べなくする (二重に請求しないため。セットを外すと、また選べる)
+    // 戻り値: 貸し出し中のためにチェックを外した家電
+    function applyDisabled() {
       const boxes = {};
       document.querySelectorAll('#opt-area [data-opt]').forEach(cb => { boxes[cb.dataset.opt] = cb; });
+      const out = {};
+      soldOut.forEach(id => { out[id] = true; });
+      const removed = [];
+      Object.keys(boxes).forEach(id => {
+        if (out[id] && boxes[id].checked) { boxes[id].checked = false; removed.push(id); }
+      });
       const inSet = {};   // 品目の id → それを含む、選ばれているセット
       allOptions().forEach(o => {
         const cb = boxes[o.optionId];
@@ -299,16 +403,26 @@
         includesOf(o).forEach(id => { if (!inSet[id]) inSet[id] = o; });
       });
       Object.keys(boxes).forEach(id => {
-        const cb = boxes[id], set = inSet[id];
+        const cb = boxes[id], set = inSet[id], gone = !!out[id];
         const rowEl = cb.closest('.opt-row');
         const note = rowEl ? rowEl.querySelector('.opt-inset') : null;
         if (set) cb.checked = false;
-        cb.disabled = !!set;
-        if (rowEl) rowEl.classList.toggle('is-disabled', !!set);
-        if (note) { note.hidden = !set; note.textContent = set ? tt('inSet')(shortName(set)) : ''; }
+        cb.disabled = !!set || gone;
+        if (rowEl) { rowEl.classList.toggle('is-disabled', !!set || gone); rowEl.classList.toggle('is-soldout', gone); }
+        if (note) {
+          const text = gone ? tt('soldOut') : (set ? tt('inSet')(shortName(set)) : '');
+          note.hidden = !text; note.textContent = text;
+        }
       });
+      return removed;
     }
-    // 引き継いだ選択 (予約途中の内容) に矛盾があれば直す: 同じグループ (補償) は最初の1つ、セットと中の品目はセットを残す
+    function showSoldOutRemoved(ids) {
+      const el = $('#p-soldout');
+      const names = (ids || []).map(id => { const o = allOptions().find(x => x.optionId === id); return o ? shortName(o) : id; });
+      el.hidden = !names.length;
+      el.textContent = names.length ? tt('soldOutRemoved')(names.join('・')) : '';
+    }
+    // 引き継いだ選択に矛盾があれば直す: 同じグループ (補償) は最初の1つ、セットと中の品目はセットを残す
     function normalizeChecks() {
       const used = {};
       document.querySelectorAll('#opt-area [data-opt]').forEach(cb => {
@@ -316,7 +430,7 @@
         if (!g || !cb.checked) return;
         if (used[g]) cb.checked = false; else used[g] = true;
       });
-      applyIncludes();
+      applyDisabled();
     }
     function recalcOptions() {
       const ids = [...document.querySelectorAll('#opt-area [data-opt]:checked')].map(c => c.dataset.opt);
@@ -332,9 +446,6 @@
       const today = Math.floor((Date.now() + JST) / DAY) * DAY - JST;
       $('#p-start').min = J.toInput(today);
       $('#p-end').min = J.toInput(today);
-      if (isItem && asset.stock > 1) {
-        $('#qty-wrap').style.display = 'flex';
-      }
       $('#p-start').addEventListener('change', onStartChange);
       $('#p-end').addEventListener('change', recalc);
       // 以前の予約途中の選択 (同じ車両) を引き継ぐ
@@ -372,9 +483,9 @@
       const el = $('#p-check');
       el.hidden = !text; el.textContent = text || '';
     }
-    function setAvail(ok, extra) {
+    function setAvail(ok) {
       $('#p-avail').innerHTML = ok
-        ? '<span class="badge ' + (extra ? 'stock' : 'ok') + '">' + esc(tt('avOk')) + (extra ? ' (' + esc(extra) + ')' : '') + '</span>'
+        ? '<span class="badge ok">' + esc(tt('avOk')) + '</span>'
         : '<span class="badge ng">' + esc(tt('avNg')) + '</span>';
     }
 
@@ -427,7 +538,9 @@
     }
 
     // ---- 本番: サーバーでも空きを確かめる (担当者の予定は Google に直接問い合わせる。入力が止まってから) ----
+    //   見積の unavailableOptionIds (貸し出し中の家電) もここで受け取る
     let checkSeq = 0, checkTimer = null;
+    function sameIds(a, b) { return a.length === b.length && a.slice().sort().join() === b.slice().sort().join(); }
     function serverCheck(start, end, optionIds) {
       clearTimeout(checkTimer);
       const my = ++checkSeq;
@@ -442,17 +555,34 @@
           return;
         }
         if (my !== checkSeq) return;   // 入力が変わった後の古い結果は捨てる
+        if (res && Array.isArray(res.unavailableOptionIds)) {
+          const ids = res.unavailableOptionIds.map(String);
+          const key = start + '|' + end;
+          const changed = !serverSoldOut || serverSoldOut.key !== key || !sameIds(serverSoldOut.ids, ids);
+          serverSoldOut = { key: key, ids: ids };
+          if (changed) {
+            soldOut = expandSoldOut(ids);
+            const removed = applyDisabled();
+            if (removed.length) {
+              // 選んでいた家電が貸し出し中だった: 外して見積をやり直す
+              recalcOptions(); recalc(); showSoldOutRemoved(removed);
+              return;
+            }
+          }
+        }
         const reasons = (res && res.availability && res.availability.reasons) || [];
-        const qErrors = (res && res.quote && res.quote.ok === false && res.quote.errors) || [];
+        // 家電を選ぶ前 (家電レンタル) は「家電を選んでください」を画面で出しているので、サーバーの同じ指摘は重ねない
+        const qErrors = ((res && res.quote && res.quote.ok === false && res.quote.errors) || [])
+          .filter(code => !(code === 'ITEM_REQUIRED' && !selectedOptions.length));
         if (qErrors.length) {
           // サーバーの料金計算で止まった (同時に選べないオプションなど。サーバーは DB の設定で判定する)
           setAvail(false);
-          showReason(B.errorMessage(qErrors[0]));
+          showReason(codeText(qErrors[0]));
           $('#book-btn').disabled = true;
           showCheck('');
         } else if (reasons.length) {
           setAvail(false);
-          showReason(B.errorMessage(reasons[0]));
+          showReason(codeText(reasons[0]));
           $('#book-btn').disabled = true;
           renderSuggestions(start, end);
           showCheck('');
@@ -466,69 +596,73 @@
       const per = periodFromInputs();
       lastStart = per.start;
       clearTimeout(checkTimer); checkSeq++;
-      showReason(''); showCheck(''); renderSuggestions(null, null);
+      showReason(''); showCheck(''); renderSuggestions(null, null); showSoldOutRemoved([]);
       if (!per.valid) {
-        $('#p-lines').innerHTML = '<div class="pl"><span class="muted">' + esc(tt('invalid')) + '</span></div>';
+        $('#p-lines').innerHTML = '<div class="pl"><span class="muted">' + esc(tt(isItem ? 'invalidItem' : 'invalid')) + '</span></div>';
         $('#p-total').textContent = yen(0);
         $('#p-avail').innerHTML = '';
         $('#book-btn').disabled = true;
         return;
       }
       const start = per.start, end = per.end;
-      // 空き & 在庫 (車両の予約・受け渡し担当者の予定・受け渡し時刻の重複)
+      // 貸し出し中の家電 (在庫) を反映してから見積る
+      soldOut = expandSoldOut(soldOutFor(start, end));
+      const removed = applyDisabled();
+      recalcOptions();
+      if (removed.length) showSoldOutRemoved(removed);
+      // 空き (車両の予約・受け渡し担当者の予定・受け渡し時刻の重複)
       const av = S.availability(asset.assetId, start, end, 1);
-      const maxQty = Math.max(1, av.remaining);
-      if (isItem && asset.stock > 1) {
-        const sel = $('#p-qty');
-        const cur = parseInt(sel.value || '1', 10);
-        let opts = '';
-        for (let i = 1; i <= maxQty; i++) opts += '<option value="' + i + '"' + (i === cur ? ' selected' : '') + '>' + i + '</option>';
-        sel.innerHTML = opts;
-        if (!sel.onchange) sel.onchange = recalc;
-      }
-      const qty = isItem && asset.stock > 1 ? parseInt($('#p-qty').value || '1', 10) : 1;
 
       // 見積 (pricing-core: 補償の短時間料金・土日祝/繁忙期/夜間の割増の行がそのまま出る)
-      const calc = P.calculate({ asset: asset, start: start, end: end, quantity: qty, options: selectedOptions });
+      const calc = P.calculate({ asset: quoteAsset(), start: start, end: end, quantity: 1, options: selectedOptions });
       $('#p-lines').innerHTML = calc.lines.map(l => '<div class="pl' + (l.amount < 0 ? ' minus' : '') + '"><span>' + esc(l.label) + '</span><span>' + esc(yen(l.amount)) + '</span></div>').join('');
       $('#p-total').textContent = yen(calc.total);
 
       if (ms(start) <= Date.now()) {
-        setAvail(false); showReason(tt('past'));
+        setAvail(false); showReason(tt(isItem ? 'pastItem' : 'past'));
         $('#book-btn').disabled = true;
+        return;
+      }
+      if (isItem && !selectedOptions.length) {
+        // 家電レンタルは、家電を1つ以上選ばないと予約に進めない (本番は貸し出し中の家電を先にサーバーへ確かめる)
+        $('#p-lines').innerHTML = '<div class="pl"><span class="muted">' + esc(tt('itemHint')) + '</span></div>';
+        $('#p-total').textContent = yen(0);
+        $('#p-avail').innerHTML = '';
+        showReason(codeText('ITEM_REQUIRED'));
+        $('#book-btn').disabled = true;
+        if (av.ok) serverCheck(start, end, []);
         return;
       }
       if (!calc.ok) {
-        setAvail(false); showReason(B.errorMessage(calc.errors[0]));
+        setAvail(false); showReason(codeText(calc.errors[0]));
         $('#book-btn').disabled = true;
         return;
       }
-      const ok = av.ok && av.remaining >= qty;
-      if (!ok) {
+      if (!av.ok) {
         setAvail(false);
         showReason(av.code ? B.errorMessage(av.code) : (av.reason ? av.reason + (isEn() ? '' : '。日時または車両を変更してください。') : ''));
         renderSuggestions(start, end);
       } else {
-        setAvail(true, isItem && asset.stock > 1 ? tt('stockLeft')(av.remaining) : '');
+        setAvail(true);
         serverCheck(start, end, selectedOptions.map(o => o.optionId));
       }
-      $('#book-btn').disabled = !ok;
+      $('#book-btn').disabled = !av.ok;
     }
 
     $('#book-btn').addEventListener('click', () => {
       const per = periodFromInputs();
       if (!per.valid) { recalc(); return; }
-      const qty = isItem && asset.stock > 1 ? parseInt($('#p-qty').value || '1', 10) : 1;
       recalcOptions();
+      if (isItem && !selectedOptions.length) { recalc(); return; }
       // 予約途中の冪等キーは引き継ぐ (前回の送信の結果が分からないまま選び直したときの二重予約を防ぐ)
       let prev = null;
       try { prev = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null'); } catch (e) { prev = null; }
       const next = {
-        assetId: asset.assetId, start: per.start, end: per.end, quantity: qty,
+        assetId: asset.assetId, start: per.start, end: per.end, quantity: 1,
         optionIds: selectedOptions.map(o => o.optionId)
       };
       if (prev && !prev.done && prev.idempotencyKey) next.idempotencyKey = prev.idempotencyKey;
-      if (prev && !prev.done && prev.assetId === asset.assetId && prev.discountType) next.discountType = prev.discountType;
+      if (prev && !prev.done && prev.assetId === asset.assetId && prev.discountType && !isItem) next.discountType = prev.discountType;
       try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(next)); } catch (e) { /* 続行 */ }
       location.href = 'booking.html';
     });
@@ -538,6 +672,7 @@
       if (booted) return;
       booted = true;
       $('#detail-grid').hidden = false;
+      options = S.optionsForCategory(asset.categoryId);
       renderStatic(); renderOptions(); initInputs(); recalcOptions(); recalc();
     }
     document.addEventListener('DOMContentLoaded', boot);

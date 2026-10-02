@@ -318,8 +318,9 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
       assert.equal(w.__probe.dcl, true, '後から登録した DOMContentLoaded が呼ばれない');
       assert.equal(w.__probe.load, true, '後から登録した load が呼ばれない');
       // lp.js (data-src) の実行が終わってから次のインラインが動いている
-      assert.equal(w.__lpRanBefore, 3, 'data-src の読込完了前に次のスクリプトが動いた');
-      assert.equal(page.document.querySelectorAll('#hs-category option').length, 3);
+      //   カテゴリの選択肢 = すべて + 一般レンタカー・キッチンカー・家電レンタル
+      assert.equal(w.__lpRanBefore, 4, 'data-src の読込完了前に次のスクリプトが動いた');
+      assert.equal(page.document.querySelectorAll('#hs-category option').length, 4);
       assert.equal(page.document.querySelectorAll('#hs-location option').length, 3);
       assert.equal(w.SkyRentStore.live, false);
       assert.equal(w.SkyRentBackend.live, false);
@@ -500,8 +501,8 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
     try {
       assert.equal(await page.ready(8000), true);
       const w = page.window, S = w.SkyRentStore, B = w.SkyRentBackend;
-      assert.equal(S.DATA_VERSION, 8);
-      assert.equal(w.localStorage.getItem('sky-rent.dataVersion'), '8');
+      assert.equal(S.DATA_VERSION, 9);
+      assert.equal(w.localStorage.getItem('sky-rent.dataVersion'), '9');
       const opts = S.list('options');
       deq(opts.map(o => o.optionId), ['OP101', 'OP102', 'OP201', 'OP202'].concat(EQUIPMENT_IDS));
       const equipment = opts.filter(o => o.kind === 'other');
@@ -516,6 +517,12 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
       deq(S.optionsForCategory('cat-rental').common.map(o => o.optionId), EQUIPMENT_IDS);
       deq(S.optionsForCategory('cat-kitchen').common.map(o => o.optionId), EQUIPMENT_IDS);
       deq(S.optionsForCategory('cat-kitchen').specific.map(o => o.optionId), ['OP201', 'OP202']);
+      // 家電レンタルでは装備オプションが借りる家電になる (補償は出ない)
+      deq(S.optionsForCategory('cat-appliance').common.map(o => o.optionId), EQUIPMENT_IDS);
+      deq(S.optionsForCategory('cat-appliance').specific, []);
+      // 在庫: 家電は各1・家電セットは null (中の9品目の在庫を使う)・補償は数えない
+      deq(opts.map(o => [o.optionId, o.stock]), [['OP101', null], ['OP102', null], ['OP201', null], ['OP202', null]]
+        .concat(EQUIPMENT_IDS.map(id => [id, id === 'OP010' ? null : 1])));
 
       // 見積・予約 (デモ) もサーバーと同じ判定
       const period = { assetId: 'V001', start: '2027-06-09T10:00', end: '2027-06-10T10:00' };
@@ -538,7 +545,7 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
     } finally { page.close(); }
   });
 
-  test('DATA_VERSION 7 → 8: 予約・会員・編集したオプションは残し、装備オプションを足す / 6 以前は作り直す', async () => {
+  test('DATA_VERSION 7 → 9: 予約・会員・編集したオプションは残し、装備オプション (在庫つき) を足す / 6 以前は作り直す', async () => {
     const T = '2026-12-01T01:00:00.000Z';
     const myReservation = {
       reservationId: 'R0099', assetId: 'V001', vehicleId: 'V001', assetName: '日産 ノート', vehicleName: '日産 ノート', categoryId: 'cat-rental',
@@ -564,20 +571,23 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
     try {
       assert.equal(await page.ready(8000), true);
       const w = page.window, S = w.SkyRentStore;
-      assert.equal(w.localStorage.getItem('sky-rent.dataVersion'), '8');
+      assert.equal(w.localStorage.getItem('sky-rent.dataVersion'), '9');
       const opts = S.list('options');
       deq(opts.map(o => o.optionId), ['OP101', 'OP102', 'OP201', 'OP202', 'OP0001'].concat(EQUIPMENT_IDS));
       const cdw = S.findById('options', 'optionId', 'OP101');
       assert.equal(cdw.price, 1700, '管理画面で変えた料金は残す');
       assert.equal(cdw.description, '事故時の免責負担ゼロ (最大5万円)', '無い項目 (説明文) は補う');
       assert.equal(S.findById('options', 'optionId', 'OP202').active, false, '無効にしたものは無効のまま');
-      deq(S.findById('options', 'optionId', 'OP0001'), v7Options[4]);
+      // 管理画面で追加したオプションは在庫を数えない (stock = null を足すだけ)
+      deq(S.findById('options', 'optionId', 'OP0001'), Object.assign({}, v7Options[4], { stock: null }));
+      assert.equal(S.findById('options', 'optionId', 'OP001').stock, 1);
+      assert.equal(S.findById('options', 'optionId', 'OP101').stock, null);
       deq(S.findById('options', 'optionId', 'OP010').includes, EQUIPMENT_IDS.slice(0, 9));
       // 予約・会員・設定は消さない (シードで上書きしない)
       deq(S.list('reservations'), [myReservation]);
       deq(S.list('members'), [myMember]);
       assert.equal(S.pointSettings().pointPerUse, 2);
-      assertClean(page, 'v7-to-v8');
+      assertClean(page, 'v7-to-v9');
     } finally { page.close(); }
 
     // 6 以前 (家電を撤去した版など) は、これまでどおりシードで作り直す
@@ -585,10 +595,12 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
     try {
       assert.equal(await page.ready(8000), true);
       const S = page.window.SkyRentStore;
-      assert.equal(page.window.localStorage.getItem('sky-rent.dataVersion'), '8');
+      assert.equal(page.window.localStorage.getItem('sky-rent.dataVersion'), '9');
       deq(S.list('options').map(o => o.optionId), ['OP101', 'OP102', 'OP201', 'OP202'].concat(EQUIPMENT_IDS));
       assert.equal(S.findById('options', 'optionId', 'OP101').price, 1650);
-      assert.equal(S.list('reservations').length, 18);
+      // 車両 18 件 + 家電レンタル 2 件
+      assert.equal(S.list('reservations').length, 20);
+      deq(S.list('categories').map(c => c.categoryId), ['cat-rental', 'cat-kitchen', 'cat-appliance']);
       assertClean(page, 'v6-reseed');
     } finally { page.close(); }
   });
@@ -604,13 +616,17 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
        'NOT_CANCELLABLE', 'IDEMPOTENCY_KEY_REUSED', 'RATE_LIMITED', 'CALENDAR_UNAVAILABLE', 'INTERNAL',
        // 料金エンジン (pricing-core) の errors・外部キー違反・Edge Function の CONFLICT
        'INVALID_ASSET', 'OPTION_NOT_APPLICABLE', 'OPTION_CONFLICT', 'DISCOUNT_NOT_APPLICABLE', 'INVALID_PERIOD',
-       'FOREIGN_KEY', 'CONFLICT', 'VERSION_CONFLICT', 'WEAK_PASSWORD', 'LINK_INVALID'].forEach(code => {
+       'FOREIGN_KEY', 'CONFLICT', 'VERSION_CONFLICT', 'WEAK_PASSWORD', 'LINK_INVALID',
+       // 家電レンタル
+       'ITEM_REQUIRED', 'OPTION_SOLD_OUT'].forEach(code => {
         const m = B.errorMessage(code);
         assert.match(m, /[ぁ-んァ-ヶ一-龠]/, code);
         if (code !== 'INTERNAL') assert.notEqual(m, internal, code + ' が既定文のまま');
       });
       assert.equal(B.errorMessage('FOREIGN_KEY'), 'この項目は予約などで使われているため削除できません。無効にしてください。');
       assert.equal(B.errorMessage('WEAK_PASSWORD'), '8文字以上で、英大文字・英小文字・数字をそれぞれ1文字以上含めてください。');
+      assert.equal(B.errorMessage('ITEM_REQUIRED'), 'お借りになる家電を1つ以上お選びください。');
+      assert.equal(B.errorMessage('OPTION_SOLD_OUT'), 'お選びの家電のうち、ご希望の日時はすでに貸し出し中のものがあります。別の日時か別の家電をお選びください。');
       assertClean(page, 'login');
     } finally { page.close(); }
   });
@@ -717,10 +733,13 @@ describe('本番モード: ローカル Supabase', { skip: NO_JSDOM || (SUPABASE
       assert.equal(S.live, true);
       assert.equal(B.live, true);
       assert.ok(B.client, 'supabase クライアントが作られていない');
-      assert.equal(S.assets().length, 6);
+      // 車両6台 + 家電レンタルの窓口 (A001)
+      assert.equal(S.assets().length, 7);
       assert.equal(S.locations().length, 2);
       assert.equal(S.list('options').length, 15);
-      assert.equal(S.categories().length, 2);
+      assert.equal(S.categories().length, 3);
+      assert.equal(S.getCategory('cat-appliance').type, 'item');
+      assert.equal(S.getAsset('A001').priceDay, 0);
       deq(S.getAsset('V003').customFields.bodyType, 'SUV');
       assert.equal(S.list('options').find(o => o.optionId === 'OP101').priceShort, 1100);
       // 装備オプション: 公開カタログの extra (説明・セットの中身) が展開されて入る
@@ -728,14 +747,19 @@ describe('本番モード: ローカル Supabase', { skip: NO_JSDOM || (SUPABASE
       const applianceSet = S.list('options').find(o => o.optionId === 'OP010');
       deq(applianceSet.includes, EQUIPMENT_IDS.slice(0, 9));
       assert.equal(applianceSet.description, 'ポータブル冷蔵冷凍庫〜電気ケトルの9点をまとめたセット');
+      // 在庫 (options.stock): 家電は各1・家電セットと補償は null
+      deq(S.list('options').map(o => [o.optionId, o.stock]), [['OP101', null], ['OP102', null], ['OP201', null], ['OP202', null]]
+        .concat(EQUIPMENT_IDS.map(id => [id, id === 'OP010' ? null : 1])));
       assert.ok(S.read('settings.pricing_rules', null), '料金ルールが入っていない');
-      assert.equal(S.list('legal').length, 4);
+      // 法務文書: cancel は 2026-10 版・物品レンタル規約 (item_clause) を足して5件
+      assert.equal(S.list('legal').length, 5);
+      deq(S.list('legal').filter(d => d.id === 'cancel' || d.id === 'item_clause').map(d => d.id + '@' + d.version), ['cancel@2026-10', 'item_clause@2026-10']);
       // デモのシード (予約・会員) は入らない
       deq(S.list('reservations'), []);
       deq(S.list('members'), []);
       assert.equal(S.currentMember(), null);
       // 画面にサーバーのデータが出ている
-      assert.equal(page.document.querySelectorAll('#hs-category option').length, 3);
+      assert.equal(page.document.querySelectorAll('#hs-category option').length, 4);
       // 書き込みもメモリだけ
       S.write('assets', S.assets());
       deq(businessKeys(w.localStorage), [], 'localStorage に業務データが書かれた');
@@ -753,7 +777,7 @@ describe('本番モード: ローカル Supabase', { skip: NO_JSDOM || (SUPABASE
     try {
       assert.equal(await page.ready(25000), true);
       const w = page.window;
-      assert.equal(w.SkyRentStore.assets().length, 6);
+      assert.equal(w.SkyRentStore.assets().length, 7);
       const n = await waitFor(() => page.document.querySelectorAll('#results > *').length >= 6 && page.document.querySelectorAll('#results > *').length, 4000);
       assert.ok(n >= 6, '検索結果が描画されない');
       // 空き状況: 取れたなら合成予約だけ、取れなかったなら警告トースト
@@ -796,7 +820,7 @@ describe('本番モード: ローカル Supabase', { skip: NO_JSDOM || (SUPABASE
       assert.equal(B.admin.staff.role, 'admin');
       assert.equal(B.admin.staff.name, 'テスト 管理者');
       assert.equal(B.admin.can('settings.write'), true);
-      assert.equal(S.assets().length, 6);
+      assert.equal(S.assets().length, 7);
       assert.equal(S.locations().length, 2);
       assert.equal(S.list('options').length, 15);
       assert.ok(S.read('settings.calendar', null), 'スタッフ専用の設定 (calendar) が読めていない');

@@ -44,6 +44,9 @@ const APPLIANCES = [
 const [FRIDGE, MICROWAVE] = APPLIANCES;
 const APPLIANCE_SET = equip('OP010', '家電セット (上記9点まとめ)', 11000, { includes: APPLIANCES.map(o => o.id) });
 const PROMO_SET = equip('OP011', '集客セット', 1100);
+// 家電レンタル (家電だけのレンタル) の受け取り窓口。基本料金 0・時間料金なし
+const ITEM = { id: 'A001', categoryId: 'cat-appliance', categoryType: 'item', priceHour: null, priceDay: 0, customFields: {} };
+const RICE = APPLIANCES[7]; // 炊飯器 2,200
 
 // 日本時間の日時 'YYYY-MM-DD HH:mm' → ISO (+09:00)
 const jst = s => s.replace(' ', 'T') + ':00+09:00';
@@ -132,7 +135,7 @@ describe('基本料金', () => {
   });
   test('rulesVersion を返し、行の合計 = total', () => {
     const r = q(COMPACT, '2026-10-02 21:00', '2026-10-04 07:00', { options: [CDW], discountType: 'student', coupon: { id: 'C1', amount: 500 } });
-    assert.equal(r.rulesVersion, '2026-06');
+    assert.equal(r.rulesVersion, '2026-10');
     assert.equal(sumLines(r), r.total);
     assert.equal(r.total, r.subtotal - r.discount - r.couponDiscount);
   });
@@ -543,6 +546,167 @@ describe('キャンセル料 (base = 24時間の基本料金)', () => {
   });
   test('日時が不正なら例外', () => {
     assert.throws(() => C.cancellationFee({ asset: COMPACT, start: 'x', cancelAt: jst(PICK), base: 7700 }), RangeError);
+  });
+});
+
+describe('家電レンタル (家電だけのレンタル・categoryType = item)', () => {
+  const opt = (r, id) => r.lines.find(l => l.code === 'option' && l.optionId === id);
+  test('電子レンジ + 炊飯器 48時間 = 4,400 + 4,400 = 8,800 (基本料金 0・行は家電だけ)', () => {
+    const r = q(ITEM, '2026-10-05 10:00', '2026-10-07 10:00', { options: [MICROWAVE, RICE] });
+    assert.equal(r.ok, true, JSON.stringify(r.errors));
+    assert.equal(r.hours, 48);
+    assert.equal(r.days, 2);
+    assert.equal(r.plan, 'daily');
+    assert.equal(r.base, 0);
+    assert.equal(r.subtotal, 8800);
+    assert.equal(r.total, 8800);
+    assert.deepEqual(r.lines.map(l => [l.code, l.label, l.amount]), [
+      ['option', '電子レンジ (24時間 × 2)', 4400],
+      ['option', '炊飯器 (24時間 × 2)', 4400]
+    ]);
+    assert.equal(sumLines(r), r.total);
+    assert.equal(r.rulesVersion, '2026-10');
+  });
+  test('3時間でも24時間分 (電子レンジ 2,200) / 25時間は ×2', () => {
+    const r3 = q(ITEM, '2026-10-05 10:00', '2026-10-05 13:00', { options: [MICROWAVE] });
+    assert.equal(r3.ok, true);
+    assert.equal(r3.hours, 3);
+    assert.deepEqual([opt(r3, 'OP002').label, opt(r3, 'OP002').amount], ['電子レンジ (24時間まで)', 2200]);
+    assert.equal(r3.total, 2200);
+    assert.equal(q(ITEM, '2026-10-05 10:00', '2026-10-06 11:00', { options: [MICROWAVE] }).total, 4400);
+  });
+  test('家電を1つも選ばなければ ITEM_REQUIRED (料金 0)', () => {
+    for (const options of [undefined, [], [null]]) {
+      const r = q(ITEM, '2026-10-05 10:00', '2026-10-06 10:00', { options });
+      assert.equal(r.ok, false);
+      assert.deepEqual(r.errors, ['ITEM_REQUIRED']);
+      assert.equal(r.total, 0);
+      assert.deepEqual(r.lines, []);
+    }
+  });
+  test('料金が 0・時間料金なしでも INVALID_ASSET にしない (車両は従来どおり INVALID_ASSET)', () => {
+    assert.equal(q(ITEM, '2026-10-05 10:00', '2026-10-06 10:00', { options: [MICROWAVE] }).ok, true);
+    const noPrice = Object.assign({}, ITEM, { priceDay: null });
+    assert.equal(q(noPrice, '2026-10-05 10:00', '2026-10-06 10:00', { options: [MICROWAVE] }).total, 2200);
+    const vehicle = Object.assign({}, ITEM, { categoryType: 'vehicle', categoryId: 'cat-rental' });
+    assert.deepEqual(q(vehicle, '2026-10-05 10:00', '2026-10-06 10:00', { options: [MICROWAVE] }).errors, ['INVALID_ASSET']);
+  });
+  test('土日祝・夜間・繁忙期の割増はかけない (繁忙期かどうか busy は返す)', () => {
+    const cases = [
+      ['2026-10-03 21:00', '2026-10-04 07:00'], // 土曜 夜間の受け取り・日曜 夜間の返却
+      ['2026-09-22 10:00', '2026-09-22 16:00'], // 国民の休日
+      ['2026-05-02 10:00', '2026-05-03 10:00'], // ゴールデンウィーク
+      ['2026-12-31 21:00', '2027-01-02 07:00']  // 年末年始・夜間
+    ];
+    for (const [s, e] of cases) {
+      const r = q(ITEM, s, e, { options: [MICROWAVE] });
+      assert.equal(r.ok, true, s);
+      assert.deepEqual(r.lines.map(l => l.code), ['option'], s);
+      assert.equal(r.total, opt(r, 'OP002').amount, s);
+    }
+    assert.equal(q(ITEM, '2026-05-02 10:00', '2026-05-03 10:00', { options: [MICROWAVE] }).busy, true);
+    assert.equal(q(ITEM, '2026-10-05 10:00', '2026-10-06 10:00', { options: [MICROWAVE] }).busy, false);
+  });
+  test('rules.itemSurcharges = true のときだけ割増をかける', () => {
+    const rules = Object.assign({}, C.DEFAULT_RULES, { itemSurcharges: true });
+    const r = q(ITEM, '2026-10-03 21:00', '2026-10-04 07:00', { options: [MICROWAVE], rules });
+    assert.equal(line(r, 'weekend')[0].amount, 330);
+    assert.deepEqual(line(r, 'night').map(l => [l.label, l.amount]), [['夜間料金 (お受け取り・ご返却 2回)', 2200]]);
+    assert.equal(r.total, 2200 + 330 + 2200);
+    const busy = q(ITEM, '2026-05-02 10:00', '2026-05-03 10:00', { options: [MICROWAVE], rules });
+    assert.equal(line(busy, 'busy')[0].amount, 550);
+  });
+  test('割引 (学生・法人・二地域居住・守成クラブ) は使えない → DISCOUNT_NOT_APPLICABLE (料金は変わらない)', () => {
+    for (const type of ['student', 'corporate', 'dual_residence', 'shusei_club']) {
+      const r = q(ITEM, '2026-10-05 10:00', '2026-10-07 10:00', { options: [MICROWAVE, RICE], discountType: type });
+      assert.equal(r.ok, false, type);
+      assert.deepEqual(r.errors, ['DISCOUNT_NOT_APPLICABLE'], type);
+      assert.equal(r.discount, 0, type);
+      assert.equal(r.total, 8800, type);
+      assert.equal(line(r, 'discount').length, 0, type);
+    }
+    // カテゴリの条件が無い割引でも同じ
+    const rules = Object.assign({}, C.DEFAULT_RULES, { discounts: { any: { label: '誰でも割引', amount: 500, minHours: 0 } } });
+    assert.deepEqual(q(ITEM, '2026-10-05 10:00', '2026-10-06 10:00', { options: [MICROWAVE], discountType: 'any', rules }).errors, ['DISCOUNT_NOT_APPLICABLE']);
+  });
+  test('クーポン (¥1,000) は車両と同じく使える (0円未満にしない)', () => {
+    const r = q(ITEM, '2026-10-05 10:00', '2026-10-07 10:00', { options: [MICROWAVE, RICE], coupon: { id: 'CP1', amount: 1000 } });
+    assert.equal(r.ok, true);
+    assert.equal(r.couponDiscount, 1000);
+    assert.equal(r.total, 7800);
+    const small = q(ITEM, '2026-10-05 10:00', '2026-10-05 12:00', { options: [APPLIANCES[2]], coupon: { id: 'CP1', amount: 1000 } });
+    assert.equal(small.subtotal, 1100);
+    assert.equal(small.total, 100);
+    const zero = q(ITEM, '2026-10-05 10:00', '2026-10-05 12:00', { options: [APPLIANCES[2]], coupon: { id: 'CP1', amount: 5000 } });
+    assert.equal(zero.total, 0);
+  });
+  test('家電セットは借りられる・セット + 中の品目は OPTION_CONFLICT・補償 (車両専用) は OPTION_NOT_APPLICABLE', () => {
+    const set = q(ITEM, '2026-10-05 10:00', '2026-10-06 10:00', { options: [APPLIANCE_SET, PROMO_SET] });
+    assert.equal(set.ok, true);
+    assert.equal(set.total, 11000 + 1100);
+    assert.deepEqual(q(ITEM, '2026-10-05 10:00', '2026-10-06 10:00', { options: [APPLIANCE_SET, MICROWAVE] }).errors, ['OPTION_CONFLICT']);
+    const cover = q(ITEM, '2026-10-05 10:00', '2026-10-06 10:00', { options: [CDW, MICROWAVE] });
+    assert.ok(cover.errors.includes('OPTION_NOT_APPLICABLE'));
+  });
+  test('DB 行 (snake_case の category_type) でも家電レンタルとして計算する / 省略すると車両 (従来どおり)', () => {
+    const row = { id: 'A001', category_id: 'cat-appliance', category_type: 'item', price_hour: null, price_day: 0, custom_fields: {} };
+    assert.equal(q(row, '2026-10-05 10:00', '2026-10-07 10:00', { options: [MICROWAVE, RICE] }).total, 8800);
+    // categoryType 無し・'vehicle' の車両は今までと同じ計算
+    const explicit = Object.assign({}, COMPACT, { categoryType: 'vehicle' });
+    for (const asset of [COMPACT, explicit]) {
+      const r = q(asset, '2026-10-03 21:00', '2026-10-04 07:00', { options: [CDW], discountType: 'student' });
+      assert.deepEqual(r.errors, ['DISCOUNT_NOT_APPLICABLE']); // 10時間なので学生割引の条件外
+      assert.equal(r.base, 7700);
+      assert.equal(line(r, 'weekend')[0].amount, 330);
+      assert.equal(line(r, 'night')[0].label, '夜間料金 (貸出・返却 2回)');
+    }
+  });
+});
+
+describe('キャンセル料 (家電レンタル)', () => {
+  // 通常期のお受け取り日: 2026-10-20 (火) 10:00。電子レンジ + 炊飯器 48時間 = 8,800
+  const r = q(ITEM, '2026-10-20 10:00', '2026-10-22 10:00', { options: [MICROWAVE, RICE] });
+  const base = C.cancellationBase({ price: r, total: r.total, categoryType: 'item' });
+  const fee = (start, cancelAt, extra) =>
+    C.cancellationFee(Object.assign({ asset: ITEM, category: { id: 'cat-appliance' }, start: jst(start), cancelAt: jst(cancelAt), base }, extra || {}));
+
+  test('元になる利用料金は家電 (オプション) の料金の合計 = 8,800', () => assert.equal(base, 8800));
+  test('通常期: 3日前 0 / 前々日 2,640 / 前日 2,640 / 当日 4,400 / 無断 8,800 (コンパクトカーと同じ割合)', () => {
+    assert.equal(fee('2026-10-20 10:00', '2026-10-17 15:00').fee, 0);
+    assert.equal(fee('2026-10-20 10:00', '2026-10-18 15:00').fee, 2640);
+    assert.equal(fee('2026-10-20 10:00', '2026-10-19 15:00').fee, 2640);
+    assert.equal(fee('2026-10-20 10:00', '2026-10-20 08:00').fee, 4400);
+    assert.equal(fee('2026-10-20 10:00', '2026-10-20 12:00', { noShow: true }).fee, 8800);
+    assert.deepEqual(fee('2026-10-20 10:00', '2026-10-19 15:00'),
+      { cls: 'item', busy: false, daysBefore: 1, pct: 30, fee: 2640, label: '前日 (30%)' });
+    assert.equal(fee('2026-10-20 10:00', '2026-10-17 15:00').label, '3日前までは無料');
+  });
+  test('繁忙期 (お受け取り日 2026-05-03): 7日前 0 / 6日前 30% / 当日 50%', () => {
+    assert.equal(fee('2026-05-03 10:00', '2026-04-26 10:00').busy, true);
+    assert.equal(fee('2026-05-03 10:00', '2026-04-26 10:00').fee, 0);
+    assert.equal(fee('2026-05-03 10:00', '2026-04-27 10:00').fee, 2640);
+    assert.equal(fee('2026-05-03 10:00', '2026-05-03 08:00').fee, 4400);
+  });
+  test('item の段階が無い古い料金ルールでは、コンパクトカーの段階 (同じ割合) で計算する', () => {
+    const old = JSON.parse(JSON.stringify(C.DEFAULT_RULES));
+    delete old.cancellation.categoryClass['cat-appliance'];
+    delete old.cancellation.normal.item;
+    delete old.cancellation.busy.item;
+    const f = fee('2026-10-20 10:00', '2026-10-19 15:00', { rules: old });
+    assert.equal(f.cls, 'compact');
+    assert.equal(f.fee, 2640);
+  });
+  test('cancellationBase: 車両は基本料金 (延長料金を含む)・家電レンタルは家電の合計・内訳が無ければ合計', () => {
+    const v = q(COMPACT, '2026-10-05 10:00', '2026-10-06 12:00', { options: [CDW, APPLIANCE_SET] });
+    assert.equal(C.cancellationBase({ price: v, total: v.total }), 9900);
+    assert.equal(C.cancellationBase({ price: v, total: v.total, categoryType: 'vehicle' }), 9900);
+    // 予約の行 (snake_case) のまま・クーポンは差し引かない (家電の料金の合計)
+    const withCoupon = q(ITEM, '2026-10-05 10:00', '2026-10-07 10:00', { options: [MICROWAVE, RICE], coupon: { amount: 1000 } });
+    assert.equal(C.cancellationBase({ price: withCoupon, total: withCoupon.total, is_item: true }), 8800);
+    assert.equal(C.cancellationBase({ price: { breakdown: withCoupon.lines }, total: withCoupon.total, isItem: true }), 8800);
+    assert.equal(C.cancellationBase({ price: {}, total: 5000, isItem: true }), 5000);
+    assert.equal(C.cancellationBase({ price: {}, total: 5000 }), 5000);
+    assert.equal(C.cancellationBase({ price: null, total: null }), 0);
   });
 });
 

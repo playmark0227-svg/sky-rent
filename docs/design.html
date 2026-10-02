@@ -184,7 +184,7 @@
   <h1>基本設計書</h1>
   <div class="sub">
     グロースレンタカー 統合予約・管理システム<br>
-    一般レンタカー ／ キッチンカー
+    一般レンタカー ／ キッチンカー ／ 家電レンタル
   </div>
   <div class="rule"></div>
   <table class="meta">
@@ -377,7 +377,8 @@
   <h3 class="h-sec" id="c2-1"><span class="sno">2.1</span>公開サイト (予約フロー)</h3>
   <p class="lead">
     トップページから検索・詳細を経て予約フローに入る。予約フローは <strong>1画面 (booking.html) 内で「情報入力 → 確認 → 完了」の3ステップを状態遷移</strong> させる構成。
-    現行の2カテゴリ (一般レンタカー・キッチンカー) はいずれも車両カテゴリのため、免許証情報入力欄と確認ステップを表示する (将来 物品カテゴリを追加した場合は動的に非表示化される)。
+    車両カテゴリ (一般レンタカー・キッチンカー) では免許の確認ステップを表示し、家電レンタル (<code>type: item</code>。家電だけのレンタル) では表示しない
+    (本人確認書類はお受け取りのときに店頭で確認。同意する規約も貸渡約款ではなく物品レンタル規約に切り替える)。
   </p>
   <figure class="fig">
     <div class="fig-frame">
@@ -519,7 +520,7 @@
       <tbody>
         <tr><td rowspan="5">公開<br>サイト</td><td class="c-key">index.html</td><td>トップ。カテゴリ・拠点導線、検索起点。</td></tr>
         <tr><td class="c-key">search.html</td><td>日時・拠点・カテゴリ検索。カテゴリ別カスタム項目で絞込。</td></tr>
-        <tr><td class="c-key">detail.html</td><td>車両詳細。固有スペック・オプション・要免許明示。</td></tr>
+        <tr><td class="c-key">detail.html</td><td>車両詳細。固有スペック・オプション・要免許明示。家電レンタルでは借りる家電 (装備オプション) を1つ以上選ぶ (貸し出し中の家電は選べない)。</td></tr>
         <tr><td class="c-key">booking.html</td><td>予約フロー (情報入力→確認→完了)。免許確認・クーポン適用・確認メール。</td></tr>
         <tr><td class="c-key">mypage.html</td><td>会員登録/ログイン・予約履歴・ポイント残高・クーポン。</td></tr>
         <tr><td rowspan="9">管理<br>画面</td><td class="c-key">dashboard.html</td><td>本日出発返却・未処理アラート・売上サマリ・週次グラフ・通知ログ (拠点別・スマホ対応)。</td></tr>
@@ -527,7 +528,7 @@
         <tr><td class="c-key">reservation-table.html</td><td>ガントチャート式予約表。日/時間単位・拠点横断・在庫複数時の段積み。</td></tr>
         <tr><td class="c-key">vehicles.html</td><td>車両・物品マスタ。カテゴリ紐付け・料金プラン・在庫・車検/点検期限。</td></tr>
         <tr><td class="c-key">categories.html</td><td>カテゴリCRUD・カスタム項目エディタ (EAV定義)。</td></tr>
-        <tr><td class="c-key">options.html</td><td>オプションCRUD (共通/カテゴリ専用の2階層)。</td></tr>
+        <tr><td class="c-key">options.html</td><td>オプションCRUD (共通/カテゴリ専用の2階層)・家電の在庫数。</td></tr>
         <tr><td class="c-key">members.html / points.html</td><td>会員管理・請求書払い許可・ポイント手動付与/減算・ポイント設定。</td></tr>
         <tr><td class="c-key">invoices.html</td><td>請求書発行 (月次一括) ・入金状況・印刷。</td></tr>
         <tr><td class="c-key">forms.html / stores.html / employees.html</td><td>帳票印刷 (貸渡証・チェックシート・領収書・物品貸出書) ・拠点/従業員管理。</td></tr>
@@ -555,7 +556,7 @@
         <tr><td>categories</td><td class="c-key">categories</td><td class="c-key">categoryId</td><td>カテゴリ + カスタム項目(EAV)定義。車両/物品の区分。</td></tr>
         <tr><td>locations</td><td class="c-key">locations</td><td class="c-key">locationId</td><td>拠点 (北見本店・釧路店)。営業時間・定休日。</td></tr>
         <tr><td>assets</td><td class="c-key">assets</td><td class="c-key">assetId</td><td>車両・物品の統合マスタ。料金・在庫・車検・カスタム値。</td></tr>
-        <tr><td>options</td><td class="c-key">options</td><td class="c-key">optionId</td><td>オプション。共通(全車両)/カテゴリ専用の2階層。</td></tr>
+        <tr><td>options</td><td class="c-key">options</td><td class="c-key">optionId</td><td>オプション。共通(全車両・家電レンタル)/カテゴリ専用の2階層。家電の在庫数。</td></tr>
         <tr><td>members</td><td class="c-key">members</td><td class="c-key">memberId</td><td>会員。ポイント・クーポン・請求書払い許可。</td></tr>
         <tr><td>reservations</td><td class="c-key">reservations</td><td class="c-key">reservationId</td><td>予約。状態・支払・料金明細・オプション。</td></tr>
         <tr><td>invoices</td><td class="c-key">invoices</td><td class="c-key">invoiceId</td><td>請求書 (法人・行政)。複数予約を集約・入金管理。</td></tr>
@@ -632,7 +633,7 @@
       <tbody>
         <tr><td class="c-key">categoryId</td><td class="c-type">string (PK)</td><td>例 <code>cat-kitchen</code>。カテゴリ識別子。</td></tr>
         <tr><td class="c-key">name / nameEn</td><td class="c-type">string</td><td>表示名 (日 / 英)。</td></tr>
-        <tr><td class="c-key">type</td><td class="c-type">'vehicle'|'item'</td><td><b>vehicle</b>=車両 (現行の全カテゴリ) / <b>item</b>=物品 (台数管理型。将来カテゴリを追加する場合の受け口)。オプション共通適用や免許欄の要否を分岐。</td></tr>
+        <tr><td class="c-key">type</td><td class="c-type">'vehicle'|'item'</td><td><b>vehicle</b>=車両 (一般レンタカー・キッチンカー) / <b>item</b>=家電レンタル (家電だけのレンタル。cat-appliance)。免許の確認・同意する規約・料金の割増と割引・帳票・画面の言葉 (お受け取り/ご返却) を分岐。</td></tr>
         <tr><td class="c-key">icon</td><td class="c-type">string</td><td>絵文字アイコン。</td></tr>
         <tr><td class="c-key">sort</td><td class="c-type">number</td><td>表示順。</td></tr>
         <tr><td class="c-key">active</td><td class="c-type">boolean</td><td>公開フラグ。</td></tr>
@@ -641,7 +642,7 @@
       </tbody>
     </table>
   </div>
-  <p class="legend">シード: cat-rental (一般レンタカー) / cat-kitchen (キッチンカー) の車両カテゴリ2件。いずれも管理画面から追加・変更できる。</p>
+  <p class="legend">シード: cat-rental (一般レンタカー) / cat-kitchen (キッチンカー) の車両カテゴリ2件と、cat-appliance (家電レンタル・type item) の3件。いずれも管理画面から変更できる。</p>
 
   <h3 class="h-sec" id="c3-3"><span class="sno">3.3</span>locations (拠点)<span class="tag">マスタ</span></h3>
   <div class="tbl-wrap">
@@ -664,14 +665,14 @@
     <table class="tbl pk">
       <thead><tr><th>カラム</th><th>型</th><th>説明</th></tr></thead>
       <tbody>
-        <tr><td class="c-key">assetId</td><td class="c-type">string (PK)</td><td>例 <code>V001</code> (レンタカー) / <code>K001</code> (キッチンカー)。</td></tr>
+        <tr><td class="c-key">assetId</td><td class="c-type">string (PK)</td><td>例 <code>V001</code> (レンタカー) / <code>K001</code> (キッチンカー) / <code>A001</code> (家電レンタル（北見本店）。家電そのものではなく予約を受ける窓口。priceDay 0)。</td></tr>
         <tr><td class="c-key">categoryId</td><td class="c-type">FK → categories</td><td>所属カテゴリ。</td></tr>
         <tr><td class="c-key">locationId</td><td class="c-type">FK → locations</td><td>配置拠点。</td></tr>
         <tr><td class="c-key">name / nameEn</td><td class="c-type">string</td><td>名称 (日 / 英)。</td></tr>
         <tr><td class="c-key">plate</td><td class="c-type">string</td><td>ナンバー (車両のみ)。物品は空。</td></tr>
         <tr><td class="c-key">capacity</td><td class="c-type">number|null</td><td>乗車定員 (車両)。</td></tr>
         <tr><td class="c-key">priceHour / priceDay<br>priceWeek / priceMonth</td><td class="c-type">number|null</td><td>時間/日/週/月の各料金。<b>priceDay は必須</b>、他は null 可。料金エンジンが最適プランを自動選択。</td></tr>
-        <tr><td class="c-key">stock</td><td class="c-type">number</td><td>在庫数。物品は 1 超可、車両は常に 1。空き判定の上限。</td></tr>
+        <tr><td class="c-key">stock</td><td class="c-type">number</td><td>在庫数。常に 1 (本番は DB の制約で 1)。家電の在庫はアセットではなく <code>options.stock</code> で品目ごとに数える (窓口 A001 は重なりで止めない)。</td></tr>
         <tr><td class="c-key">requiredLicense</td><td class="c-type">string</td><td>必要免許・資格。例「準中型免許以上」。空なら不要。予約フローの確認ステップを分岐。</td></tr>
         <tr><td class="c-key">image</td><td class="c-type">string</td><td>絵文字 or 画像URL。</td></tr>
         <tr><td class="c-key">active</td><td class="c-type">boolean</td><td>公開フラグ。</td></tr>
@@ -691,16 +692,17 @@
         <tr><td class="c-key">price</td><td class="c-type">number</td><td>単価 (円)。</td></tr>
         <tr><td class="c-key">priceShort</td><td class="c-type">number | null</td><td>1〜6時間の料金 (補償の一部)。null なら6時間以内でも <code>price</code> (装備オプションはすべて null)。</td></tr>
         <tr><td class="c-key">priceType</td><td class="c-type">'per_day'|'per_rental'</td><td>課金単位。24時間ごと×単価 / 1回固定。</td></tr>
-        <tr><td class="c-key">categoryIds</td><td class="c-type">null | string[]</td><td><b>null = 共通オプション</b> (全車両カテゴリ) / 配列 = カテゴリ専用。物品カテゴリには共通を出さない。</td></tr>
+        <tr><td class="c-key">categoryIds</td><td class="c-type">null | string[]</td><td><b>null = 共通オプション</b> (全車両カテゴリと家電レンタル。家電レンタルでは借りる家電として選ぶ) / 配列 = カテゴリ専用 (補償)。</td></tr>
         <tr><td class="c-key">kind</td><td class="c-type">'cover'|'other'</td><td>cover = 補償オプション / other = 装備オプション。車両詳細の見出しを分ける (補償が先)。</td></tr>
         <tr><td class="c-key">exclusiveGroup</td><td class="c-type">string | null</td><td>同じグループからは1つだけ選べる (補償は <code>'cover'</code>)。</td></tr>
         <tr><td class="c-key">description</td><td class="c-type">string</td><td>名称の下に小さく出す説明 (装備オプションは型番)。</td></tr>
         <tr><td class="c-key">includes</td><td class="c-type">string[] (任意)</td><td>セットに含まれる品目の <code>optionId</code>。家電セット (OP010) だけが OP001〜OP009 を持つ。セットと中の品目は同時に選べない (<code>OPTION_CONFLICT</code>)。</td></tr>
+        <tr><td class="c-key">stock</td><td class="c-type">number | null</td><td>在庫数 (2026-10)。null = 数えない (家電セット・補償)。同じ時間に、車両に付けた分と家電レンタルの分を合わせて stock を超えると予約できない (<code>OPTION_SOLD_OUT</code>)。家電セットは中の品目の在庫で判定。</td></tr>
         <tr><td class="c-key">active</td><td class="c-type">boolean</td><td>有効フラグ。</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="legend">シード — 共通 (装備オプション11品目・24時間ごと): ポータブル冷蔵冷凍庫 ¥3,300・電子レンジ ¥2,200・サーキュレーター ¥1,100・ポータブル電源 ¥3,300・ドラムリール ¥1,100・カセットコンロ ¥1,100・カセットボンベ ¥1,100・炊飯器 ¥2,200・電気ケトル ¥1,100・家電セット (上記9点) ¥11,000・集客セット ¥1,100。カテゴリ専用 (補償): 一般レンタカー CDW ¥1,650 / PAP ¥3,300、キッチンカー CDW ¥3,300 / PAP ¥6,600。</p>
+  <p class="legend">シード — 共通 (装備オプション11品目・24時間ごと・在庫各1。家電セットは在庫 null): ポータブル冷蔵冷凍庫 ¥3,300・電子レンジ ¥2,200・サーキュレーター ¥1,100・ポータブル電源 ¥3,300・ドラムリール ¥1,100・カセットコンロ ¥1,100・カセットボンベ ¥1,100・炊飯器 ¥2,200・電気ケトル ¥1,100・家電セット (上記9点) ¥11,000・集客セット ¥1,100。カテゴリ専用 (補償): 一般レンタカー CDW ¥1,650 / PAP ¥3,300、キッチンカー CDW ¥3,300 / PAP ¥6,600。</p>
 
   <h3 class="h-sec" id="c3-6"><span class="sno">3.6</span>members (会員) / coupons<span class="tag">会員</span></h3>
   <div class="tbl-wrap">
@@ -730,7 +732,7 @@
         <tr><td class="c-key">assetId / vehicleId</td><td class="c-type">FK → assets</td><td>対象。vehicleId は旧画面互換エイリアス。</td></tr>
         <tr><td class="c-key">assetName / vehicleName</td><td class="c-type">string</td><td>予約時点の名称スナップショット。</td></tr>
         <tr><td class="c-key">categoryId / locationId</td><td class="c-type">FK</td><td>カテゴリ・拠点。</td></tr>
-        <tr><td class="c-key">quantity</td><td class="c-type">number</td><td>数量 (物品)。在庫照合に使用。</td></tr>
+        <tr><td class="c-key">quantity</td><td class="c-type">number</td><td>数量。常に 1 (家電レンタルで借りる家電は optionIds で表し、在庫は options.stock で数える)。</td></tr>
         <tr><td class="c-key">customerName / Email / Phone</td><td class="c-type">string</td><td>利用者連絡先。</td></tr>
         <tr><td class="c-key">company / licenseNo</td><td class="c-type">string</td><td>会社名 / 免許証番号 (車両)。</td></tr>
         <tr><td class="c-key">memberId</td><td class="c-type">FK → members | null</td><td>会員予約なら紐付け。ゲスト予約は null。</td></tr>
@@ -742,7 +744,7 @@
         <tr><td class="c-key">status</td><td class="c-type">enum</td><td><code>confirmed</code> → <code>in_use</code> → <code>returned</code> / <code>cancelled</code>。returned で会員へポイント自動付与。</td></tr>
         <tr><td class="c-key">pointGranted</td><td class="c-type">boolean</td><td>ポイント付与済フラグ (二重付与防止)。</td></tr>
         <tr><td class="c-key">invoiceId</td><td class="c-type">FK → invoices | null</td><td>請求書に集約された場合の参照。</td></tr>
-        <tr><td class="c-key">licenseConfirmed</td><td class="c-type">boolean</td><td>免許確認ステップの完了フラグ。</td></tr>
+        <tr><td class="c-key">licenseConfirmed</td><td class="c-type">boolean</td><td>免許確認ステップの完了フラグ (車両のみ。家電レンタルでは求めない)。</td></tr>
         <tr><td class="c-key">note / createdAt</td><td class="c-type">string / ISO</td><td>備考・受付日時。</td></tr>
       </tbody>
     </table>
@@ -816,7 +818,8 @@
         <tr><td class="c-key">getLocation(id)</td><td>locationId</td><td>object|null</td></tr>
         <tr><td class="c-key">assets(filter?)</td><td>{categoryId?, locationId?, activeOnly?, type?}</td><td>array — 条件で絞込。</td></tr>
         <tr><td class="c-key">getAsset(id)</td><td>assetId</td><td>object|null</td></tr>
-        <tr><td class="c-key">optionsForCategory(categoryId)</td><td>categoryId</td><td><code>{common:[], specific:[]}</code> — type='item' のカテゴリでは common=[]。</td></tr>
+        <tr><td class="c-key">optionsForCategory(categoryId)</td><td>categoryId</td><td><code>{common:[], specific:[]}</code> — 家電レンタル (type='item') でも common に装備オプション (借りる家電) を返す。</td></tr>
+        <tr><td class="c-key">unavailableOptionIds(start, end, excludeResId?)</td><td>ISO×2, string?</td><td>array — その期間に残り0の家電の optionId (家電セットは中の品目のどれかが残り0なら含める)。見積の <code>unavailableOptionIds</code> と同じ値。</td></tr>
       </tbody>
     </table>
   </div>
@@ -825,7 +828,7 @@
     <table class="tbl">
       <thead><tr><th>メソッド</th><th>引数</th><th>戻り値 / 説明</th></tr></thead>
       <tbody>
-        <tr><td class="c-key">availability(assetId, start, end, qty, excludeResId?)</td><td>ISO×2, number</td><td><code>{ok, remaining, stock, reason}</code> — 車両=重複不可 / 物品=在庫数照合。</td></tr>
+        <tr><td class="c-key">availability(assetId, start, end, qty, excludeResId?)</td><td>ISO×2, number</td><td><code>{ok, remaining, stock, reason}</code> — 車両=重複不可 / 家電レンタルの窓口=重なりで止めない (家電ごとの在庫で止める)。</td></tr>
         <tr><td class="c-key">searchAvailable(params)</td><td>{categoryId?, locationId?, start?, end?, quantity?, filters?}</td><td>array — 各要素に <code>.availability</code> 付与。filters は number型=「以上」、select/text=完全一致。</td></tr>
         <tr><td class="c-key">createReservation(payload)</td><td>payload (下記)</td><td>reservation — 空き検証・クーポン消費・通知ログを内包。</td></tr>
         <tr><td class="c-key">updateReservation(id, updates)</td><td>reservationId, object</td><td>reservation — status='returned' でポイント自動付与+クーポン自動発行。</td></tr>
@@ -959,6 +962,7 @@
   <ul class="bul">
     <li><b>プラン選択は上から順に評価</b>し、最初に条件を満たしたプランを採用 (月割 → 週割 → 時間貸 → 日貸)。週割・月割は端数を日割りしつつ、次の週/月料金を超えない上限で丸める。</li>
     <li><b>ハイシーズン</b>は <code>sky-rent.high-season</code> を自動参照し、利用期間と重なる日数分だけ基本料金に rate% を加算。</li>
+    <li><b>家電レンタル</b> (<code>type: item</code>。2026-10) は基本料金 0 で、選んだ家電 (装備オプション) の24時間ごとの料金の合計。割増 (繁忙期・土日祝・夜間) と割引はかけない。家電を1つも選ばないと <code>ITEM_REQUIRED</code>。本番の料金計算は <code>js/pricing-core.js</code> (production/implementation-v1.md §1・§8)。</li>
     <li><b>拡張性</b>：長期割引・会員ランク別料金などは、加算ルールを 1 関数追加するだけで組み込める設計 (要件7章「料金計算モジュールの拡張性」準拠)。</li>
   </ul>
   <a class="back-top" href="#top">▲ 目次へ戻る</a>

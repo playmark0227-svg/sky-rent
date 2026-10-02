@@ -5,7 +5,8 @@
 //   checkStaffForReservation({locationId, start, end})
 //                                             予約・見積の確定判定 (キャッシュを使わず Google へ直接)
 //   handoverMinutesFor(locationId)            create_reservation_tx に渡す受け渡し間隔 (分)
-//   processGcalJob(job)                       outbox の gcal_sync (予約 → 担当者カレンダーへ貸出・返却の予定)
+//   processGcalJob(job)                       outbox の gcal_sync (予約 → 担当者カレンダーへ貸出・返却の予定。
+//                                             家電レンタルは【家電受取】【家電返却】)
 //
 // 「予定あり」の定義 (§3.1):
 //   status != cancelled かつ 当社が書いた予定ではない (extendedProperties.private.skyrent)
@@ -481,21 +482,27 @@ async function removeRef(ref: EventRef | undefined) {
 
 type ResvRow = {
   id: string; kind: string; status: string; start_at: string; end_at: string; customer_name: string;
-  location_id: string; asset_id: string; gcal_events: GcalEvents | null;
+  location_id: string; asset_id: string; gcal_events: GcalEvents | null; is_item?: boolean | null;
 };
 
+/**
+ * 予定の題名と本文。家電レンタルは【家電受取】/【家電返却】。
+ * 本文は車両と同じ項目だけ (予約番号・車両 (家電レンタルは受付)・拠点・日時)。
+ * プライバシーポリシーどおり、借りる家電の品目名・オプションは書かない。
+ */
 function eventBody(r: ResvRow, kind: 'pickup' | 'return', assetName: string, locationName: string, minutes: number) {
   const s = Date.parse(r.start_at), e = Date.parse(r.end_at);
   const at = kind === 'pickup' ? s : e;
-  const tag = kind === 'pickup' ? '【貸出】' : '【返却】';
+  const item = r.is_item === true;
+  const tag = item ? (kind === 'pickup' ? '【家電受取】' : '【家電返却】') : (kind === 'pickup' ? '【貸出】' : '【返却】');
   const name = (r.customer_name || '').trim();
   const summary = tag + r.id + ' ' + assetName + (name ? ' / ' + name + ' 様' : '');
   const site = env().SITE_URL;
   const description = [
     '予約番号: ' + r.id,
-    '車両: ' + assetName,
+    (item ? '受付: ' : '車両: ') + assetName,
     '拠点: ' + locationName,
-    '貸出: ' + jstLabel(s),
+    (item ? '受取: ' : '貸出: ') + jstLabel(s),
     '返却: ' + jstLabel(e),
     '',
     '予約の詳細 (管理画面): ' + site + 'manage/reservation-list.html',
@@ -554,7 +561,7 @@ export async function processGcalJob(job: { id?: number; ref_id?: string | null;
     const cfg = await loadCalendarSettings();
     const db = adminClient();
     const { data: r, error } = await db.from('reservations')
-      .select('id, kind, status, start_at, end_at, customer_name, location_id, asset_id, gcal_events')
+      .select('id, kind, status, start_at, end_at, customer_name, location_id, asset_id, gcal_events, is_item')
       .eq('id', reservationId).maybeSingle();
     if (error) throw new Error('reservations: ' + (error.code || 'db error'));
     if (!r) return { status: 'skipped', error: '予約が見つかりません' };

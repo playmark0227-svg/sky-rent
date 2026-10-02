@@ -14,6 +14,7 @@
     const nav = [
       ['index.html#categories', 'カテゴリ', true],
       ['fleet.html', '車両と料金', true],
+      ['fleet.html#appliance', '家電レンタル', true],
       ['guide.html', 'ご利用方法', true],
       ['faq.html', 'よくある質問', true],
       ['mypage.html', 'マイページ', false]
@@ -35,7 +36,7 @@
       '<div class="footer-top">' +
         '<div class="footer-brand">' +
           '<a href="index.html" class="fb-logo"><img src="images/brand/logo-white.png" alt="グロースレンタカー" width="1200" height="547" loading="lazy"></a>' +
-          '<p>コンパクトカー・SUV・ミニバン・軽トラック・キッチンカー。<br>北海道 北見・釧路からお貸しします。</p>' +
+          '<p>コンパクトカー・SUV・ミニバン・軽トラック・キッチンカー。家電だけのレンタルも。<br>北海道 北見・釧路からお貸しします。</p>' +
         '</div>' +
         '<div class="footer-col"><h4>Rental</h4>' +
           '<a href="search.html">空き検索・予約</a>' +
@@ -43,6 +44,7 @@
           '<a href="insurance.html">保険・補償プラン</a>' +
           '<a href="search.html?category=cat-rental">一般レンタカー</a>' +
           '<a href="search.html?category=cat-kitchen">キッチンカー</a>' +
+          '<a href="search.html?category=cat-appliance">家電レンタル (家電だけ)</a>' +
         '</div>' +
         '<div class="footer-col"><h4>Guide</h4>' +
           '<a href="guide.html">ご利用方法</a>' +
@@ -54,6 +56,7 @@
         '<div class="footer-col"><h4>Company</h4>' +
           '<a href="company.html">会社概要</a>' +
           '<a href="clause.html">貸渡約款</a>' +
+          '<a href="item-terms.html">物品レンタル規約</a>' +
           '<a href="privacy.html">プライバシーポリシー</a>' +
           '<a href="law.html">特定商取引法に基づく表記</a>' +
           '<a href="mailto:' + MAIL + '">' + MAIL + '</a>' +

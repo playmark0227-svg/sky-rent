@@ -189,7 +189,7 @@
     <h1>管理者向けマニュアル<br>操作手順書</h1>
     <div class="sysname">
       グロースレンタカー<br>
-      一般レンタカー・キッチンカー　統合予約／管理システム
+      一般レンタカー・キッチンカー・家電レンタル　統合予約／管理システム
     </div>
     <div class="rule"></div>
     <div class="meta">
@@ -211,12 +211,13 @@
       <li><a href="#ch4"><span class="n">4</span><span class="t">帳票の出力<small>貸渡証・車輌チェックシート・領収書の出し方と印刷</small></span></a></li>
       <li><a href="#ch5"><span class="n">5</span><span class="t"><span class="star">★</span> 新しいカテゴリを追加する<small>例:「冷凍車」を追加する通し手順 (最重要)</small></span></a></li>
       <li><a href="#ch6"><span class="n">6</span><span class="t">車両・物品の登録と在庫・車検期限の管理</span></a></li>
-      <li><a href="#ch7"><span class="n">7</span><span class="t">オプション管理<small>共通オプション（装備）とカテゴリ専用オプション（補償）・家電セット</small></span></a></li>
-      <li><a href="#ch8"><span class="n">8</span><span class="t">会員・ポイント・クーポン<small>請求書払い許可の付与・ポイント手動調整・自動発行のしくみ</small></span></a></li>
-      <li><a href="#ch9"><span class="n">9</span><span class="t">請求書の発行と入金管理<small>月次一括請求の手順</small></span></a></li>
-      <li><a href="#ch10"><span class="n">10</span><span class="t">拠点・スタッフ 各種設定<small>営業時間・定休日・ポイント設定・振込先</small></span></a></li>
-      <li><a href="#ch11"><span class="n">11</span><span class="t">データのバックアップと復元</span></a></li>
-      <li><a href="#ch12"><span class="n">12</span><span class="t">トラブルシューティング<small>データの初期化・デモデータの再投入</small></span></a></li>
+      <li><a href="#ch7"><span class="n">7</span><span class="t">オプション管理<small>共通オプション（装備）とカテゴリ専用オプション（補償）・家電セット・在庫数</small></span></a></li>
+      <li><a href="#ch8"><span class="n">8</span><span class="t">家電レンタル（家電だけの貸し出し）<small>受け付け → お受け取り（本人確認・動作確認・物品貸出書）→ ご返却・在庫の変え方</small></span></a></li>
+      <li><a href="#ch9"><span class="n">9</span><span class="t">会員・ポイント・クーポン<small>請求書払い許可の付与・ポイント手動調整・自動発行のしくみ</small></span></a></li>
+      <li><a href="#ch10"><span class="n">10</span><span class="t">請求書の発行と入金管理<small>月次一括請求の手順</small></span></a></li>
+      <li><a href="#ch11"><span class="n">11</span><span class="t">拠点・スタッフ 各種設定<small>営業時間・定休日・ポイント設定・振込先</small></span></a></li>
+      <li><a href="#ch12"><span class="n">12</span><span class="t">データのバックアップと復元</span></a></li>
+      <li><a href="#ch13"><span class="n">13</span><span class="t">トラブルシューティング<small>データの初期化・デモデータの再投入</small></span></a></li>
     </ol>
   </nav>
 
@@ -228,7 +229,8 @@
   <h3 class="sec">1.1　このシステムについて</h3>
   <p class="lead">■ 目的：このマニュアルで何ができるようになるか</p>
   <p>
-    グロースレンタカー は、<strong>一般レンタカー</strong>（コンパクト・SUV・ミニバン・軽トラック）と <strong>キッチンカー</strong> のレンタルを、
+    グロースレンタカー は、<strong>一般レンタカー</strong>（コンパクト・SUV・ミニバン・軽トラック）と <strong>キッチンカー</strong> のレンタル、
+    そして車を借りずに家電だけを借りられる <strong>家電レンタル</strong>（北見本店でお受け取り・ご返却。第 8 章）を、
     ひとつの予約サイト・ひとつの管理画面でまとめて扱えるシステムです。
     お客様が使う「予約サイト」と、スタッフが使う「管理画面」の 2 つで構成されています。
     本書では <strong>管理画面</strong> の使い方を、はじめての方でも迷わないように順を追って説明します。
@@ -301,6 +303,7 @@
     <li>免許証番号などを確認し、<strong>「🚗 貸出処理（出発）」</strong> ボタンを押します。状態が <span class="badge">確定</span> → <span class="badge">貸出中</span> に変わります。</li>
     <li>必要に応じて、貸渡証などの帳票を印刷します（第 4 章）。</li>
   </ol>
+  <p style="font-size:13.5px;color:var(--sub)">※ 家電レンタル（家電だけの予約）は、「貸出／返却」ではなく「お受け取り／ご返却」と表示されます。手順は第 8 章を見てください（運転免許ではなく本人確認書類を確認し、物品貸出書を使います）。</p>
 
   <h3 class="sec">2.3　夕方：帰着（返却）の処理をする</h3>
   <p>ダッシュボードの <strong>「本日の帰着予定」</strong>に、返却予定の予約が表示されます。車両が戻ってきたら「返却済」にします。</p>
@@ -311,7 +314,7 @@
     <li>現地決済で未入金の場合は、同じ画面の <strong>「入金を記録」</strong> で入金済にします。</li>
   </ol>
   <div class="call tip"><span class="h">ヒント：ポイントは返却時に自動で付きます</span>
-    会員のお客様の予約を「返却済」にすると、<strong>ポイントが自動で付与</strong>されます。累計が一定に達すると割引クーポンも自動発行されます（第 8 章）。スタッフが手動で付ける必要はありません。
+    会員のお客様の予約を「返却済」にすると、<strong>ポイントが自動で付与</strong>されます。累計が一定に達すると割引クーポンも自動発行されます（第 9 章）。スタッフが手動で付ける必要はありません。
   </div>
 
   <h3 class="sec">2.4　未処理アラートへの対応</h3>
@@ -371,7 +374,7 @@
     <li><strong>拠点・カテゴリ</strong>で絞り込めます。拠点を「全拠点」にすると、拠点ごとにグループ分けして表示されます。</li>
     <li>色の意味（凡例）：<span class="badge g">確定=緑</span> <span class="badge">貸出中=青</span> <span class="badge gray">返却済=グレー</span> <span class="badge red">キャンセル=赤</span></li>
     <li>横棒を<strong>クリック</strong>すると、その予約の詳細へ移動します。</li>
-    <li>在庫数を 2 台以上で登録している場合は、同じ行の中に<strong>段（レーン）を分けて重ねて</strong>表示されます。</li>
+    <li><strong>家電レンタル（北見本店）</strong>の行は、同じ時間に何件でも予約が入るため（家電ごとの在庫で管理しているため。第 8 章）、重なる予約は同じ行の中に<strong>段（レーン）を分けて重ねて</strong>表示されます。バーにマウスを合わせると、借りる家電の名前も表示されます。車両の行は 1 台ずつなので、予約が重なることはありません。</li>
   </ul>
   <a class="backtop" href="#toc">▲ 目次へ戻る</a>
 
@@ -387,11 +390,11 @@
     <thead><tr><th>レンタル種別</th><th>出力できる帳票</th></tr></thead>
     <tbody>
       <tr><th>車両（一般レンタカー・キッチンカー）</th><td>貸渡証 ／ 車輌チェックシート ／ 領収書</td></tr>
-      <tr><th>物品（種別を「物品レンタル」で作成したカテゴリ）</th><td>物品貸出書 ／ 領収書</td></tr>
+      <tr><th>家電レンタル（家電だけの予約）</th><td>物品貸出書 ／ 領収書</td></tr>
     </tbody>
   </table>
   </div>
-  <p style="font-size:13.5px;color:var(--sub)">※ 現在のカテゴリはどちらも車両のため、通常は上段の 3 帳票を使います。</p>
+  <p style="font-size:13.5px;color:var(--sub)">※ 車両の予約に家電（装備オプション）を付けた場合は、車両の 3 帳票です（貸渡証・チェックシートに家電の欄が付きます）。</p>
 
   <h3 class="sec">4.2　印刷の手順</h3>
   <ol class="steps">
@@ -412,7 +415,7 @@
       <tr><th>貸渡証</th><td>貸渡人・借受人・車両・ナンバー・定員・貸渡／返却日時・料金内訳・補償オプション／装備オプション（選ばれたときだけ）・必要免許・注意事項・署名欄</td></tr>
       <tr><th>車輌チェックシート</th><td>外装キズ・タイヤ・灯火・車内清掃・燃料残量・走行距離を「出発時／返却時」でチェック。装備オプションがあるときは、品目ごとの有無（□有 □要確認）の欄も付きます（<strong>家電セットは中の 9 品目に分けて</strong>出ます）</td></tr>
       <tr><th>領収書</th><td>金額（税込）・料金の内訳（基本料金・オプションなど）・内税表示。5万円以上は収入印紙欄が付きます</td></tr>
-      <tr><th>物品貸出書</th><td>品目名・数量・貸出期間・料金・オプション・注意事項・署名欄</td></tr>
+      <tr><th>物品貸出書</th><td>家電レンタルで使います。借りる家電を <strong>1 品目ずつ 1 行</strong>で並べます（<strong>家電セットは中の 9 品目に分けて</strong>出ます）。お受け取り／ご返却の日時・料金・注意事項（延滞・破損・紛失の扱い）・署名欄</td></tr>
     </tbody>
   </table>
   </div>
@@ -430,7 +433,7 @@
   <ol class="steps">
     <li><strong>「＋ カテゴリ追加」</strong> を押します。</li>
     <li><strong>カテゴリ名</strong>に「冷凍車」と入力します。</li>
-    <li><strong>種別</strong>を選びます。ナンバーの付いた車を貸し出すカテゴリは <strong>「車両レンタル（免許入力・車検管理あり）」</strong>、車ではない品目を台数単位で貸し出すカテゴリは <strong>「物品レンタル（在庫数管理・免許入力なし）」</strong> を選びます。→ 冷凍車は「車両レンタル」。</li>
+    <li><strong>種別</strong>を選びます。ナンバーの付いた車を貸し出すカテゴリは <strong>「車両レンタル（免許入力・車検管理あり）」</strong>、車ではない品目を台数単位で貸し出すカテゴリは <strong>「物品レンタル（在庫数管理・免許入力なし）」</strong> を選びます。→ 冷凍車は「車両レンタル」。<br><span style="font-size:13px;color:var(--sub)">※ 「物品レンタル」の種別は、いまは家電レンタル（第 8 章）だけで使っています。家電は品目ごとの在庫をオプション管理で数えるしくみのため、新しい物品のカテゴリを作るときは技術担当に相談してください。</span></li>
     <li><strong>アイコン（絵文字）</strong>・<strong>説明文</strong>・<strong>表示順</strong>を入力します。</li>
     <li><strong>カスタム項目</strong>（そのカテゴリだけのスペック欄・検索条件）を <strong>「＋ 項目を追加」</strong> で定義します。冷凍車の例：
       <div class="tbl-wrap">
@@ -476,7 +479,7 @@
     <li>車両の詳細ページに、入力したスペックが表示される。</li>
   </ul>
   <div class="call imp"><span class="h">この 4 ステップで完結します</span>
-    カテゴリを作る → 車両を登録 → オプション紐付け → 予約サイトで確認。<strong>プログラム改修は一切不要</strong>です。種別を「物品レンタル」で作ったカテゴリの場合は、STEP 2 で「在庫数」を入力します（免許・車検欄は表示されません）。
+    カテゴリを作る → 車両を登録 → オプション紐付け → 予約サイトで確認。<strong>プログラム改修は一切不要</strong>です（車両のカテゴリの場合）。
   </div>
   <a class="backtop" href="#toc">▲ 目次へ戻る</a>
 
@@ -494,14 +497,14 @@
     <li><strong>カテゴリ</strong>を選ぶと、そのカテゴリのカスタム項目の入力欄に自動で切り替わります。</li>
     <li><strong>料金</strong>は「時間・日・週・月」を入力できます（<strong>日は必須</strong>）。空欄のプランは適用されず、システムが期間に応じて<strong>最適な料金プランを自動選択</strong>します。</li>
     <li><strong>車両</strong>の場合：必要免許（不要なら空欄）・車検満了日・次回点検日を入力。</li>
-    <li>種別が<strong>物品</strong>のカテゴリの場合：<strong>在庫数</strong>（2 以上も可）を入力。免許・車検欄は表示されません。</li>
+    <li>種別が<strong>物品</strong>のカテゴリ（家電レンタル）の場合：免許・車検欄は表示されません。<strong>家電レンタル（北見本店）</strong>は家電そのものではなく「家電の予約を受ける窓口」です。料金は 0 円のままにします（家電の料金はオプション管理で設定します）。</li>
     <li><strong>状態</strong>を「稼働中／休止中」で設定して <strong>「保存」</strong>。</li>
   </ol>
 
   <h3 class="sec">6.3　在庫の考え方</h3>
   <ul>
     <li><strong>車両</strong>は 1 台ずつ登録します（在庫は常に 1）。同型が複数あるときは複数登録します。</li>
-    <li>種別が<strong>物品</strong>のカテゴリでは、1 種類につき「在庫数」でまとめて管理できます（例：同じ品目が 5 点あれば在庫数 5）。</li>
+    <li><strong>家電の在庫</strong>は、この画面ではなく <strong>オプション管理の「在庫数」</strong>で品目ごとに管理します（第 7 章・第 8 章）。</li>
     <li>一時的に貸出を止めたいときは、削除せず <strong>「休止中」</strong> にします。休止中は予約サイトに表示されません。</li>
   </ul>
 
@@ -525,12 +528,12 @@
   <table class="tbl">
     <thead><tr><th>種類</th><th>適用範囲</th><th>例</th></tr></thead>
     <tbody>
-      <tr><th>共通オプション<br>（装備オプション）</th><td>すべての<strong>車両</strong>カテゴリに自動で付きます（軽トラック・キッチンカーを含む）</td><td>ポータブル冷蔵冷凍庫・電子レンジ・サーキュレーター・ポータブル電源・ドラムリール・カセットコンロ・カセットボンベ・炊飯器・電気ケトル・家電セット・集客セット（全 11 品目。料金は 24 時間ごと）</td></tr>
+      <tr><th>共通オプション<br>（装備オプション）</th><td>すべての<strong>車両</strong>カテゴリに自動で付きます（軽トラック・キッチンカーを含む）。<strong>家電レンタル</strong>では、お客様はこの中から借りる家電を選びます</td><td>ポータブル冷蔵冷凍庫・電子レンジ・サーキュレーター・ポータブル電源・ドラムリール・カセットコンロ・カセットボンベ・炊飯器・電気ケトル・家電セット・集客セット（全 11 品目。料金は 24 時間ごと）</td></tr>
       <tr><th>カテゴリ専用<br>（補償）</th><td>指定したカテゴリにだけ表示されます</td><td>免責補償制度（CDW）／安心保証コース（PAP）。金額はカテゴリごとに設定（一般レンタカー ¥1,650・¥3,300／キッチンカー ¥3,300・¥6,600）。1 つの予約で選べるのはどちらか 1 つです</td></tr>
     </tbody>
   </table>
   </div>
-  <p style="font-size:13.5px;color:var(--sub)">※ 装備オプションは単体では貸し出さず、車両に付ける形で提供します。種別が「物品レンタル」のカテゴリには共通オプションは付きません。</p>
+  <p style="font-size:13.5px;color:var(--sub)">※ 装備オプションは、車両の予約に付ける形と、家電レンタル（家電だけの予約。第 8 章）の 2 通りで貸し出します。どちらも同じ在庫を使います。補償オプションは家電レンタルには出ません。</p>
 
   <h3 class="sec">7.2　装備オプションの決まりごと</h3>
   <p>お客様は、予約サイトの車両詳細で <strong>「補償オプション」</strong> と <strong>「装備オプション」</strong> から選びます。選んだ品目は予約詳細の「料金内訳」に表示されます。</p>
@@ -539,8 +542,9 @@
     <li>学生・法人などの割引は基本料金に対するもので、オプションには適用されません。</li>
     <li><strong>家電セット</strong>（¥11,000）は、ポータブル冷蔵冷凍庫〜電気ケトルの 9 点をまとめたものです。家電セットを選ぶと、セットに含まれる 9 品目は個別に選べなくなります（同じ品目の二重請求を防ぐため）。集客セットは家電セットに含まれないので、一緒に選べます。</li>
   </ul>
-  <div class="call warn"><span class="h">注意：装備オプションの在庫数は管理していません</span>
-    同じ品目が同じ時間帯の別の予約に付いていても、予約は受け付けられます。<strong>貸出日の前に予約一覧で装備オプションの付いた予約を確認し</strong>、数が足りるかを確かめてください。足りない場合は、お客様に連絡して調整します。
+  <div class="call warn"><span class="h">注意：装備オプションには在庫数があります（初期値は各 1 台）</span>
+    同じ時間に、在庫数を超えて同じ家電を貸し出す予約は受け付けません（車両に付けた分と家電レンタルの分を合わせて数えます）。お客様には「すでに貸し出し中」と表示され、予約サイトではその日時に残りの無い家電は選べなくなります。
+    <strong>家電セット</strong>は、中の 9 品目の在庫を使います（セット自体の在庫数は空欄）。在庫数の変え方は 8.5 を見てください。
   </div>
 
   <h3 class="sec">7.3　追加・編集する</h3>
@@ -552,6 +556,7 @@
     <li><strong>課金単位</strong>を選びます：<strong>「24時間あたり」</strong>（24 時間ごとにかかる）または <strong>「1回」</strong>（レンタル1回につき）。</li>
     <li><strong>適用範囲</strong>を選びます：<strong>「共通（全車両カテゴリ）」</strong>か <strong>「カテゴリを指定」</strong>（チェックボックスで複数選択可）。</li>
     <li>セット（家電セットなど）のときだけ、<strong>「セットに含む品目」</strong>にチェックを入れます。お客様は、セットとここで選んだ品目を同時には選べなくなります（二重請求を防ぐため）。</li>
+    <li>装備オプション（家電など）は <strong>「在庫数」</strong>に、貸し出せる台数を入れます。<strong>空欄</strong>は「在庫を数えない」（家電セット・補償）、<strong>0</strong> は「貸し出さない」です。</li>
     <li>状態（有効／無効）を選んで <strong>「保存」</strong>。</li>
   </ol>
   <div class="call tip"><span class="h">ヒント</span>
@@ -560,11 +565,86 @@
   <p style="font-size:13.5px;color:var(--sub)">※ 予約サイトでの並び順はこの画面では変えられません（新しく追加した品目は最後に並びます）。並び順を変えたいときは、技術担当に依頼してください。</p>
   <a class="backtop" href="#toc">▲ 目次へ戻る</a>
 
-  <!-- ================= 8. 会員・ポイント・クーポン ================= -->
-  <h2 class="chapter" id="ch8"><span class="no">8</span>会員・ポイント・クーポン</h2>
+  <!-- ================= 8. 家電レンタル ================= -->
+  <h2 class="chapter" id="ch8"><span class="no">8</span>家電レンタル（家電だけの貸し出し）</h2>
+  <p class="lead">■ 目的：車を借りないお客様に、家電だけを貸し出す（受け付け → お受け取り → ご返却）。家電の在庫を管理する</p>
+
+  <h3 class="sec">8.1　家電レンタルのしくみ</h3>
+  <p>お客様は、予約サイトの <strong>「家電レンタル」</strong> から、借りたい家電を <strong>1 つ以上</strong> 選んで予約します。選べる家電は装備オプションと同じ 11 品目（ポータブル冷蔵冷凍庫〜集客セット）です。1 つの予約で複数の家電を借りられます（各品目 1 つずつ）。</p>
+  <p>予約は <strong>「家電レンタル（北見本店）」</strong> という受け取り窓口に入ります。これは家電そのものではなく、家電の予約を受ける窓口です。予約一覧・予約表ではこの名前で表示され、借りる家電は予約一覧の行と、予約詳細の <strong>「お借りになる家電」</strong> に 1 品目ずつ並びます（家電セットは中の品目も添えて表示されます）。</p>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>項目</th><th>車両の予約</th><th>家電レンタル（家電だけの予約）</th></tr></thead>
+    <tbody>
+      <tr><th>画面の言葉</th><td>貸出／返却・車両</td><td><strong>お受け取り／ご返却・家電レンタル</strong></td></tr>
+      <tr><th>場所</th><td>北見本店・釧路店</td><td><strong>北見本店だけ</strong>（配送はしていません）</td></tr>
+      <tr><th>料金</th><td>基本料金＋オプション＋割増</td><td>選んだ家電の 24 時間ごとの料金の<strong>合計だけ</strong>（基本料金なし）</td></tr>
+      <tr><th>割増・割引</th><td>土日祝・夜間・繁忙期の割増あり。学生・法人などの割引あり</td><td><strong>割増なし・割引なし</strong>（ポイントの ¥1,000 クーポンは使えます）</td></tr>
+      <tr><th>確認するもの</th><td>運転免許証</td><td><strong>本人確認書類</strong>（運転免許証・保険証など）。運転免許は不要</td></tr>
+      <tr><th>補償</th><td>CDW・PAP を選べる</td><td>なし。破損・紛失は修理費または再調達費用の実費（物品レンタル規約）</td></tr>
+      <tr><th>お客様が同意する規約</th><td>貸渡約款・キャンセル規定・プライバシーポリシー</td><td><strong>物品レンタル規約</strong>・キャンセル規定・プライバシーポリシー</td></tr>
+      <tr><th>帳票</th><td>貸渡証・車輌チェックシート・領収書</td><td><strong>物品貸出書</strong>・領収書</td></tr>
+      <tr><th>キャンセル料</th><td>車種ごとの段階</td><td>コンパクトカーと同じ割合（3 日前まで無料／前日まで 30%／当日 50%。繁忙期は 7 日前まで無料。無断は 100%）。元になる金額は家電の料金の合計</td></tr>
+      <tr><th>ポイント</th><td colspan="2">どちらも、会員の予約を「返却済」にすると自動で付きます</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="font-size:13.5px;color:var(--sub)">※ 車両の予約に家電を付けることも、これまでどおりできます。家電の在庫は、車両に付けた分と家電だけの予約の分を合わせて数えます（8.5）。陸運局向けの貸渡実績報告書には、家電レンタルは入りません（車両の報告のため）。</p>
+
+  <h3 class="sec">8.2　予約が入ったら（お受け取りの前日まで）</h3>
+  <ul>
+    <li>予約が入ると、店舗宛ての通知メールが届きます。Google カレンダー連携を使っている場合は、担当者のカレンダーに <strong>【家電受取】【家電返却】</strong> の予定が入ります（予定には家電の品目名は入りません）。</li>
+    <li>借りる家電は、<strong>管理画面の予約詳細</strong>で確認します。お受け取りの前日までに品目をそろえ、ポータブル電源の充電や、電源コードなどの付属品を確認しておきます。<strong>家電セット</strong>はポータブル冷蔵冷凍庫〜電気ケトルの 9 点です。</li>
+    <li>お受け取り・ご返却のときも店頭で受け渡しをするため、担当者の予定（Google カレンダー）と受け渡しの間隔の判定は、車両と同じように行われます。</li>
+  </ul>
+
+  <h3 class="sec">8.3　お受け取り（貸し出し）の手順</h3>
+  <ol class="steps">
+    <li><span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">予約一覧</span></span> で予約の <strong>「詳細」</strong> を開き、借りる家電の一覧を確認します。</li>
+    <li><strong>本人確認書類</strong>（運転免許証・保険証など）で、予約したご本人であることを確認します。運転免許の確認は要りません。</li>
+    <li><span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">帳票出力</span></span> で <strong>「物品貸出書」</strong> を印刷します。借りる家電が 1 品目ずつ並びます（家電セットは中の 9 品目に分かれます）。</li>
+    <li>お客様と一緒に、物品貸出書の品目ごとに <strong>数と付属品</strong>、<strong>動作</strong>（電源が入る・冷える・温まる など）を確認します。</li>
+    <li>ご返却の日時、返却が遅れたときの追加料金（24 時間ごと）、破損・紛失のときの扱い（修理費または再調達費用の実費）を説明し、物品貸出書に署名をいただきます。</li>
+    <li>予約詳細の <strong>「🔌 お受け取り処理（お渡し）」</strong> ボタンを押します。状態が <span class="badge">確定</span> → <span class="badge">貸出中</span> に変わります（車両の「貸出処理」にあたるボタンです）。</li>
+  </ol>
+
+  <h3 class="sec">8.4　ご返却の手順</h3>
+  <ol class="steps">
+    <li>物品貸出書と照らし合わせて、<strong>品目と数</strong>（付属品を含む）がそろっているか確認します。</li>
+    <li>それぞれの <strong>動作</strong> と、破損・汚れがないかを確認します。</li>
+    <li>問題がなければ、予約詳細の <strong>「✅ ご返却処理」</strong> ボタンを押します。状態が <span class="badge">貸出中</span> → <span class="badge gray">返却済</span> に変わります（会員はポイントが自動で付きます）。</li>
+    <li>現地決済で未入金の場合は <strong>「入金を記録」</strong> で入金済にします。</li>
+  </ol>
+  <div class="call warn"><span class="h">返却が遅れたとき・破損や紛失があったとき</span>
+    延滞の追加料金（24 時間ごと）や、修理費・再調達費用の実費は、システムでは自動で請求されません。店頭で精算し、物品貸出書の控えに内容を書き残してください。金額の決め方は事業者の確認事項です。
+  </div>
+
+  <h3 class="sec">8.5　在庫の変え方（オプション管理の「在庫数」）</h3>
+  <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">オプション管理</span><span class="arw">▸</span><span class="crumb">家電の行の「編集」</span></div>
+  <ul>
+    <li>家電ごとの在庫は <strong>「在庫数」</strong> で設定します。初期値は <strong>各 1 台</strong> です。2 台目を買ったら 2 にします。</li>
+    <li><strong>家電セット</strong>は、中の 9 品目の在庫を使います。家電セットの在庫数は空欄のままにします。</li>
+    <li><strong>空欄</strong>は「在庫を数えない」、<strong>0</strong> は「貸し出さない」という意味です。</li>
+    <li>同じ時間に在庫数を超える予約は、車両のオプションでも家電だけの予約でも受け付けません。お客様には「すでに貸し出し中」と表示され、予約サイトではその日時に残りの無い家電は選べなくなります。</li>
+  </ul>
+  <div class="call tip"><span class="h">修理中などで、しばらく貸し出せないとき</span>
+    その家電の <strong>在庫数を 0</strong> にするか、オプションを <strong>「無効」</strong> にします。どちらも、家電レンタルでも車両のオプションでも選べなくなります。直ったら元に戻します。<br>
+    在庫数を減らしても、すでに入っている予約は取り消されません。予約一覧で該当する予約を確認し、必要ならお客様に連絡してください。
+  </div>
+
+  <h3 class="sec">8.6　貸出停止枠は家電レンタルには使えません</h3>
+  <p>整備・車検のための <strong>「貸出停止枠」</strong> は、家電レンタル（北見本店）には作れません（作ろうとすると「家電レンタルには貸出停止枠を作れません。家電ごとの在庫はオプション管理で変えてください。」と表示されます）。家電は窓口ではなく家電ごとの在庫で管理しているためです。家電を貸し出せない期間は、8.5 の方法を使ってください。</p>
+
+  <div class="call imp"><span class="h">釧路店で家電を頼まれたら</span>
+    家電は北見本店にある前提です。家電レンタル（家電だけの予約）は北見本店でのお受け取り・ご返却だけです。釧路店の車両の予約に家電を付けた場合の受け渡し方法は、事業者が決めることになっています（決まるまでは、予約が入ったら北見本店と相談してください）。
+  </div>
+  <a class="backtop" href="#toc">▲ 目次へ戻る</a>
+
+  <!-- ================= 9. 会員・ポイント・クーポン ================= -->
+  <h2 class="chapter" id="ch9"><span class="no">9</span>会員・ポイント・クーポン</h2>
   <p class="lead">■ 目的：会員情報の確認、ポイントの手動調整、クーポン発行、請求書払い許可の付与を行う</p>
 
-  <h3 class="sec">8.1　会員一覧を開く</h3>
+  <h3 class="sec">9.1　会員一覧を開く</h3>
   <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">顧客・会員管理</span></div>
   <ul>
     <li>上部に <strong>会員数／請求書払い許可／未使用クーポン</strong>の合計が表示されます。</li>
@@ -572,13 +652,13 @@
     <li><strong>「＋ 会員追加」</strong>で、電話予約のお客様などを手動で登録できます（初期パスワードは <code>demo1234</code>）。</li>
   </ul>
 
-  <h3 class="sec">8.2　会員詳細でできること</h3>
+  <h3 class="sec">9.2　会員詳細でできること</h3>
   <p>行の <strong>「詳細」</strong> を開くと、次の操作ができます。</p>
   <div class="tbl-wrap">
   <table class="tbl">
     <thead><tr><th>操作</th><th>やり方</th></tr></thead>
     <tbody>
-      <tr><th>請求書払い許可</th><td><strong>「許可を付与／解除」</strong>ボタン。付与すると、その会員は予約時に「請求書払い」を選べるようになります（第 9 章）。法人・行政向け。</td></tr>
+      <tr><th>請求書払い許可</th><td><strong>「許可を付与／解除」</strong>ボタン。付与すると、その会員は予約時に「請求書払い」を選べるようになります（第 10 章）。法人・行政向け。</td></tr>
       <tr><th>ポイント手動調整</th><td>「増減（例：+5 / −3）」と「事由」を入力して <strong>「反映」</strong>。</td></tr>
       <tr><th>クーポン手動発行</th><td>金額と事由を入力して <strong>「発行」</strong>。お詫びやキャンペーンに。</td></tr>
       <tr><th>履歴の確認</th><td>保有クーポン・ポイント履歴・利用履歴を一覧で確認できます。</td></tr>
@@ -586,8 +666,8 @@
   </table>
   </div>
 
-  <h3 class="sec">8.3　ポイント・クーポン自動発行のしくみ</h3>
-  <p>スタッフが操作しなくても、次のように自動で動きます（数値は設定変更できます。第 10 章）。</p>
+  <h3 class="sec">9.3　ポイント・クーポン自動発行のしくみ</h3>
+  <p>スタッフが操作しなくても、次のように自動で動きます（数値は設定変更できます。第 11 章）。</p>
   <ol class="steps">
     <li>予約を <strong>「返却済」</strong>にすると、会員に <strong>ポイントが自動付与</strong>（初期：1 回で 1pt）。</li>
     <li>累計が <strong>しきい値（初期：10pt）</strong> に達すると、<strong>¥1,000 クーポンが自動発行</strong>されます。</li>
@@ -599,19 +679,19 @@
   </div>
   <a class="backtop" href="#toc">▲ 目次へ戻る</a>
 
-  <!-- ================= 9. 請求書 ================= -->
-  <h2 class="chapter" id="ch9"><span class="no">9</span>請求書の発行と入金管理</h2>
+  <!-- ================= 10. 請求書 ================= -->
+  <h2 class="chapter" id="ch10"><span class="no">10</span>請求書の発行と入金管理</h2>
   <p class="lead">■ 目的：法人・行政向けに請求書を発行・印刷し、入金状況を管理する（月次一括対応）</p>
 
   <div class="call imp"><span class="h">前提：先に「請求書払い許可」を付与</span>
-    請求書払いは、<strong>「請求書払い許可」を付けた会員</strong>だけが使えます（第 8 章）。許可がない会員は、予約フローに請求書払いの選択肢が出ず、この画面の宛先にも表示されません。
+    請求書払いは、<strong>「請求書払い許可」を付けた会員</strong>だけが使えます（第 9 章）。許可がない会員は、予約フローに請求書払いの選択肢が出ず、この画面の宛先にも表示されません。
   </div>
 
-  <h3 class="sec">9.1　請求書画面を開く</h3>
+  <h3 class="sec">10.1　請求書画面を開く</h3>
   <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">請求書管理</span></div>
   <p>上部に <strong>未払い請求額／今月発行額／発行済み件数</strong>が表示されます。</p>
 
-  <h3 class="sec">9.2　請求書を発行する（月次一括）</h3>
+  <h3 class="sec">10.2　請求書を発行する（月次一括）</h3>
   <ol class="steps">
     <li><strong>「＋ 請求書を発行」</strong> を押します。</li>
     <li><strong>宛先会員</strong>を選びます（許可済みの会員のみ表示）。</li>
@@ -620,14 +700,14 @@
     <li>合計額を確認して <strong>「発行する」</strong> を押します。</li>
   </ol>
 
-  <h3 class="sec">9.3　印刷する</h3>
+  <h3 class="sec">10.3　印刷する</h3>
   <ol class="steps">
     <li>一覧で対象請求書の <strong>「詳細」</strong> を開きます。</li>
     <li>プレビューを確認し <strong>「印刷」</strong> を押します（A4／PDF保存）。</li>
   </ol>
-  <p>請求書には、会社名・住所・案件名・金額・<strong>振込先口座</strong>が印字されます。振込先は <span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">予約サイト設定</span><span class="arw">▸</span><span class="crumb">ポイント・クーポン設定</span></span> で設定します（第 10 章）。</p>
+  <p>請求書には、会社名・住所・案件名・金額・<strong>振込先口座</strong>が印字されます。振込先は <span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">予約サイト設定</span><span class="arw">▸</span><span class="crumb">ポイント・クーポン設定</span></span> で設定します（第 11 章）。</p>
 
-  <h3 class="sec">9.4　入金を管理する</h3>
+  <h3 class="sec">10.4　入金を管理する</h3>
   <ul>
     <li>入金があったら、一覧の <strong>「入金確認」</strong>、または詳細内の <strong>「入金を記録」</strong> で <span class="badge g">支払済</span> にします。</li>
     <li>誤って支払済にした場合は、詳細の <strong>「未払いに戻す」</strong> で戻せます。</li>
@@ -635,11 +715,11 @@
   </ul>
   <a class="backtop" href="#toc">▲ 目次へ戻る</a>
 
-  <!-- ================= 10. 各種設定 ================= -->
-  <h2 class="chapter" id="ch10"><span class="no">10</span>拠点・スタッフ 各種設定</h2>
+  <!-- ================= 11. 各種設定 ================= -->
+  <h2 class="chapter" id="ch11"><span class="no">11</span>拠点・スタッフ 各種設定</h2>
   <p class="lead">■ 目的：拠点情報・営業時間・定休日、従業員、ポイント制度、振込先を設定する</p>
 
-  <h3 class="sec">10.1　店舗（拠点）の設定</h3>
+  <h3 class="sec">11.1　店舗（拠点）の設定</h3>
   <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">社内管理</span><span class="arw">▸</span><span class="crumb">店舗管理</span></div>
   <ul>
     <li>拠点名・住所・TEL・<strong>営業時間・定休日</strong>・表示順を編集できます。</li>
@@ -647,7 +727,7 @@
     <li>車両・物品が紐づいている拠点は削除できません（先に移動・削除が必要）。</li>
   </ul>
 
-  <h3 class="sec">10.2　従業員（スタッフ）の設定</h3>
+  <h3 class="sec">11.2　従業員（スタッフ）の設定</h3>
   <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">社内管理</span><span class="arw">▸</span><span class="crumb">従業員管理</span></div>
   <p>氏名・メール・所属店舗・<strong>権限</strong>・状態を管理します。権限で操作できる範囲が変わります。</p>
   <div class="tbl-wrap">
@@ -662,36 +742,36 @@
   </table>
   </div>
 
-  <h3 class="sec">10.3　ポイント制度と振込先の設定</h3>
+  <h3 class="sec">11.3　ポイント制度と振込先の設定</h3>
   <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">予約サイト設定</span><span class="arw">▸</span><span class="crumb">ポイント・クーポン設定</span></div>
   <ul>
     <li><strong>ポイント制度</strong>：1回で付与するポイント／クーポン発行に必要なポイント／自動発行クーポンの額面／有効期限（ヶ月）を設定します。画面下部の <strong>「現在の設定でのフロー」</strong> に、設定結果が文章で表示されます。</li>
-    <li><strong>請求書 振込先口座</strong>：銀行・支店名／口座種別／口座番号／名義。ここで設定した口座が<strong>請求書に印字</strong>されます（第 9 章）。</li>
+    <li><strong>請求書 振込先口座</strong>：銀行・支店名／口座種別／口座番号／名義。ここで設定した口座が<strong>請求書に印字</strong>されます（第 10 章）。</li>
     <li>設定を変えたら、それぞれの <strong>「保存」</strong> を押します。</li>
   </ul>
 
-  <h3 class="sec">10.4　繁忙期・定休日</h3>
+  <h3 class="sec">11.4　繁忙期・定休日</h3>
   <ul>
     <li><strong>繁忙期の料金加算</strong>：<span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">ハイシーズン管理</span></span>（GW・夏休み・年末年始などの倍率）。</li>
     <li><strong>定休日</strong>：<span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">各種管理</span><span class="arw">▸</span><span class="crumb">定休日管理</span></span>。</li>
   </ul>
   <a class="backtop" href="#toc">▲ 目次へ戻る</a>
 
-  <!-- ================= 11. バックアップ ================= -->
-  <h2 class="chapter" id="ch11"><span class="no">11</span>データのバックアップと復元</h2>
+  <!-- ================= 12. バックアップ ================= -->
+  <h2 class="chapter" id="ch12"><span class="no">12</span>データのバックアップと復元</h2>
   <p class="lead">■ 目的：全データ（車両・予約・会員・設定）をファイルに保存し、必要なときに戻す</p>
 
-  <h3 class="sec">11.1　画面を開く</h3>
+  <h3 class="sec">12.1　画面を開く</h3>
   <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">右上のお名前</span><span class="arw">▸</span><span class="crumb">プロフィール編集</span><span class="arw">▸</span><span class="crumb">データのバックアップ / 復元</span></div>
   <p>このセクションに、現在の保存状況（車輌台数・予約件数・設定項目数）が表示されます。</p>
 
-  <h3 class="sec">11.2　バックアップする</h3>
+  <h3 class="sec">12.2　バックアップする</h3>
   <ol class="steps">
     <li><strong>「⬇ バックアップをダウンロード」</strong> を押します。</li>
     <li><code>sky-rent-backup-YYYYMMDD.json</code> というファイルが保存されます。パソコンや外部ストレージに保管してください。</li>
   </ol>
 
-  <h3 class="sec">11.3　復元する</h3>
+  <h3 class="sec">12.3　復元する</h3>
   <ol class="steps">
     <li><strong>「⬆ バックアップから復元」</strong> を押します。</li>
     <li>保存しておいた <code>.json</code> ファイルを選びます。</li>
@@ -702,29 +782,31 @@
   </div>
   <a class="backtop" href="#toc">▲ 目次へ戻る</a>
 
-  <!-- ================= 12. トラブルシューティング ================= -->
-  <h2 class="chapter" id="ch12"><span class="no">12</span>トラブルシューティング</h2>
+  <!-- ================= 13. トラブルシューティング ================= -->
+  <h2 class="chapter" id="ch13"><span class="no">13</span>トラブルシューティング</h2>
   <p class="lead">■ 目的：よくある困りごとを、自分たちで解決できるようにする</p>
 
-  <h3 class="sec">12.1　よくある質問（FAQ）</h3>
+  <h3 class="sec">13.1　よくある質問（FAQ）</h3>
   <div class="tbl-wrap">
   <table class="tbl">
     <thead><tr><th>こんなとき</th><th>対処</th></tr></thead>
     <tbody>
       <tr><td>表示がおかしい／最新に見えない</td><td>まずブラウザを<strong>再読み込み（更新）</strong>してください。多くはこれで直ります。</td></tr>
       <tr><td>登録した車両が予約サイトに出ない</td><td>その車両・カテゴリ・拠点が <strong>「稼働中／有効」</strong> か、<strong>日貸し料金が入力済み</strong>かを確認してください。</td></tr>
-      <tr><td>請求書払いが選べない</td><td>対象会員に <strong>「請求書払い許可」</strong> が付いているか確認（第 8 章）。</td></tr>
+      <tr><td>請求書払いが選べない</td><td>対象会員に <strong>「請求書払い許可」</strong> が付いているか確認（第 9 章）。</td></tr>
       <tr><td>ログインできない</td><td>デモ環境では任意の値でログインできます。パスワードはログイン画面の <strong>「パスワードをお忘れですか?」</strong> から再設定。</td></tr>
       <tr><td>お客様にメールが届かない</td><td>本システムは送信内容を <strong>ダッシュボード下部「自動通知ログ」</strong> に記録します。実際のメール送信は本番環境で有効化されます。</td></tr>
       <tr><td>車両・物品が削除できない</td><td>有効な予約が紐づいています。先に予約を処理してください。使わないだけなら「休止中」に。</td></tr>
+      <tr><td>お客様が家電を予約できない（「すでに貸し出し中」と出る）</td><td>その時間に、同じ家電が付いた予約（車両のオプション・家電レンタルの両方）が在庫数ぶん入っています。<strong>オプション管理の「在庫数」</strong>が実際の台数と合っているか確認してください（第 8 章 8.5）。</td></tr>
+      <tr><td>家電レンタルに貸出停止枠を作れない</td><td>仕様です。家電を貸し出せない期間は、オプション管理でその家電の在庫数を 0 にするか「無効」にします（第 8 章 8.6）。</td></tr>
     </tbody>
   </table>
   </div>
 
-  <h3 class="sec">12.2　データを初期化する（全データ削除）</h3>
+  <h3 class="sec">13.2　データを初期化する（全データ削除）</h3>
   <div class="path"><span class="lbl">画面</span><span class="crumb">右上のお名前</span><span class="arw">▸</span><span class="crumb">プロフィール編集</span><span class="arw">▸</span><span class="crumb">危険ゾーン</span></div>
   <ol class="steps">
-    <li><strong>必ず先にバックアップ</strong>を取ります（第 11 章）。</li>
+    <li><strong>必ず先にバックアップ</strong>を取ります（第 12 章）。</li>
     <li><strong>「設定を初期化（全データ削除）」</strong> を押します。</li>
     <li>確認が 2 回表示されます。両方 <strong>「OK」</strong> を押すと全データが削除され、画面が再読み込みされます。</li>
   </ol>
@@ -732,10 +814,10 @@
     初期化は取り消せません。必要なデータがある場合は、実行前に必ずバックアップしてください。
   </div>
 
-  <h3 class="sec">12.3　デモデータを再投入する</h3>
+  <h3 class="sec">13.3　デモデータを再投入する</h3>
   <p>
     初期化して画面を再読み込みすると、<strong>初期のサンプルデータが自動で再投入</strong>されます。
-    これには、基本のカテゴリ（一般レンタカー・キッチンカー）、2 拠点（北見本店・釧路店）、サンプルの車両 6 台、オプション、デモ会員、サンプル予約が含まれます。
+    これには、基本のカテゴリ（一般レンタカー・キッチンカー・家電レンタル）、2 拠点（北見本店・釧路店）、サンプルの車両 6 台と家電レンタルの受け取り窓口、オプション（在庫数つき）、デモ会員、サンプル予約が含まれます。
     操作の練習や、動作確認をやり直したいときに便利です。
   </p>
   <div class="tbl-wrap">
@@ -748,7 +830,7 @@
   </table>
   </div>
 
-  <h3 class="sec">12.4　それでも解決しないとき</h3>
+  <h3 class="sec">13.4　それでも解決しないとき</h3>
   <p>上部メニューの <strong>「お問合せ」</strong>、または <strong>「よくあるご質問（FAQ）」</strong> をご確認ください。運用に関するご不明点は、保守窓口までご連絡ください。</p>
   <a class="backtop" href="#toc">▲ 目次へ戻る</a>
 

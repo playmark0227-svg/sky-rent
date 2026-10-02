@@ -53,13 +53,13 @@
 
   <script src="partials.js"></script>
 
-  <script src="../js/config.js?v=20260930"></script>
-  <script src="../js/store.js?v=20260930"></script>
-  <script src="../js/pricing-core.js?v=20260930"></script>
-  <script src="../js/pricing.js?v=20260930"></script>
-  <script src="../js/api.js?v=20260930"></script>
-  <script src="../js/backend.js?v=20260930"></script>
-  <script src="../js/boot.js?v=20260930"></script>
+  <script src="../js/config.js?v=20261002"></script>
+  <script src="../js/store.js?v=20261002"></script>
+  <script src="../js/pricing-core.js?v=20261002"></script>
+  <script src="../js/pricing.js?v=20261002"></script>
+  <script src="../js/api.js?v=20261002"></script>
+  <script src="../js/backend.js?v=20261002"></script>
+  <script src="../js/boot.js?v=20261002"></script>
   <script type="text/x-deferred">
   (function () {
     const S = window.SkyRentStore;
@@ -118,7 +118,8 @@
       function assetRow(a) {
         const cat = S.getCategory(a.categoryId);
         const isItem = cat && cat.type === 'item';
-        const stock = Number(a.stock) || 1;
+        // 物品 (家電レンタルの受け取り窓口) の行は段積みにする (同じ時間に何件でも予約が入る。止めるのは家電ごとの在庫)
+        const stacked = isItem;
         // セル
         const cells = [];
         for (let i = 0; i < cellCount; i++) {
@@ -128,7 +129,8 @@
           cells.push('<div class="gantt-cell ' + (isWeekend ? 'weekend ' : '') + (isToday ? 'today' : '') + '" style="width:' + cellW + 'px"></div>');
         }
         // バー (物品は段積み)
-        const rs = reservations.filter(r => String(r.assetId) === String(a.assetId));
+        const rs = reservations.filter(r => String(r.assetId) === String(a.assetId))
+          .sort((x, y) => new Date(x.start) - new Date(y.start));   // 段は開始の早い順に詰める
         // 段割り当て (単純: 開始順に空いている段へ)
         const lanes = [];
         const bars = rs.map(r => {
@@ -145,17 +147,19 @@
           return { r, left, width, lane };
         }).filter(Boolean);
         const maxLane = bars.reduce((m, b) => Math.max(m, b.lane), 0);
-        const rowH = isItem && stock > 1 ? Math.max(48, (maxLane + 1) * 26 + 14) : 48;
+        const rowH = stacked ? Math.max(48, (maxLane + 1) * 26 + 14) : 48;
         const barHtml = bars.map(b => {
           const r = b.r;
-          const top = isItem && stock > 1 ? (8 + b.lane * 26) : 8;
-          const barH = isItem && stock > 1 ? 20 : null;
+          const top = stacked ? (8 + b.lane * 26) : 8;
+          const barH = stacked ? 20 : null;
           const qtyTxt = (r.quantity > 1 ? ' ×' + r.quantity : '');
-          return '<div class="gantt-bar status-' + r.status + '" style="left:' + b.left + 'px;width:' + b.width + 'px;top:' + top + 'px' + (barH ? ';bottom:auto;height:' + barH + 'px' : '') + '" title="' + esc(r.reservationId + ' / ' + r.customerName + ' / ' + fmtDT(r.start) + '〜' + fmtDT(r.end) + ' / ' + (S.STATUS_LABELS[r.status] || r.status)) + '" onclick="location.href=\'reservation-list.html#' + r.reservationId + '\'">' + esc(r.customerName) + qtyTxt + '</div>';
+          // 家電レンタルは借りる家電の名前も添える
+          const items = isItem ? (r.options || []).map(o => o && o.name).filter(Boolean).join('・') : '';
+          return '<div class="gantt-bar status-' + r.status + '" style="left:' + b.left + 'px;width:' + b.width + 'px;top:' + top + 'px' + (barH ? ';bottom:auto;height:' + barH + 'px' : '') + '" title="' + esc(r.reservationId + ' / ' + r.customerName + ' / ' + fmtDT(r.start) + '〜' + fmtDT(r.end) + ' / ' + (S.STATUS_LABELS[r.status] || r.status) + (items ? ' / ' + items : '')) + '" onclick="location.href=\'reservation-list.html#' + r.reservationId + '\'">' + esc(r.customerName) + qtyTxt + '</div>';
         }).join('');
 
         return '<div class="gantt-row" style="min-height:' + rowH + 'px">' +
-          '<div class="gantt-label"><strong>' + esc(a.name) + '</strong><small>' + esc(a.assetId) + ' / ' + esc(cat ? cat.name : '') + (isItem && stock > 1 ? ' ・在庫' + stock : '') + '</small></div>' +
+          '<div class="gantt-label"><strong>' + esc(a.name) + '</strong><small>' + esc(a.assetId) + ' / ' + esc(cat ? cat.name : '') + (isItem ? ' ・家電ごとの在庫で受付' : '') + '</small></div>' +
           '<div class="gantt-track">' + cells.join('') + '<div class="gantt-bars">' + barHtml + '</div></div></div>';
       }
 

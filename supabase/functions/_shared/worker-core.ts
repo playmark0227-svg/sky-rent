@@ -159,7 +159,7 @@ function sharedSettings(shared: Shared) {
 }
 
 const RES_COLS = 'id, kind, status, start_at, end_at, asset_id, category_id, location_id, customer_name, user_id, ' +
-  'payment_method, options, price, total, discount_type, company, note, cancel_fee, cancelled_by, source, guest_token_hash';
+  'payment_method, options, price, total, discount_type, company, note, cancel_fee, cancelled_by, source, guest_token_hash, is_item';
 
 type Loaded = { ctx: MailContext; realLookupUrl: string | null; replyTo: string | null; skip?: string };
 

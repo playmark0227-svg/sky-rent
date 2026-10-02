@@ -15,7 +15,16 @@
   const reduced = typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const CAT_EN = { 'cat-rental': 'Rental Car', 'cat-kitchen': 'Kitchen Car' };
+  const CAT_EN = { 'cat-rental': 'Rental Car', 'cat-kitchen': 'Kitchen Car', 'cat-appliance': 'Appliance Rental' };
+  // 家電レンタル (物品のカテゴリ。車両は付かない) か
+  const isItemCat = c => !!(c && c.type === 'item');
+  // 補償 (kind='cover') か。kind の無い古いデータは「補償の1つだけ選べるグループ」かで判断する
+  const isCover = o => o.kind ? o.kind === 'cover' : o.exclusiveGroup === 'cover';
+  // 家電レンタルで借りられる家電 (補償を除くオプション) の数
+  function itemCount(categoryId) {
+    const o = S.optionsForCategory(categoryId);
+    return o.common.concat(o.specific).filter(x => x && !isCover(x)).length;
+  }
 
   // ===== イントロスプラッシュ =====
   function intro() {
@@ -185,7 +194,8 @@
 
   // ===== 統計 =====
   function stats() {
-    const assets = S.assets({ activeOnly: true }).length;
+    // 貸出車両の台数 (家電レンタルの受け取り窓口は車両ではないので数えない)
+    const assets = S.assets({ activeOnly: true }).filter(a => !isItemCat(S.getCategory(a.categoryId))).length;
     const locs = S.locations().length;
     const el1 = $('#st-assets2'), el3 = $('#st-locs');
     if (el1) el1.dataset.count = assets;
@@ -198,12 +208,13 @@
     if (!wrap) return;
     const cats = S.categories();
     wrap.innerHTML = cats.map((c, i) => {
-      const cnt = S.assets({ categoryId: c.categoryId, activeOnly: true }).length;
+      // 家電レンタルは借りられる家電の数、車両は台数
+      const cnt = isItemCat(c) ? itemCount(c.categoryId) + ' ITEMS' : S.assets({ categoryId: c.categoryId, activeOnly: true }).length + ' UNITS';
       const ph = P.CAT_PHOTOS[c.categoryId];
       return '<a class="cat-item rv d' + Math.min(i + 1, 6) + '" href="search.html?category=' + esc(encodeURIComponent(c.categoryId)) + '">' +
         '<span class="idx">' + String(i + 1).padStart(2, '0') + '</span>' +
         '<span class="ttl"><span class="en">' + esc(CAT_EN[c.categoryId] || c.nameEn || '') + '</span><span class="jp">' + esc(c.name) + '</span></span>' +
-        '<span class="desc">' + esc(c.description || '') + '<span class="cnt">' + cnt + ' UNITS</span></span>' +
+        '<span class="desc">' + esc(c.description || '') + '<span class="cnt">' + esc(cnt) + '</span></span>' +
         '<span class="go">→</span>' +
         (ph ? '<img class="float-img" src="' + ph + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
         '</a>';

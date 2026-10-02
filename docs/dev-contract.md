@@ -33,21 +33,26 @@
 ### categories (カテゴリ / EAV定義)
 ```js
 { categoryId: 'cat-kitchen', name: 'キッチンカー', nameEn: 'Kitchen Car',
-  type: 'vehicle'|'item',      // 現在は vehicle のみ運用 (物品単体レンタルは提供していない)
+  type: 'vehicle'|'item',      // vehicle = 車両 / item = 家電レンタル (家電だけのレンタル。cat-appliance)
   icon: '🍳', sort: 2, active: true, description: '…',
   customFieldDefs: [           // カテゴリ固有のカスタム項目定義 (管理画面から編集可能)
     { key: 'sinks', label: 'シンク数', type: 'text'|'number'|'select',
       unit: '槽', options: ['…'](selectのみ), filterable: true|false }
   ] }
 ```
-シード: cat-rental(一般レンタカー) / cat-kitchen(キッチンカー)
-※ type:'item' (物品カテゴリ) はデータモデル上の枠のみ。物品単体のレンタルは提供しておらず、取扱いは車両2カテゴリのみ。
+シード: cat-rental(一般レンタカー・vehicle) / cat-kitchen(キッチンカー・vehicle) / cat-appliance(家電レンタル・item)
+```js
+{ categoryId: 'cat-appliance', name: '家電レンタル', nameEn: 'Appliance Rental', type: 'item', icon: '🔌', sort: 3,
+  description: '車がなくても大丈夫。ポータブル電源や調理家電を、家電だけでお貸しします。北見本店でお受け取り・ご返却。',
+  customFieldDefs: [] }
+```
+※ type:'item' のカテゴリは cat-appliance だけ。家電レンタルのしくみは下の「家電レンタル (家電だけのレンタル)」の節。
 
 ### locations (拠点)
 ```js
 { locationId: 'loc-kitami', name: '北見本店', nameEn, tel, address, hours: '9:00-19:00', holiday: 'なし (年中無休)', sort }
 ```
-シード: loc-sapporo / loc-chitose / loc-asahikawa / loc-hakodate
+シード: loc-kitami (北見本店) / loc-kushiro (釧路店)
 
 ### assets (車両マスタ)
 ```js
@@ -60,6 +65,14 @@
   shakenDate: ISO|null, maintenanceDate: ISO|null,   // 車検・点検期限 (車両のみ)
   customFields: { sinks: 2, power: 3000 } }          // categoryのcustomFieldDefsに対応
 ```
+シード: 車両 V001〜V005 (cat-rental) / K001 (cat-kitchen) と、家電レンタルの受け取り窓口 A001。
+```js
+{ assetId: 'A001', categoryId: 'cat-appliance', locationId: 'loc-kitami',
+  name: '家電レンタル（北見本店）', nameEn: 'Appliance Rental (Kitami)',
+  capacity: null, priceHour: null, priceDay: 0, image: '🔌', photo: '', sort: 7, customFields: {} }
+```
+A001 は家電そのものではなく「家電レンタルの予約を受ける窓口」。基本料金 0 円で、借りる家電はこの予約で装備オプションとして選ぶ。
+在庫は家電 (options.stock) ごとに数える (A001 の stock は 1 のままで、空き判定には使わない)。
 
 ### options (オプション2階層)
 ```js
@@ -71,6 +84,7 @@
   exclusiveGroup: 'cover' | null,       // 同じグループからは1つだけ選べる (補償は CDW か PAP のどちらか)
   description: '…',                     // 名前の下に小さく出す説明 (装備は型番)。本番 DB では options.extra.description
   includes: ['OP001', …],               // セットに含まれる品目の optionId (家電セット OP010 だけが持つ)。本番 DB では options.extra.includes
+  stock: null | 0以上の整数,            // 在庫数。null = 数えない (家電セット・補償)。本番 DB では options.stock
   active: true, sort: 1 }
 ```
 シード:
@@ -78,19 +92,21 @@
 - **装備オプション** (共通 = `categoryIds: null`・`kind: 'other'`・`exclusiveGroup: null`・`priceType: 'per_day'`・`priceShort: null`・sort 11〜21):
   総合料金表 (2026年6月改定版) の11品目。料金は24時間ごと (税込)。
 
-  | ID | 名称 | 24時間あたり | description |
-  |---|---|---|---|
-  | OP001 | ポータブル冷蔵冷凍庫 | 3,300 | アイリスオーヤマ IPD-4A-B |
-  | OP002 | 電子レンジ | 2,200 | パナソニック NE-FL1C-W |
-  | OP003 | サーキュレーター | 1,100 | アイリスオーヤマ KCF-SDC15T-EC-W |
-  | OP004 | ポータブル電源 | 3,300 | Jackery JE-1800A |
-  | OP005 | ドラムリール | 1,100 | 日動工業 NR-304D-S |
-  | OP006 | カセットコンロ | 1,100 | 岩谷産業 CB-ODX1-BK |
-  | OP007 | カセットボンベ | 1,100 | 岩谷産業 CB-250-OR |
-  | OP008 | 炊飯器 | 2,200 | タイガー魔法瓶 JPV-Y180KV |
-  | OP009 | 電気ケトル | 1,100 | 象印マホービン CK-VB15 BM |
-  | OP010 | 家電セット (上記9点まとめ) | 11,000 | ポータブル冷蔵冷凍庫〜電気ケトルの9点をまとめたセット。`includes: ['OP001', …, 'OP009']` |
-  | OP011 | 集客セット | 1,100 | ホワイトボード・マグネット・ペン |
+  | ID | 名称 | 24時間あたり | description | stock |
+  |---|---|---|---|---|
+  | OP001 | ポータブル冷蔵冷凍庫 | 3,300 | アイリスオーヤマ IPD-4A-B | 1 |
+  | OP002 | 電子レンジ | 2,200 | パナソニック NE-FL1C-W | 1 |
+  | OP003 | サーキュレーター | 1,100 | アイリスオーヤマ KCF-SDC15T-EC-W | 1 |
+  | OP004 | ポータブル電源 | 3,300 | Jackery JE-1800A | 1 |
+  | OP005 | ドラムリール | 1,100 | 日動工業 NR-304D-S | 1 |
+  | OP006 | カセットコンロ | 1,100 | 岩谷産業 CB-ODX1-BK | 1 |
+  | OP007 | カセットボンベ | 1,100 | 岩谷産業 CB-250-OR | 1 |
+  | OP008 | 炊飯器 | 2,200 | タイガー魔法瓶 JPV-Y180KV | 1 |
+  | OP009 | 電気ケトル | 1,100 | 象印マホービン CK-VB15 BM | 1 |
+  | OP010 | 家電セット (上記9点まとめ) | 11,000 | ポータブル冷蔵冷凍庫〜電気ケトルの9点をまとめたセット。`includes: ['OP001', …, 'OP009']` | null (中の9品目の在庫を使う) |
+  | OP011 | 集客セット | 1,100 | ホワイトボード・マグネット・ペン | 1 |
+
+  補償 OP101 / OP102 / OP201 / OP202 の stock は null (数えない)。
 
 オプションの約束:
 - **同時に選べない組み合わせ** (`SkyRentPricingCore.quote` が errors に `'OPTION_CONFLICT'` を入れる):
@@ -99,8 +115,50 @@
      二重請求を防ぐため。`includes` が配列でなければ無視する。
 - per_day の計算は24時間ごと (25時間なら ×2)。`priceShort` が null の装備は6時間以内でも24時間料金。
 - 割引 (学生・法人・二地域居住者・守成クラブ) は基本料金だけに効き、オプションには効かない。
-- 装備オプションには在庫数が無い。同じ時間帯に同じ品目の予約が重なっても止めない。
-- 装備は車両の予約に追加する形でだけ貸し出す (単体では貸し出さない)。
+- 装備オプションは2通りで貸し出す。(1) 車両の予約に追加する (従来どおり)。(2) 家電レンタル (cat-appliance / A001) の予約で、家電だけを借りる。
+  どちらも同じ在庫 (`stock`) を使う。数え方と在庫切れの扱いは下の「家電レンタル」の節。
+- 補償 (CDW / PAP) は cat-rental / cat-kitchen 専用なので、家電レンタルには出ない。
+
+### 家電レンタル (家電だけのレンタル。2026-10)
+
+事業者の依頼「車の貸し出しにオプション、ではなくそのまま家電貸出だけもやりたい」に対応した。
+車両の予約に付ける装備オプションとしての提供はそのまま続ける。
+
+- **予約の形**: 窓口アセット A001 (`cat-appliance`) の予約で、借りる家電を装備オプション (OP001〜OP011) から **1つ以上** 選ぶ。
+  1つの予約で複数の家電を借りられる。各品目は1つずつ (数量の指定は無い)。補償は出ない。
+- **料金**: 選んだ家電の24時間ごとの料金の合計 (基本料金 0)。土日祝・夜間・繁忙期の割増はかけない。
+  割引 (学生・法人・二地域居住者・守成クラブ) は使えない。ポイントの ¥1,000 クーポンは車両と同じく使える。
+- **受け取り・返却**: 北見本店のみ。配送しない。運転免許は不要 (受け取り時に本人確認書類を確認)。`licenseConfirmed` を求めない。
+- **重なり**: A001 には同じ時間に何件でも予約が入る (車両の「重なり禁止」は家電レンタルに適用しない)。止めるのは家電ごとの在庫。
+- **貸出停止枠** (`kind: 'block'`) は家電レンタルのアセットには作れない。家電を貸せない期間は、オプション管理で在庫を 0 にするか無効にする。
+- **受け渡しの担当者確認** (Google カレンダー・`oneHandoverAtATime`) は家電レンタルにもそのまま適用する (店頭で受け渡すため)。
+- **キャンセル料**: 区分 `item` (`rules.cancellation.categoryClass['cat-appliance'] = 'item'`)。割合はコンパクトカーと同じ
+  (通常期 3日前まで0% / 前日まで30% / 当日50%、繁忙期 7日前まで0% / 前日まで30% / 当日50%、無断100%)。
+  キャンセル料の元になる「利用料金」は、車両 = 基本料金、家電レンタル = 家電 (オプション) の料金の合計。
+- **同意する文書**: 車両 = `clause` / `cancel` / `privacy`、家電レンタル = `item_clause` (物品レンタル規約 `item-terms.html`) / `cancel` / `privacy`。
+- ゲスト予約の上限 (1件31日・有効3件)・返却時のポイント付与は車両と同じ。
+
+**在庫の数え方** (車両に付けたオプションと家電だけの予約で、同じ在庫を使う):
+- 家電 X の使用数 = 期間内に「同時に貸し出している数」の最大値。数えるのは状態が `confirmed` / `in_use` の予約 (`kind: 'rental'`) で、
+  `optionIds` を展開した集合 (選んだ id + その id の `includes`) に X を含むもの。車両の予約も家電だけの予約も数える。変更時は自分自身を除く。
+  同時最大は「期間の開始時点」と「期間内に始まる各予約の開始時点」で数えた件数の最大。
+- 予約で選んだ (展開後の) 家電のうち、在庫を数えるもの (`stock` が null でない) のどれかが 使用数 + 1 > `stock` なら、
+  予約は `OPTION_SOLD_OUT` で失敗する。家電セットを選んだ場合は、中の9品目の在庫で判定する。
+- 見積は、その期間に貸し出せない (残り0の) 家電の id を `unavailableOptionIds` で返す。家電セットは中の9品目のどれかが残り0なら含める。
+  画面はこれを見て、その家電を選べなくする。
+
+**エラーコード** (追加分。HTTP は本番 API の値):
+
+| code | HTTP | いつ | お客様向けの文 |
+|---|---|---|---|
+| `ITEM_REQUIRED` | 400 | 家電レンタルで家電を1つも選んでいない (pricing-core の `quote.errors`。DB の `create_reservation_tx` / `admin_create_reservation` でも確認) | お借りになる家電を1つ以上お選びください。 |
+| `OPTION_SOLD_OUT` | 409 | 選んだ家電のどれかが、その日時はすでに貸し出し中 | お選びの家電のうち、ご希望の日時はすでに貸し出し中のものがあります。別の日時か別の家電をお選びください。 |
+
+`OPTION_SOLD_OUT` は `details: { optionIds: [売り切れの家電の id (家電セットを選んだ場合はセット自身の id も)] }` と
+`fields.optionIds: 'ご希望の日時は貸し出し中の家電があります。'` を返す。
+
+**表示の言葉**: 家電レンタルは「貸出/返却」ではなく「お受け取り/ご返却」、「車両」ではなく「家電レンタル」。
+予約確認メール・マイページ・管理画面・帳票には、借りる家電の一覧を必ず出す。帳票は「物品貸出書」(家電セットは中の9品目に分けて1行ずつ)。
 
 ### members (会員)
 ```js
@@ -129,6 +187,8 @@
   pointGranted: false, invoiceId: null, licenseConfirmed: false,
   note, createdAt }
 ```
+家電レンタルの予約は `assetId: 'A001'`・`categoryId: 'cat-appliance'`。借りる家電は `optionIds` / `options`。`licenseConfirmed` は求めない。
+本番 DB では `reservations.is_item` が true になる (カテゴリの type が 'item' のときトリガーで設定。画面からは送らない)。
 
 ### invoices (請求書)
 ```js
@@ -146,8 +206,14 @@
 - `list(entity)` / `saveList(entity, arr)` / `upsert(entity, idField, obj)` / `removeById(entity, idField, id)` / `genId(prefix, entity, idField)`
 - `categories(includeInactive?)`, `getCategory(id)`, `locations()`, `getLocation(id)`
 - `assets({categoryId?, locationId?, activeOnly?, type?})`, `getAsset(id)`
-- `optionsForCategory(categoryId)` → `{common: [], specific: []}` (物品カテゴリは common=[])
-- `availability(assetId, start, end, qty, excludeResId?)` → `{ok, remaining, stock, reason}`
+- `optionsForCategory(categoryId)` → `{common: [], specific: []}` (家電レンタル cat-appliance でも common に装備オプションを返す。家電レンタルで選ぶ家電はこれ)
+- `availability(assetId, start, end, qty, excludeResId?, optionIds?)` → `{ok, remaining, stock, reason}` (家電レンタルの窓口 A001 は重なりで止めない。
+  `optionIds` を渡すと選んだ家電の在庫も確かめ、足りなければ `ok: false`・`code: 'OPTION_SOLD_OUT'`・`soldOut: [id...]`)
+- `unavailableOptionIds(startIso, endIso, excludeReservationId?)` → その期間に貸し出せない (残り0の) 家電の id の配列。見積の `unavailableOptionIds` と同じ値
+- `optionSoldOut(optionIds, start, end, excludeResId?)` → 選んだ家電のうち在庫が足りないものの id (家電セットはセット自身の id も)。`[]` なら予約できる
+- `optionStock(start, end, excludeResId?)` → `[{optionId, stock, used, remaining}]` (在庫を数える家電だけ)
+- `isItemCategory(categoryId)` / `isItemAsset(asset)` / `categoryTypeOf(asset)` → 家電レンタルかどうか (`'vehicle'` | `'item'`。料金計算の `asset.categoryType` に渡す値)
+- `createReservation` と `updateReservation` (日時・車両・家電を変えたとき。自分自身は数えない) は、家電の在庫が足りなければ `code: 'OPTION_SOLD_OUT'` (`details.optionIds`・`fields.optionIds` 付き) のエラーを投げる
 - `searchAvailable({categoryId?, locationId?, start?, end?, quantity?, filters?})` → assets配列 + 各要素に `.availability`
   - filters: `{customFieldKey: value}`。number型は「以上」、select/textは完全一致
 - `createReservation(payload)` → 予約 (空き検証・クーポン消費・通知ログ込み)。payload: `{assetId, quantity, customerName, customerEmail, customerPhone, company, licenseNo, memberId, start, end, optionIds, options, paymentMethod, price, couponId, licenseConfirmed, note}`
@@ -166,6 +232,9 @@ SkyRentPricing.calculate({ asset, start, end, quantity, options: [optionObj], co
 // → { lines: [{label, amount}], days, hours, plan, subtotal, discount, total }
 ```
 時間貸し(<24h)/日貸し/週割(≥7日)/月割(≥30日)を自動選択。ハイシーズン加算は `sky-rent.high-season` を自動参照。
+(現在は `js/pricing-core.js` の `quote()` を呼ぶアダプタ。料金規則は [`production/implementation-v1.md`](production/implementation-v1.md) §1)
+- 料金エンジンに渡す `asset` には `categoryType` (`'vehicle'` | `'item'`) をカテゴリの type から補う。家電レンタル (`'item'`) は基本料金 0・割増なし・割引なし、家電0件で `ITEM_REQUIRED`。
+- `SkyRentPricing.cancellationFee(p)` / `SkyRentPricing.cancellationBase(p)`: キャンセル料の元になる利用料金は、車両 = 基本料金、家電レンタル = 借りる家電の料金の合計。
 
 ## SkyRentAPI (Promise / 公開サイト・旧管理画面用)
 
@@ -246,15 +315,17 @@ SkyRentPricing.calculate({ asset, start, end, quantity, options: [optionObj], co
 
 以下はサービスとして提供していない。ページ・データ・オプションのいずれにも追加しないこと。
 
-- **特殊車両・工具・キャンピングカー**は取り扱わない。
-- **物品単体のレンタル**はしない。家電などの装備は、車両の予約に追加する装備オプションとしてだけ貸し出す
-  (家電・工具のカテゴリ・「車両・物品を探す」のような表記は作らない)。
-- **料金表に無いオプション** (例: 発電機・フライヤー・鉄板・のぼり旗) は追加しない。
+- **特殊車両・工具・キャンピングカー**は取り扱わない (工具のカテゴリも作らない)。
+- **料金表に無い品目・オプション** (例: 発電機・フライヤー・鉄板・のぼり旗) は追加しない。家電レンタルで貸すのも、装備オプション11品目だけ。
 
-提供するオプションは、補償 (免責補償制度 CDW / 安心保証コース PAP) と、
+家電は **単体でも貸す** (2026-10 から)。家電レンタルのカテゴリ `cat-appliance` (type `'item'`) の窓口アセット A001 (北見本店) の予約で、
+装備オプションの中から借りる家電を選ぶ形 (上の「家電レンタル」の節)。車両の予約に付ける装備オプションとしての提供も続ける。
+受け取り・返却は北見本店だけで、配送はしない。
+
+提供するオプションは、補償 (免責補償制度 CDW / 安心保証コース PAP。車両だけ) と、
 装備オプション11品目 (ポータブル冷蔵冷凍庫 / 電子レンジ / サーキュレーター / ポータブル電源 / ドラムリール /
 カセットコンロ / カセットボンベ / 炊飯器 / 電気ケトル / 家電セット / 集客セット。総合料金表 2026年6月改定版どおり) だけ。
-装備オプションは 2026-09-04 にいったん全廃し、2026-09-30 に事業者の依頼で復活した。
+装備オプションは 2026-09-04 にいったん全廃し、2026-09-30 に事業者の依頼で復活した。2026-10 から家電だけのレンタルも始めた。
 季節・時間帯の割増 (土日祝割増・夜間料金・繁忙期割増) は料金体系であってオプションではない。
 車両に標準装備されている設備 (カーナビ・ETC車載器、キッチンカーの営業設備等) は
 装備オプション (別料金で追加する品目) ではなく車両の仕様なので、スペックとして表示してよい。

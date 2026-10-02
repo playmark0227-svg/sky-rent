@@ -22,7 +22,11 @@ insert into public.categories (id, name, name_en, type, icon, description, sort,
    '[{"key":"kitchenSize","label":"キッチン寸法","type":"text","unit":"","filterable":false},
      {"key":"equipment","label":"搭載機材","type":"text","unit":"","filterable":false},
      {"key":"sinks","label":"シンク数","type":"number","unit":"槽","filterable":false},
-     {"key":"power","label":"電源容量","type":"number","unit":"W","filterable":false}]')
+     {"key":"power","label":"電源容量","type":"number","unit":"W","filterable":false}]'),
+  -- 家電レンタル (車を借りずに家電だけを借りる)。借りる家電は装備オプションから選ぶ
+  ('cat-appliance', '家電レンタル', 'Appliance Rental', 'item', '🔌',
+   '車がなくても大丈夫。ポータブル電源や調理家電を、家電だけでお貸しします。北見本店でお受け取り・ご返却。', 3,
+   '[]')
 on conflict (id) do nothing;
 
 insert into public.assets (id, category_id, location_id, name, name_en, capacity, price_hour, price_day,
@@ -38,7 +42,11 @@ insert into public.assets (id, category_id, location_id, name, name_en, capacity
   ('V005', 'cat-rental', 'loc-kitami',  '軽トラック',          'Kei Truck',           2, 1100,  7700, '🛻', '',                           5,
    '{"bodyType":"軽トラック","drive":"4WD","mission":"AT","navi":"無","etc":"無"}'),
   ('K001', 'cat-kitchen', 'loc-kitami', 'キッチンカー',        'Kitchen Car',         2, null, 22000, '🍳', '',                           6,
-   '{"kitchenSize":"2400×1800×1900mm","equipment":"2槽シンク・換気扇・作業台・給排水タンク・冷蔵庫","sinks":2,"power":3000}')
+   '{"kitchenSize":"2400×1800×1900mm","equipment":"2槽シンク・換気扇・作業台・給排水タンク・冷蔵庫","sinks":2,"power":3000}'),
+  -- 家電レンタルの受け取り窓口 (家電そのものではない。同じ時間に何件でも予約が入り、家電ごとの在庫で止める)。
+  --   基本料金は 0 (料金は選んだ家電の24時間ごとの料金の合計)
+  ('A001', 'cat-appliance', 'loc-kitami', '家電レンタル（北見本店）', 'Appliance Rental (Kitami)', null, null, 0, '🔌', '', 7,
+   '{}')
 on conflict (id) do nothing;
 
 -- 補償オプション (1〜6時間の料金は price_short)
@@ -49,32 +57,38 @@ insert into public.options (id, name, price, price_short, price_type, category_i
   ('OP202', '安心保証コース (PAP)', 6600, null, 'per_day', '{cat-kitchen}', 'cover', 'cover', 4, '{"description":"免責免除・NOC免除"}')
 on conflict (id) do nothing;
 
--- 装備オプション (全車共通 = 一般レンタカー・キッチンカーの両方。24時間ごとの料金で、短時間料金は無い)
---   車両の予約に追加する形だけで提供する (装備品だけのレンタルはしない)。在庫数は管理しない。
---   家電セット (OP010) は OP001〜OP009 を含む。extra.includes に入れておき、セットと中の品目を
---   一緒に選ぶと料金計算 (pricing-core) が OPTION_CONFLICT にする (二重請求を防ぐ)。
-insert into public.options (id, name, price, price_short, price_type, category_ids, kind, exclusive_group, sort, extra) values
-  ('OP001', 'ポータブル冷蔵冷凍庫',       3300,  null, 'per_day', null, 'other', null, 11, '{"description":"アイリスオーヤマ IPD-4A-B"}'),
-  ('OP002', '電子レンジ',                 2200,  null, 'per_day', null, 'other', null, 12, '{"description":"パナソニック NE-FL1C-W"}'),
-  ('OP003', 'サーキュレーター',           1100,  null, 'per_day', null, 'other', null, 13, '{"description":"アイリスオーヤマ KCF-SDC15T-EC-W"}'),
-  ('OP004', 'ポータブル電源',             3300,  null, 'per_day', null, 'other', null, 14, '{"description":"Jackery JE-1800A"}'),
-  ('OP005', 'ドラムリール',               1100,  null, 'per_day', null, 'other', null, 15, '{"description":"日動工業 NR-304D-S"}'),
-  ('OP006', 'カセットコンロ',             1100,  null, 'per_day', null, 'other', null, 16, '{"description":"岩谷産業 CB-ODX1-BK"}'),
-  ('OP007', 'カセットボンベ',             1100,  null, 'per_day', null, 'other', null, 17, '{"description":"岩谷産業 CB-250-OR"}'),
-  ('OP008', '炊飯器',                     2200,  null, 'per_day', null, 'other', null, 18, '{"description":"タイガー魔法瓶 JPV-Y180KV"}'),
-  ('OP009', '電気ケトル',                 1100,  null, 'per_day', null, 'other', null, 19, '{"description":"象印マホービン CK-VB15 BM"}'),
-  ('OP010', '家電セット (上記9点まとめ)', 11000, null, 'per_day', null, 'other', null, 20,
+-- 装備オプション (全車共通 = 一般レンタカー・キッチンカー・家電レンタルのすべて。24時間ごとの料金で、短時間料金は無い)
+--   車両の予約に追加する形と、家電だけのレンタル (家電レンタルのカテゴリ) の両方で貸す。
+--   在庫数 (stock) は各1。車両の予約のオプションと家電だけの予約で同じ在庫を使い、同じ時間に
+--   在庫を超えて貸し出す予約は OPTION_SOLD_OUT になる。
+--   家電セット (OP010) は OP001〜OP009 を含む。在庫は持たず (null)、中の9品目の在庫を使う。
+--   extra.includes に入れておき、セットと中の品目を一緒に選ぶと料金計算 (pricing-core) が
+--   OPTION_CONFLICT にする (二重請求を防ぐ)。
+insert into public.options (id, name, price, price_short, price_type, category_ids, kind, exclusive_group, sort, stock, extra) values
+  ('OP001', 'ポータブル冷蔵冷凍庫',       3300,  null, 'per_day', null, 'other', null, 11, 1,    '{"description":"アイリスオーヤマ IPD-4A-B"}'),
+  ('OP002', '電子レンジ',                 2200,  null, 'per_day', null, 'other', null, 12, 1,    '{"description":"パナソニック NE-FL1C-W"}'),
+  ('OP003', 'サーキュレーター',           1100,  null, 'per_day', null, 'other', null, 13, 1,    '{"description":"アイリスオーヤマ KCF-SDC15T-EC-W"}'),
+  ('OP004', 'ポータブル電源',             3300,  null, 'per_day', null, 'other', null, 14, 1,    '{"description":"Jackery JE-1800A"}'),
+  ('OP005', 'ドラムリール',               1100,  null, 'per_day', null, 'other', null, 15, 1,    '{"description":"日動工業 NR-304D-S"}'),
+  ('OP006', 'カセットコンロ',             1100,  null, 'per_day', null, 'other', null, 16, 1,    '{"description":"岩谷産業 CB-ODX1-BK"}'),
+  ('OP007', 'カセットボンベ',             1100,  null, 'per_day', null, 'other', null, 17, 1,    '{"description":"岩谷産業 CB-250-OR"}'),
+  ('OP008', '炊飯器',                     2200,  null, 'per_day', null, 'other', null, 18, 1,    '{"description":"タイガー魔法瓶 JPV-Y180KV"}'),
+  ('OP009', '電気ケトル',                 1100,  null, 'per_day', null, 'other', null, 19, 1,    '{"description":"象印マホービン CK-VB15 BM"}'),
+  ('OP010', '家電セット (上記9点まとめ)', 11000, null, 'per_day', null, 'other', null, 20, null,
    '{"description":"ポータブル冷蔵冷凍庫〜電気ケトルの9点をまとめたセット",
      "includes":["OP001","OP002","OP003","OP004","OP005","OP006","OP007","OP008","OP009"]}'),
-  ('OP011', '集客セット',                 1100,  null, 'per_day', null, 'other', null, 21, '{"description":"ホワイトボード・マグネット・ペン"}')
+  ('OP011', '集客セット',                 1100,  null, 'per_day', null, 'other', null, 21, 1,    '{"description":"ホワイトボード・マグネット・ペン"}')
 on conflict (id) do nothing;
 
 -- 設定
 insert into public.app_settings (key, value) values
   ('points', '{"pointPerUse":1,"couponThreshold":10,"couponAmount":1000,"expiryMonths":12}'),
 
+  -- version 2026-10: 家電レンタル (家電だけのレンタル) を追加。家電レンタルは土日祝・夜間・繁忙期の割増なし
+  --   (itemSurcharges = true でかける)・割引なし。キャンセル料の段階 (item) はコンパクトカーと同じ割合で、
+  --   元になる利用料金は家電の料金の合計
   ('pricing_rules', '{
-    "version": "2026-06",
+    "version": "2026-10",
     "timezone": "Asia/Tokyo",
     "shortHoursMax": 6,
     "weekendHolidayFee": 330,
@@ -87,6 +101,7 @@ insert into public.app_settings (key, value) values
       {"name": "年末年始", "from": "12-29", "to": "01-03"}
     ],
     "extraHolidays": [],
+    "itemSurcharges": false,
     "discounts": {
       "student":        {"label": "学生割引",         "amount": 1100, "minHours": 24, "proof": "学生証"},
       "corporate":      {"label": "法人割引",         "amount": 1100, "minHours": 24, "proof": "社員証・法人名でのご予約"},
@@ -95,16 +110,18 @@ insert into public.app_settings (key, value) values
     },
     "cancellation": {
       "classOf": {"コンパクト": "compact", "軽トラック": "compact", "SUV": "large", "ミニバン": "large"},
-      "categoryClass": {"cat-kitchen": "kitchen"},
+      "categoryClass": {"cat-kitchen": "kitchen", "cat-appliance": "item"},
       "normal": {
         "compact": [{"minDays": 3, "pct": 0}, {"minDays": 1, "pct": 30}, {"minDays": 0, "pct": 50}],
         "large":   [{"minDays": 3, "pct": 0}, {"minDays": 1, "pct": 30}, {"minDays": 0, "pct": 50}],
-        "kitchen": [{"minDays": 14, "pct": 0}, {"minDays": 3, "pct": 50}, {"minDays": 0, "pct": 100}]
+        "kitchen": [{"minDays": 14, "pct": 0}, {"minDays": 3, "pct": 50}, {"minDays": 0, "pct": 100}],
+        "item":    [{"minDays": 3, "pct": 0}, {"minDays": 1, "pct": 30}, {"minDays": 0, "pct": 50}]
       },
       "busy": {
         "compact": [{"minDays": 7, "pct": 0}, {"minDays": 1, "pct": 30}, {"minDays": 0, "pct": 50}],
         "large":   [{"minDays": 7, "pct": 0}, {"minDays": 1, "pct": 30}, {"minDays": 0, "pct": 50}],
-        "kitchen": [{"minDays": 14, "pct": 0}, {"minDays": 7, "pct": 20}, {"minDays": 3, "pct": 30}, {"minDays": 1, "pct": 50}, {"minDays": 0, "pct": 100}]
+        "kitchen": [{"minDays": 14, "pct": 0}, {"minDays": 7, "pct": 20}, {"minDays": 3, "pct": 30}, {"minDays": 1, "pct": 50}, {"minDays": 0, "pct": 100}],
+        "item":    [{"minDays": 7, "pct": 0}, {"minDays": 1, "pct": 30}, {"minDays": 0, "pct": 50}]
       },
       "noShowPct": 100
     },
@@ -131,9 +148,12 @@ on conflict (key) do nothing;
 
 -- 公開中の法務文書 (内容を改定したら version を上げて新しい行を active にする)
 --   law は 2026-10 版 (装備オプションの再開で事業内容・料金の記載が変わったため)。予約時の同意の対象外。
+--   cancel は 2026-10 版 (家電レンタルのキャンセル料の段階を追加)。
+--   item_clause (物品レンタル規約) は家電レンタルの予約で同意する (車両の予約は clause = 貸渡約款)。
 insert into public.legal_documents (id, version, title, url, effective_at) values
-  ('clause',  '2026-08', '貸渡約款',                   'clause.html',  '2026-08-01'),
-  ('cancel',  '2026-08', 'キャンセル規定',             'law.html#cancel', '2026-08-01'),
-  ('privacy', '2026-08', 'プライバシーポリシー',       'privacy.html', '2026-08-01'),
-  ('law',     '2026-10', '特定商取引法に基づく表記',   'law.html',     '2026-10-01')
+  ('clause',      '2026-08', '貸渡約款',                   'clause.html',     '2026-08-01'),
+  ('item_clause', '2026-10', '物品レンタル規約',           'item-terms.html', '2026-10-01'),
+  ('cancel',      '2026-10', 'キャンセル規定',             'law.html#cancel', '2026-10-01'),
+  ('privacy',     '2026-08', 'プライバシーポリシー',       'privacy.html',    '2026-08-01'),
+  ('law',         '2026-10', '特定商取引法に基づく表記',   'law.html',        '2026-10-01')
 on conflict do nothing;

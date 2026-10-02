@@ -224,14 +224,14 @@
 
   <footer class="site-footer"><div class="container"><div class="footer-bottom" style="border-top:none"><span data-i18n="footer.copyright">© 2026 グロースレンタカー</span><a href="index.html">← トップへ戻る</a></div></div></footer>
 
-  <script src="js/config.js?v=20260930"></script>
-  <script src="js/store.js?v=20260930"></script>
-  <script src="js/pricing-core.js?v=20260930"></script>
-  <script src="js/pricing.js?v=20260930"></script>
-  <script src="js/i18n.js?v=20260930"></script>
-  <script src="js/api.js?v=20260930"></script>
-  <script src="js/backend.js?v=20260930"></script>
-  <script src="js/boot.js?v=20260930"></script>
+  <script src="js/config.js?v=20261002"></script>
+  <script src="js/store.js?v=20261002"></script>
+  <script src="js/pricing-core.js?v=20261002"></script>
+  <script src="js/pricing.js?v=20261002"></script>
+  <script src="js/i18n.js?v=20261002"></script>
+  <script src="js/api.js?v=20261002"></script>
+  <script src="js/backend.js?v=20261002"></script>
+  <script src="js/boot.js?v=20261002"></script>
   <script type="text/x-deferred">
   (function () {
     'use strict';
@@ -579,6 +579,24 @@
       if (method === 'onsite' || !method) return '当日店頭でのお支払い';
       return S.PAYMENT_LABELS[method] || method;
     }
+    // 家電レンタル (物品のカテゴリ) の予約か。カテゴリが分からなければアセットから引く
+    function isItemRes(r) {
+      if (!r) return false;
+      if (r.isItem === true) return true;
+      const a = r.assetId ? S.getAsset(r.assetId) : null;
+      const c = S.getCategory(r.categoryId || (a && a.categoryId));
+      return !!(c && c.type === 'item');
+    }
+    // 予約で借りる家電の名前 (予約時の控え)
+    function itemNames(r) {
+      return (Array.isArray(r.options) ? r.options : []).map(o => o && o.name).filter(Boolean);
+    }
+    // 一覧の「車両・家電」欄
+    function resTarget(r) {
+      if (!isItemRes(r)) return esc(r.assetName || r.vehicleName || '');
+      const names = itemNames(r);
+      return '🔌 家電レンタル' + (names.length ? '<div class="muted" style="font-size:11.5px;line-height:1.6">' + esc(names.join('・')) + '</div>' : '');
+    }
 
     function renderMember() {
       const m = S.currentMember();
@@ -615,19 +633,19 @@
       if (!res.length) {
         html += '<p class="muted">ご予約はまだありません。<a href="search.html" class="mp-link">空き状況を検索する →</a></p>';
       } else {
-        html += '<div class="p-table-wrap"><table class="p-table"><thead><tr><th>予約番号</th><th>車両</th><th>貸出</th><th>返却</th><th>金額 (税込)</th><th>状態</th><th></th></tr></thead><tbody>' +
+        html += '<div class="p-table-wrap"><table class="p-table"><thead><tr><th>予約番号</th><th>車両・家電</th><th>貸出 / お受け取り</th><th>返却 / ご返却</th><th>金額 (税込)</th><th>状態</th><th></th></tr></thead><tbody>' +
           res.map(r => {
             const total = r.total != null ? r.total : ((r.price && r.price.total) || 0);
             const can = isCancellable(r);
-            return '<tr><td><code>' + esc(r.reservationId) + '</code></td>' +
-              '<td>' + esc(r.assetName || r.vehicleName || '') + '</td>' +
+            return '<tr' + (isItemRes(r) ? ' data-item-res' : '') + '><td><code>' + esc(r.reservationId) + '</code></td>' +
+              '<td>' + resTarget(r) + '</td>' +
               '<td style="white-space:nowrap">' + esc(fmtDT(r.start)) + '</td>' +
               '<td style="white-space:nowrap">' + esc(fmtDT(r.end)) + '</td>' +
               '<td>' + yen(total) + (r.status === 'cancelled' && r.cancelFee ? '<div class="muted" style="font-size:11px">キャンセル料 ' + yen(r.cancelFee) + '</div>' : '') + '</td>' +
               '<td>' + statusBadge(r.status) + '</td>' +
               '<td class="mp-res-actions"><button type="button" class="btn btn-secondary mp-btn-sm" data-res="' + esc(r.reservationId) + '">' + (can ? '詳細・キャンセル' : '詳細') + '</button></td></tr>';
           }).join('') + '</tbody></table></div>';
-        html += '<p class="mp-small" style="margin-top:12px">キャンセルは貸出開始日時の前まで、この画面からお手続きいただけます。キャンセル料は、お手続きの前に金額を表示します。日時・車両の変更は<a class="mp-link" href="' + LINE_URL + '" target="_blank" rel="noopener">公式LINE</a>または<a class="mp-link" href="contact.html">お問い合わせフォーム</a>からご相談ください。</p>';
+        html += '<p class="mp-small" style="margin-top:12px">キャンセルは貸出開始日時 (家電レンタルはお受け取りの日時) の前まで、この画面からお手続きいただけます。キャンセル料は、お手続きの前に金額を表示します。日時・車両・家電の変更は<a class="mp-link" href="' + LINE_URL + '" target="_blank" rel="noopener">公式LINE</a>または<a class="mp-link" href="contact.html">お問い合わせフォーム</a>からご相談ください。</p>';
       }
       html += '</div>';
 
@@ -772,15 +790,23 @@
       const price = r.price && typeof r.price === 'object' ? r.price : {};
       const lines = Array.isArray(price.lines) ? price.lines : (Array.isArray(price.breakdown) ? price.breakdown : []);
       const total = r.total != null ? r.total : (price.total || 0);
+      const item = isItemRes(r);
+      const names = item ? itemNames(r) : [];
       let h = '<dl class="mp-dl">' +
         '<dt>予約番号</dt><dd><code>' + esc(r.id || r.reservationId) + '</code> ' + statusBadge(r.status) + '</dd>' +
         (r.customerName ? '<dt>ご予約者</dt><dd>' + esc(r.customerName) + ' 様</dd>' : '') +
-        '<dt>車両</dt><dd>' + esc(r.assetName || '-') + '</dd>' +
+        (item
+          ? '<dt>ご予約</dt><dd>' + esc(r.assetName || '家電レンタル') + '<div class="muted" style="font-size:12px">車両は付きません (家電だけのお貸し出しです)</div></dd>' +
+            '<dt>お借りになる家電</dt><dd data-item-list>' + (names.length ? names.map(n => esc(n) + ' <small class="muted">× 1</small>').join('<br>') : '-') + '</dd>'
+          : '<dt>車両</dt><dd>' + esc(r.assetName || '-') + '</dd>') +
         '<dt>店舗</dt><dd>' + esc(r.locationName || '-') + (r.locationAddress ? '<div class="muted" style="font-size:12px">' + esc(r.locationAddress) + '</div>' : '') + '</dd>' +
-        '<dt>貸出日時</dt><dd>' + esc(fmtDT(r.start)) + '</dd>' +
-        '<dt>返却日時</dt><dd>' + esc(fmtDT(r.end)) + '</dd>' +
+        '<dt>' + (item ? 'お受け取り日時' : '貸出日時') + '</dt><dd>' + esc(fmtDT(r.start)) + '</dd>' +
+        '<dt>' + (item ? 'ご返却日時' : '返却日時') + '</dt><dd>' + esc(fmtDT(r.end)) + '</dd>' +
         '<dt>お支払い方法</dt><dd>' + esc(payLabel(r.paymentMethod)) + '</dd>' +
         '</dl>';
+      if (item && (r.status === 'confirmed' || r.status === 'in_use')) {
+        h += '<div class="mp-small" style="margin:-4px 0 10px">お受け取りの際に、本人確認書類 (運転免許証・保険証など) をお持ちください。運転免許証でなくてもかまいません。</div>';
+      }
       h += '<table class="mp-lines"><tbody>' +
         lines.map(l => '<tr><td>' + esc(l.label) + '</td><td>' + (Number(l.amount) < 0 ? '-' + yen(-l.amount) : yen(l.amount)) + '</td></tr>').join('') +
         '<tr class="total"><td>合計 (税込)</td><td>' + yen(total) + '</td></tr></tbody></table>';
@@ -790,7 +816,8 @@
           (r.cancelFee != null ? ' キャンセル料: <strong>' + yen(r.cancelFee) + '</strong>' : '') + '</div>';
       } else if (cn.cancellable) {
         h += '<div class="mp-fee" data-fee-box>いまキャンセルした場合のキャンセル料: <strong>' + yen(cn.fee) + '</strong> <span class="muted">(' + esc(cn.label || '') + ')</span>' +
-          '<div class="mp-small" style="margin-top:4px">キャンセル料は、貸出日とキャンセルのお手続きの日 (いずれも日本時間の日付) の差で決まります。' +
+          '<div class="mp-small" style="margin-top:4px">キャンセル料は、' + (item ? 'お受け取りの日' : '貸出日') + 'とキャンセルのお手続きの日 (いずれも日本時間の日付) の差で決まります。' +
+          (item ? ' 家電レンタルのキャンセル料は、お借りになる家電の料金の合計をもとに計算します。' : '') +
           (cn.fee > 0 ? ' お支払い方法は、当社からあらためてご連絡します。' : '') +
           ' 規定の詳細は<a class="mp-link" href="law.html#cancel" target="_blank" rel="noopener">キャンセル料の表</a>をご覧ください。</div></div>' +
           '<div data-cancel-step1><button type="button" class="btn btn-secondary" data-cancel-open>このご予約をキャンセルする</button></div>' +
@@ -798,7 +825,7 @@
           '<div class="mp-actions"><button type="button" class="btn mp-btn-danger" data-cancel-go>キャンセルを確定する</button>' +
           '<button type="button" class="btn btn-secondary" data-cancel-back>やめる</button></div></div>';
       } else if (r.status === 'confirmed' || r.status === 'in_use') {
-        h += '<div class="mp-msg">貸出開始日時を過ぎているため、Webではキャンセルできません。' +
+        h += '<div class="mp-msg">' + (item ? 'お受け取りの日時' : '貸出開始日時') + 'を過ぎているため、Webではキャンセルできません。' +
           '<a class="mp-link" href="' + LINE_URL + '" target="_blank" rel="noopener">公式LINE</a>または<a class="mp-link" href="contact.html">お問い合わせフォーム</a>からご連絡ください。</div>';
       }
       h += '<div data-result></div>';

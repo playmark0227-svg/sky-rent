@@ -3,6 +3,8 @@
 //   renderMail(template, ctx) は純関数。ctx (予約・車両・拠点・設定など) は worker-core が DB から読む。
 //   件名は必ず【グロースレンタカー】で始める。お客様向けは丁寧語。
 //   個人情報は必要最小限 (店舗宛ては氏名まで。連絡先は管理画面で確認してもらう)。
+//   家電レンタル (reservation.is_item。車を借りずに家電だけ) は「貸出/返却」ではなく「お受け取り/ご返却」、
+//   「車両」ではなく「家電レンタル」と書き、借りる家電の一覧を必ず出す。運転免許証ではなく本人確認書類を案内する。
 // =====================================================================
 import { Core } from './catalog.ts';
 import { oneLine } from './mail.ts';
@@ -57,10 +59,12 @@ export type ReservationCtx = {
   start_at: string;
   end_at: string;
   category_id: string;
+  /** 家電レンタル (categories.type = 'item') の予約か */
+  is_item?: boolean | null;
   customer_name: string;
   user_id: string | null;
   payment_method: string;
-  options: Array<{ optionId?: string; name?: string }>;
+  options: Array<{ optionId?: string; name?: string; includes?: string[] }>;
   price: any;
   total: number;
   discount_type: string | null;
@@ -186,8 +190,28 @@ function locationBlock(ctx: MailContext, withDetail: boolean): string {
   return out.join('\n');
 }
 
+/** 家電レンタルの予約か */
+export function isItemReservation(r: ReservationCtx | null | undefined): boolean {
+  return !!(r && r.is_item === true);
+}
+
+function optionNames(r: ReservationCtx): string[] {
+  return (Array.isArray(r.options) ? r.options : []).map((o) => nm(o && o.name, 60)).filter(Boolean);
+}
+
 function reservationBlock(ctx: MailContext, r: ReservationCtx, withDetail: boolean): string {
-  const opts = (Array.isArray(r.options) ? r.options : []).map((o) => nm(o && o.name, 60)).filter(Boolean);
+  const opts = optionNames(r);
+  if (isItemReservation(r)) {
+    return lines(
+      '予約番号: ' + r.id,
+      'ご利用　: 家電レンタル',
+      locationBlock(ctx, withDetail),
+      'お受け取り: ' + fmtDateTime(r.start_at),
+      'ご返却　: ' + fmtDateTime(r.end_at),
+      'お借りする家電:',
+      opts.length ? opts.map((n) => '・' + n).join('\n') : '・(家電の指定なし)'
+    );
+  }
   return lines(
     '予約番号: ' + r.id,
     '車両　　: ' + assetName(ctx),
@@ -233,10 +257,13 @@ function tierRange(min: number, upperExclusive: number | null): string {
   return dayLabel(hi) + '〜' + dayLabel(lo);
 }
 
-/** この車両区分・この時期のキャンセル規定 (段階表を文章に) */
+/** この車両区分 (家電レンタルは家電レンタルの区分)・この時期のキャンセル規定 (段階表を文章に) */
 export function cancellationPolicyText(ctx: MailContext, r: ReservationCtx): string {
   const rules = ctx.rules || Core.DEFAULT_RULES;
-  const base = r.price && Number.isFinite(Number(r.price.base)) ? Number(r.price.base) : Number(r.total || 0);
+  const item = isItemReservation(r);
+  // 元になる利用料金: 車両 = 基本料金 (延長料金を含む)、家電レンタル = 家電の料金の合計
+  const base = Core.cancellationBase({ price: r.price, total: r.total, isItem: item }) as number;
+  const baseName = item ? 'レンタル料金' : '基本料金';
   const info = Core.cancellationFee({
     asset: ctx.asset
       ? { id: ctx.asset.id, categoryId: ctx.asset.category_id, customFields: ctx.asset.custom_fields || {} }
@@ -252,16 +279,20 @@ export function cancellationPolicyText(ctx: MailContext, r: ReservationCtx): str
     .map((t: any) => ({ minDays: Number(t.minDays) || 0, pct: Number(t.pct) || 0 }))
     .sort((a: any, b: any) => b.minDays - a.minDays);
   const out: string[] = [];
-  out.push('キャンセル料は、基本料金 (延長料金を含む・' + yen(base) + ') に対する割合で計算します。');
+  out.push(item
+    ? 'キャンセル料は、お借りする家電のレンタル料金の合計 (' + yen(base) + ') に対する割合で計算します。'
+    : 'キャンセル料は、基本料金 (延長料金を含む・' + yen(base) + ') に対する割合で計算します。');
   if (info.busy) out.push('このご予約は繁忙期にあたるため、繁忙期の規定を適用します。');
   tiers.forEach((t, i) => {
     const upper = i === 0 ? null : tiers[i - 1].minDays;
     const range = tierRange(t.minDays, upper);
-    out.push('・' + range + ': ' + (t.pct === 0 ? '無料' : '基本料金の' + t.pct + '% (' + yen(Math.floor(base * t.pct / 100)) + ')'));
+    out.push('・' + range + ': ' + (t.pct === 0 ? '無料' : baseName + 'の' + t.pct + '% (' + yen(Math.floor(base * t.pct / 100)) + ')'));
   });
   const noShow = Number.isFinite(Number(C.noShowPct)) ? Number(C.noShowPct) : 100;
-  out.push('・無断キャンセル: 基本料金の' + noShow + '% (' + yen(Math.floor(base * noShow / 100)) + ')');
-  out.push('※ 日数は貸出日を基準に、日本時間の暦日で数えます (前日 = 貸出日の前の日)。');
+  out.push('・無断キャンセル: ' + baseName + 'の' + noShow + '% (' + yen(Math.floor(base * noShow / 100)) + ')');
+  out.push(item
+    ? '※ 日数はお受け取り日を基準に、日本時間の暦日で数えます (前日 = お受け取り日の前の日)。'
+    : '※ 日数は貸出日を基準に、日本時間の暦日で数えます (前日 = 貸出日の前の日)。');
   return out.join('\n');
 }
 
@@ -298,6 +329,7 @@ function adminUrl(ctx: MailContext, page: string): string {
 function reservationConfirmed(ctx: MailContext) {
   const r = need(ctx.reservation, '予約');
   const proof = discountProof(ctx, r);
+  const item = isItemReservation(r);
   const text = lines(
     nm(r.customer_name) + ' 様',
     '',
@@ -313,20 +345,28 @@ function reservationConfirmed(ctx: MailContext) {
     '■ お支払い方法・時期',
     paymentText(r.payment_method),
     '',
-    '■ キャンセル規定 (この車両・この時期)',
+    item ? '■ キャンセル規定 (家電レンタル・この時期)' : '■ キャンセル規定 (この車両・この時期)',
     cancellationPolicyText(ctx, r),
     '',
     '■ ご予約の確認・キャンセル',
-    ctx.lookupUrl ? '下記のページから、ご予約内容の確認とキャンセル (貸出開始前まで) ができます。' : null,
+    ctx.lookupUrl
+      ? '下記のページから、ご予約内容の確認とキャンセル (' + (item ? 'お受け取りの前まで' : '貸出開始前まで') + ') ができます。'
+      : null,
     ctx.lookupUrl || null,
     ctx.lookupUrl ? '※ このURLはご予約専用です。他の方に知られないようご注意ください。' : null,
     'ご予約の変更は、公式LINEまたはメールでご連絡ください。',
     '',
     '■ 当日お持ちいただくもの',
-    '・運転される方全員の運転免許証 (当日、店頭で確認させていただきます)',
+    item
+      ? '・ご本人の本人確認書類 (運転免許証・保険証など。お受け取りの際に店頭で確認させていただきます)'
+      : '・運転される方全員の運転免許証 (当日、店頭で確認させていただきます)',
     proof,
     r.payment_method === 'invoice' ? null : '・お支払いに使う現金またはクレジットカード',
     '',
+    item ? '■ 家電のお受け取り・ご返却' : null,
+    item ? '・店舗の窓口でお受け取り・ご返却ください (配送はしておりません)。' : null,
+    item ? '・ご返却が遅れた場合は、24時間ごとに追加の料金がかかります。' : null,
+    item ? '' : null,
     'ご来店を心よりお待ちしております。',
     '',
     signature(ctx)
@@ -363,7 +403,8 @@ function reservationNewShop(ctx: MailContext) {
     '(このメールは予約システムから自動送信しています)'
   );
   const loc = ctx.location ? ' ' + ctx.location.name : '';
-  return { subject: subject('新規Web予約 ' + r.id + ' (' + fmtShortDate(r.start_at) + loc + ')'), text };
+  const kind = isItemReservation(r) ? ' 家電レンタル' : '';
+  return { subject: subject('新規Web予約 ' + r.id + kind + ' (' + fmtShortDate(r.start_at) + loc + ')'), text };
 }
 
 function reservationCancelled(ctx: MailContext) {
@@ -411,7 +452,8 @@ function reservationCancelledShop(ctx: MailContext) {
     '',
     '(このメールは予約システムから自動送信しています)'
   );
-  return { subject: subject('予約キャンセル ' + r.id + ' (' + fmtShortDate(r.start_at) + ')'), text };
+  const kind = isItemReservation(r) ? ' 家電レンタル' : '';
+  return { subject: subject('予約キャンセル ' + r.id + kind + ' (' + fmtShortDate(r.start_at) + ')'), text };
 }
 
 function inquiryReceived(ctx: MailContext) {

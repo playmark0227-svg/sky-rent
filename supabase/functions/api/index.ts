@@ -1,25 +1,31 @@
 // =====================================================================
 // api — 公開サイト・会員向け (実装契約書 §2.1)
 //   GET  /api/availability?from&to     空き状況 (車両の埋まり・受け渡し時刻・担当者の予定あり時間帯)
-//   POST /api/quote                    見積 (サーバーのカタログ・料金ルールで計算)
+//   POST /api/quote                    見積 (サーバーのカタログ・料金ルールで計算) + その期間に貸し出せない家電
 //   POST /api/reservations             予約確定
 //   POST /api/reservations/lookup      予約照会 (照会キー / 会員本人)
 //   POST /api/reservations/cancel      お客様によるキャンセル
 //   POST /api/inquiries                お問い合わせ
 //   POST /api/me/close                 会員の退会
 // 金額・在庫・同意・担当者の空きはすべてサーバーで確認する (クライアントの値は信用しない)。
+// 家電レンタル (categories.type = 'item'。車を借りずに家電だけ) も同じ窓口で受け付ける:
+//   車両の重なりは見ない (家電ごとの在庫で止める)・運転免許の確認は不要・同意する規約は物品レンタル規約。
 // =====================================================================
 import { ApiError, handle, readJson, subPath, validationError } from '../_shared/http.ts';
 import { adminClient, type Caller, env, getCaller, isServiceRole } from '../_shared/db.ts';
-import { fieldsOfCode, pgToApiError, withPgRetry } from '../_shared/errors.ts';
+import { fieldsOfCode, pgToApiError, soldOutError, withPgRetry } from '../_shared/errors.ts';
 import {
   type AssetRow,
   cancellationFor,
+  categoryTypeOf,
   type LegalDoc,
   loadActiveLegal,
   loadAssetBundle,
   loadPricingRules,
+  loadUnavailableOptionIds,
   type OptionRow,
+  optionIncludes,
+  optionSoldOut,
   quoteErrorCode,
   serverQuote,
   toIso
@@ -36,7 +42,9 @@ const DAY = 86400000;
 const MAX_AVAILABILITY_DAYS = 120;
 const WORKER_WAIT_MS = 8000;
 const ACTIVE_STATUSES = ['confirmed', 'in_use'];
+/** 予約で同意する文書: 車両 = 貸渡約款、家電レンタル = 物品レンタル規約 (どちらもキャンセル規定・プライバシーポリシー) */
 const RESERVATION_CONSENTS = ['clause', 'cancel', 'privacy'];
+const ITEM_RESERVATION_CONSENTS = ['item_clause', 'cancel', 'privacy'];
 const INQUIRY_CONSENTS = ['privacy'];
 
 // ---------------------------------------------------------------------
@@ -176,6 +184,18 @@ async function vehicleFree(assetId: string, start: string, end: string): Promise
     .eq('asset_id', assetId).in('status', ACTIVE_STATUSES).lt('start_at', end).gt('end_at', start).limit(1);
   if (error) throw pgToApiError(error);
   return !(data && data.length);
+}
+
+/** 車両 (アセット) のカテゴリの種類。見つからなければ車両として扱う (存在の確認は見積で行う) */
+async function assetCategoryType(assetId: string): Promise<'vehicle' | 'item'> {
+  if (!ASSET_ID_RE.test(assetId)) return 'vehicle';
+  const db = adminClient();
+  const { data: a, error } = await db.from('assets').select('category_id').eq('id', assetId).maybeSingle();
+  if (error) throw pgToApiError(error);
+  if (!a) return 'vehicle';
+  const { data: c, error: e2 } = await db.from('categories').select('type').eq('id', a.category_id).maybeSingle();
+  if (e2) throw pgToApiError(e2);
+  return categoryTypeOf(c);
 }
 
 /** 同じ拠点で受け渡し時刻が近い有効予約があるか (create_reservation_tx と同じ判定) */
@@ -400,20 +420,29 @@ async function quoteHandler(req: Request) {
   const caller = await getCaller(req);
   const member = await activeMember(caller);
   const coupon = await memberCoupon(caller, member, p.couponId);
-  const { quote, bundle } = await serverQuote({ ...p, coupon });
+  const { quote, bundle, categoryType } = await serverQuote({ ...p, coupon });
+  const isItem = categoryType === 'item';
+  // その期間に貸し出せない (残り0) 家電の id (家電セットは中身のどれかが残り0なら含める)
+  const unavailableOptionIds = await loadUnavailableOptionIds(p.start, p.end);
 
   const reasons: string[] = [];
   let vehicle = true;
   let staffOk = true;
   let handover = true;
+  let optionsOk = true;
   if (quote.ok) {
     const locId = bundle.asset.location_id;
     const [free, minutes] = await Promise.all([
-      vehicleFree(bundle.asset.id, p.start, p.end),
+      // 家電レンタルは車両の重なりを見ない (家電ごとの在庫で止める)
+      isItem ? Promise.resolve(true) : vehicleFree(bundle.asset.id, p.start, p.end),
       handoverMinutesFor(locId)
     ]);
     vehicle = free;
     if (!free) reasons.push('AVAILABILITY_CONFLICT');
+    if (p.optionIds.some((id) => unavailableOptionIds.includes(id))) {
+      optionsOk = false;
+      reasons.push('OPTION_SOLD_OUT');
+    }
     const [clash, st] = await Promise.all([
       handoverClash(locId, p.start, p.end, minutes),
       checkStaffForReservation({ locationId: locId, start: p.start, end: p.end })
@@ -428,7 +457,13 @@ async function quoteHandler(req: Request) {
       reasons.push(st.code);
     }
   }
-  return { ok: true, quote, availability: { vehicle, staff: staffOk, handover, reasons } };
+  return {
+    ok: true,
+    quote,
+    categoryType,
+    availability: { vehicle, staff: staffOk, handover, options: optionsOk, reasons },
+    unavailableOptionIds
+  };
 }
 
 // ---------------------------------------------------------------------
@@ -491,7 +526,10 @@ async function reservationHandler(req: Request) {
   else if (hasUrl(customer.company)) fields.company = '会社名にURLは入力できません。';
   const paymentMethod = b.paymentMethod === undefined || b.paymentMethod === null ? 'onsite' : b.paymentMethod;
   if (paymentMethod !== 'onsite' && paymentMethod !== 'invoice') fields.paymentMethod = 'お支払い方法を選択してください。';
-  if (b.licenseConfirmed !== true) fields.licenseConfirmed = '運転される方全員が有効な運転免許証をお持ちであることを確認し、チェックしてください。';
+  // 運転免許の確認は車両の予約だけ (家電レンタルは不要。本人確認書類を受け取り時に確認する)
+  if (b.licenseConfirmed !== true && (await assetCategoryType(q.assetId)) !== 'item') {
+    fields.licenseConfirmed = '運転される方全員が有効な運転免許証をお持ちであることを確認し、チェックしてください。';
+  }
   const note = str(b.note, 2000);
   if (note.length > 2000) fields.note = 'ご要望は2000文字以内で入力してください。';
   if (!isInt(b.expectedTotal) || b.expectedTotal < 0) fields.expectedTotal = '表示された料金を確認できませんでした。画面を再読み込みしてください。';
@@ -531,7 +569,8 @@ async function reservationHandler(req: Request) {
   }
 
   // --- サーバーで見積 → 表示金額と照合 ---
-  const { quote, bundle, options, rules } = await serverQuote({ ...q, coupon });
+  const { quote, bundle, options, rules, categoryType } = await serverQuote({ ...q, coupon });
+  const isItem = categoryType === 'item';
   if (!quote.ok) {
     // 入力欄に結び付くコード (OPTION_CONFLICT → fields.optionIds など) は、DB が返したときと同じ fields も付ける
     const code = quoteErrorCode(quote.errors);
@@ -540,14 +579,18 @@ async function reservationHandler(req: Request) {
   }
   if (quote.total !== b.expectedTotal) throw new ApiError('PRICE_CHANGED', 409, undefined, { quote });
 
-  // --- 必須の同意 (貸渡約款・キャンセル規定・プライバシーポリシーの公開中の版) ---
-  const consent = await requireConsent(b.consent, RESERVATION_CONSENTS);
+  // --- 必須の同意 (車両は貸渡約款、家電レンタルは物品レンタル規約・キャンセル規定・プライバシーポリシーの公開中の版) ---
+  const consent = await requireConsent(b.consent, isItem ? ITEM_RESERVATION_CONSENTS : RESERVATION_CONSENTS);
 
   // --- 同じ人が持てる予約の件数・日数 (偽の連絡先で全車両を押さえ続けることへの対策) ---
   if (!trusted) await enforceHoldLimits(member, customer, q.start, q.end);
 
-  // --- 車両の空き (先に軽く確認。最終判定は DB の排他制約) ---
-  if (!(await vehicleFree(bundle.asset.id, q.start, q.end))) throw new ApiError('AVAILABILITY_CONFLICT', 409);
+  // --- 車両の空き (先に軽く確認。最終判定は DB の排他制約)。家電レンタルは車両の重なりを見ない ---
+  if (!isItem && !(await vehicleFree(bundle.asset.id, q.start, q.end))) throw new ApiError('AVAILABILITY_CONFLICT', 409);
+
+  // --- 家電の在庫 (先に軽く確認。最終判定は DB がロックを取ってから数える) ---
+  const soldOut = await optionSoldOut(options.map((o: OptionRow) => o.id), q.start, q.end);
+  if (soldOut.length) throw soldOutError(soldOut);
 
   // --- 受け渡し担当者の予定 (Google カレンダーへ直接問い合わせ) ---
   const locId = bundle.asset.location_id;
@@ -565,6 +608,7 @@ async function reservationHandler(req: Request) {
     ...shopEmails().map((to) => ({ template: 'reservation_new_shop', to, payload: {} }))
   ];
   const price = {
+    categoryType,
     base: quote.base,
     lines: quote.lines,
     subtotal: quote.subtotal,
@@ -587,11 +631,17 @@ async function reservationHandler(req: Request) {
       user_id: member ? member.user_id : null,
       customer,
       payment_method: paymentMethod,
-      license_confirmed: true,
+      // 家電レンタルは運転免許の確認をしない (受け取り時に本人確認書類を確認する)
+      license_confirmed: !isItem,
       option_ids: options.map((o: OptionRow) => o.id),
-      options: options.map((o: OptionRow) => ({
-        optionId: o.id, name: o.name, price: o.price, priceShort: o.price_short, priceType: o.price_type
-      })),
+      // 予約時点のオプション名・単価。家電セットは中身の id (includes) も残す (帳票で品目ごとに並べるため)
+      options: options.map((o: OptionRow) => {
+        const includes = optionIncludes(o);
+        return {
+          optionId: o.id, name: o.name, price: o.price, priceShort: o.price_short, priceType: o.price_type,
+          ...(includes ? { includes } : {})
+        };
+      }),
       price,
       total: quote.total,
       discount_type: q.discountType,
@@ -643,6 +693,8 @@ async function safeReservation(r: any) {
       assetId: r.asset_id,
       assetName: bundle ? bundle.asset.name : '',
       categoryId: r.category_id,
+      categoryType: bundle ? categoryTypeOf(bundle.category) : (r.is_item ? 'item' : 'vehicle'),
+      isItem: !!r.is_item,
       locationId: r.location_id,
       locationName: bundle ? bundle.location.name : '',
       locationAddress: bundle ? bundle.location.address : '',

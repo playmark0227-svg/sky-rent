@@ -1,6 +1,6 @@
 # 本番環境の立ち上げ手順書
 
-更新日: 2026-09-30 (装備オプションの追加手順 2-5) / 対象: グロースレンタカー 予約サイト・管理画面 (本番モード)
+更新日: 2026-10-02 (家電レンタルの追加手順 2-6) / 対象: グロースレンタカー 予約サイト・管理画面 (本番モード)
 
 この手順書は、**エンジニアでない事業者の方が、上から順に作業すれば本番を立ち上げられる** ことを目標に書いています。
 画面の名前やボタンの位置は各サービスの更新で少し変わることがあります。見つからないときは、同じ意味の項目を探してください。
@@ -152,7 +152,7 @@ supabase db push --include-seed     # 本番に反映 (確認を聞かれたら 
 ```
 
 - `supabase/migrations/*.sql` の順にテーブル・権限 (RLS)・予約処理・定期ジョブが作られます。
-- `supabase/seed.sql` は **カタログと設定だけ** (拠点2・車両6台・補償オプション・装備オプション11品目・料金ルール・法務文書の版) を入れます。架空の顧客や予約は入りません。
+- `supabase/seed.sql` は **カタログと設定だけ** (拠点2・車両6台・家電レンタルのカテゴリと受け取り窓口・補償オプション・装備オプション11品目と在庫・料金ルール・法務文書の版) を入れます。架空の顧客や予約は入りません。
 - seed の拠点の住所・電話、車両のナンバー等は仮の値です。**公開前に管理画面で実際の値に直してください** (10章)。
 
 ### 2-4. 確認
@@ -161,6 +161,7 @@ supabase db push --include-seed     # 本番に反映 (確認を聞かれたら 
 
 ```sql
 select id, name from public.locations;          -- 北見本店・釧路店 の2行
+select id, type from public.categories order by sort; -- cat-rental・cat-kitchen (vehicle)・cat-appliance (item) の3行
 select key from public.app_settings order by 1; -- billing, calendar, points, pricing_rules, site の5行
 select kind, count(*) from public.options group by kind; -- cover 4 (補償)・other 11 (装備)
 select jobname, schedule from cron.job;         -- skyrent-expire-points, skyrent-outbox-release の2行
@@ -188,6 +189,9 @@ select cron.schedule('skyrent-outbox-release', '*/10 * * * *', 'select public.ou
    supabase db push --dry-run    # 20260930000100_equipment_options.sql だけが表示されることを確認
    supabase db push
    ```
+   2-6 (2026-10 の家電レンタル) もまだの場合は、`20261002000100_item_rental.sql` も一緒に表示されます。そのまま両方を反映してください
+   (手順3で貼り付ける seed の文には、2026-10 の migration で増えた在庫の列 `stock` が入っているため、両方の反映が必要です)。
+   その後、この節の手順2〜6、続けて 2-6 の手順2〜5 を行います。
 2. Edge Functions を公開し直します (料金計算とエラーの文言が変わったため)。
    ```bash
    supabase functions deploy api admin worker
@@ -216,6 +220,85 @@ select cron.schedule('skyrent-outbox-release', '*/10 * * * *', 'select public.ou
 > 管理画面の **各種管理 → オプション管理** からも1品ずつ追加できます (種類「装備オプション」・説明 (型番)・
 > 「セットに含む品目」を入力できます)。ただし11品目をまとめて正しい ID・並び順で入れるには、上の手順3 (SQL) が確実です。
 > 入れた後の料金・説明の変更や、貸し出さない品目を「無効」にする操作は管理画面でできます。
+
+### 2-6. 既に seed を入れた本番に家電レンタルを追加する (2026-10 の更新)
+
+2026-10 に、車を借りずに **家電だけを借りられる「家電レンタル」** を追加しました。
+新しいカテゴリ「家電レンタル」の受け取り窓口 (北見本店) の予約で、お客様が装備オプションの中から借りる家電を選びます。
+あわせて、家電ごとの **在庫** (各1台) を数えるようにしました (車両に付けるオプションと、家電だけの予約で同じ在庫を使います)。
+**これから 2-3 を行う場合は、この節は不要です** (seed に含まれています)。
+2-3 を 2026-10 より前に済ませた本番では、seed は入れ直さず、次の順に追加します。
+(2-5 の装備オプションの追加が済んでいない場合は、先に 2-5 を行ってください。2-5 の手順1で、この節の手順1の migration も一緒に反映されます)
+
+1. 新しい migration (`20261002000100_item_rental.sql`。在庫の列・在庫の判定・家電レンタルの予約を「車両の重なり禁止」から外す変更) を反映します。
+   ```bash
+   supabase db push --dry-run    # 20261002000100_item_rental.sql だけが表示されることを確認
+   supabase db push
+   ```
+2. Edge Functions を公開し直します (料金計算・在庫の判定・同意する文書・メールの文面が変わったため)。
+   ```bash
+   supabase functions deploy api admin worker
+   ```
+3. ダッシュボードの **SQL Editor** で、次をそのまま貼り付けて実行します (`supabase/seed.sql` の該当部分と同じ内容です)。
+   2回実行しても重複しません。カテゴリ・受け取り窓口は無いときだけ入れ、在庫数は空欄 (null) の品目にだけ 1 を入れます。
+   料金ルールは、家電レンタルに関係する項目 (版・`categoryClass` の `cat-appliance`・キャンセル料の `item` の段階・`itemSurcharges`) だけを書き換えます
+   (管理画面でこれらを直した後にもう一度実行すると、この項目は下の値に戻ります)。
+   古いキャンセル規定 (2026-08) の行は消さずに「公開終了」にします (過去の予約の同意の記録に使うため)。
+   ```sql
+   -- (1) 家電レンタルのカテゴリと、受け取り窓口 (北見本店。家電そのものではなく予約を受ける窓口。基本料金 0 円)
+   insert into public.categories (id, name, name_en, type, icon, description, sort, custom_field_defs) values
+     ('cat-appliance', '家電レンタル', 'Appliance Rental', 'item', '🔌',
+      '車がなくても大丈夫。ポータブル電源や調理家電を、家電だけでお貸しします。北見本店でお受け取り・ご返却。', 3, '[]')
+   on conflict (id) do nothing;
+
+   insert into public.assets (id, category_id, location_id, name, name_en, capacity, price_hour, price_day,
+                              image, photo, sort, custom_fields) values
+     ('A001', 'cat-appliance', 'loc-kitami', '家電レンタル（北見本店）', 'Appliance Rental (Kitami)', null, null, 0,
+      '🔌', '', 7, '{}')
+   on conflict (id) do nothing;
+
+   -- (2) 家電の在庫 (各1台)。家電セット (OP010) は中の9品目の在庫を使うので数えない (null)。補償も数えない
+   update public.options set stock = 1
+    where id in ('OP001','OP002','OP003','OP004','OP005','OP006','OP007','OP008','OP009','OP011')
+      and stock is null;
+
+   -- (3) 法務文書: 物品レンタル規約を新設し、キャンセル規定を 2026-10 版にする (家電レンタルの段階を追加したため)
+   insert into public.legal_documents (id, version, title, url, effective_at)
+     values ('item_clause', '2026-10', '物品レンタル規約', 'item-terms.html', '2026-10-01')
+     on conflict (id, version) do update set active = true;
+   update public.legal_documents set active = false where id = 'cancel' and active and version <> '2026-10';
+   insert into public.legal_documents (id, version, title, url, effective_at)
+     values ('cancel', '2026-10', 'キャンセル規定', 'law.html#cancel', '2026-10-01')
+     on conflict (id, version) do update set active = true;
+
+   -- (4) 料金ルール: 版を 2026-10 に。家電レンタルのキャンセル料 (コンパクトカーと同じ割合)。家電レンタルには割増をかけない
+   update public.app_settings
+      set value = jsonb_set(jsonb_set(jsonb_set(jsonb_set(jsonb_set(value,
+                    '{version}', '"2026-10"'),
+                    '{cancellation,categoryClass,cat-appliance}', '"item"'),
+                    '{cancellation,normal,item}', '[{"minDays":3,"pct":0},{"minDays":1,"pct":30},{"minDays":0,"pct":50}]'),
+                    '{cancellation,busy,item}',   '[{"minDays":7,"pct":0},{"minDays":1,"pct":30},{"minDays":0,"pct":50}]'),
+                    '{itemSurcharges}', 'false'),
+          updated_at = now()
+    where key = 'pricing_rules';
+   ```
+4. 公開サイトのファイル (GitHub Pages) を最新にします (物品レンタル規約 `item-terms.html` の新設、`law.html` のキャンセル規定、予約画面などが変わっています)。
+5. 確認します。
+   ```sql
+   select id, name, type from public.categories order by sort;                  -- 3行目が cat-appliance (item)
+   select id, name, location_id, price_day from public.assets where id = 'A001'; -- 家電レンタル（北見本店）・loc-kitami・0
+   select id, name, stock from public.options order by sort;                    -- OP001〜OP009・OP011 が 1、OP010 と補償4件が空 (null)
+   select id, version from public.legal_documents where active order by id;     -- cancel・item_clause・law が 2026-10、clause・privacy が 2026-08
+   select value ->> 'version', value #> '{cancellation,categoryClass}' from public.app_settings where key = 'pricing_rules';
+                                                                                -- 2026-10 / cat-appliance が item
+   ```
+   予約サイトの検索に「家電レンタル」が出て、家電だけの予約 (家電を1つ以上選ぶ) ができ、最終確認画面の同意が
+   「物品レンタル規約・キャンセル規定・プライバシーポリシー」になっていれば完了です。
+
+> [!NOTE]
+> 在庫数 (各1台) は仮の値です。実際の保有数に合わせて、管理画面の **各種管理 → オプション管理** の「在庫数」で直してください
+> (空欄 = 数えない、0 = 貸し出さない)。家電レンタルの料金は装備オプションの料金そのもの (同じ行) です。
+> 釧路店で家電を受け取れるようにする・配送する などは今は対応していません ([現状監査 §10.5](current-state-audit.md#105-実装で新たに置いた業務ルール-要確認))。
 
 ---
 
@@ -528,6 +611,7 @@ Supabase 標準のメール送信は、ごく少数のテスト用です。**本
 - 担当者の予定の件名・内容はお客様には表示されません (「予定あり」の時間帯だけを使います)。
 - 書き込む予定の説明には予約番号・車両・お名前・日時・管理画面の予約一覧へのリンクが入ります。**お客様の電話番号やメールアドレスは書き込みません。**
   ご選択のオプション (補償・装備) も書き込みません (プライバシーポリシーに書いた登録項目に無いため)。貸し出す装備は管理画面の予約一覧で確認してください。
+- 家電レンタル (家電だけの予約) の予定の件名は【家電受取】【家電返却】です。説明に入る項目は車両の予約と同じで、借りる家電の品目名は入りません。
 - 担当者が異動・退職したら、その人のカレンダーを管理画面から外し、本人に共有を解除してもらいます。
 
 ---
@@ -701,7 +785,7 @@ node scripts/create-admin.mjs --email owner@skyward-growth.com --name "藤本 �
 ### 法務・事業判断
 
 - [ ] [事業判断 A〜P](README.md#13-実装開始前の事業判断-ap) に担当者・回答・承認日がある ([現状監査 §10](current-state-audit.md#10-2026-09-23-実装状況) に未決の一覧あり)
-- [ ] 貸渡約款 (`clause.html`)・特定商取引法に基づく表記 (`law.html`)・プライバシーポリシー (`privacy.html`) を専門家が確認し、事業者情報・許可番号・料金・キャンセル規定・補償に仮の記載 (空欄・「〇〇」等) が無い
+- [ ] 貸渡約款 (`clause.html`)・物品レンタル規約 (`item-terms.html`)・特定商取引法に基づく表記 (`law.html`)・プライバシーポリシー (`privacy.html`) を専門家が確認し、事業者情報・許可番号・料金・キャンセル規定・補償に仮の記載 (空欄・「〇〇」等) が無い
 - [ ] プライバシーポリシーに、委託先 (Supabase・Resend・Google) と、Google カレンダーへ予約情報 (予約番号・車両・お名前・日時) を登録することが書かれている
 - [ ] サイト上の料金表・キャンセル規定と、管理画面の料金ルール (`pricing_rules`) が一致している
 - [ ] 法務文書を改定したら、`legal_documents` の版 (version) を上げている (同意の記録に使われます)
@@ -711,7 +795,8 @@ node scripts/create-admin.mjs --email owner@skyward-growth.com --name "藤本 �
 - [ ] 拠点: 名称・住所・電話・営業時間・定休日が正しい (seed の仮の値を直した)
 - [ ] 車両: 実車だけが「公開」になっている。ナンバー・定員・料金・写真・車検/点検日が正しい
 - [ ] 補償オプション・装備オプション (品目・料金)・割引・繁忙期・会社情報 (サイト設定)・振込先 (請求書払いを使う場合) が正しい
-- [ ] 装備オプション: 実際に貸し出せる品目だけが「有効」になっている (在庫数は管理していないため、同じ品目の予約が重なっても止まりません。[現状監査 §10.5](current-state-audit.md#105-実装で新たに置いた業務ルール-要確認))
+- [ ] 装備オプション: 実際に貸し出せる品目だけが「有効」になっていて、**在庫数が実際の保有数と合っている** (家電レンタルと車両のオプションで同じ在庫を使います。在庫を超える予約は受け付けません)
+- [ ] 家電レンタル: 受け取り窓口「家電レンタル（北見本店）」が公開になっていて、受け取り場所・料金・キャンセル料・延滞・破損時の扱いを事業者が確認した ([現状監査 §10.5](current-state-audit.md#105-実装で新たに置いた業務ルール-要確認) の「2026-10」の行)
 - [ ] Google カレンダー: 全拠点で接続テストが `events`、モードと受け渡し時間が運用と合っている
 
 ### セキュリティ・運用
@@ -737,6 +822,7 @@ node scripts/create-admin.mjs --email owner@skyward-growth.com --name "藤本 �
 - [ ] 担当者の Google カレンダーに【貸出】【返却】の予定が入る
 - [ ] 担当者の予定がある時間・終日の「休み」の日は、予約画面で選べない
 - [ ] 同じ車両・同じ時間でもう一度予約すると「埋まっています」と断られる
+- [ ] 家電レンタル: 家電だけの予約ができ、確認メールに借りる家電の一覧と「本人確認書類」の案内が入る。同じ家電を同じ時間にもう一度予約すると「すでに貸し出し中」と断られる (車両に同じ家電を付けた予約でも同じ)
 - [ ] 予約確認メールの照会 URL (またはマイページ) から予約を確認 → キャンセル → キャンセル料が規定どおり → キャンセルメールが届き、カレンダーの予定が消える
 - [ ] 問い合わせフォーム → 受付メールと店舗宛て通知が届く
 - [ ] Gmail・Yahoo!メール・携帯キャリアメールで迷惑メールに入らない (5-5)
@@ -845,6 +931,8 @@ colima stop
 | 確認メールのリンクを開くとエラー | 4-1 の Site URL / Redirect URLs に公開サイトの URL があるか。リンクの有効期限切れ (もう一度送信) |
 | スタッフが管理画面に入れない | 8-2 の二段階認証。スタッフが「無効」になっていないか (「スタッフ・権限」画面) |
 | 予約がカレンダーに書き込まれない | 共有の権限が「予定の変更」か (接続テストで `events`)。「予約をカレンダーに書き込む」が ON か。7章の定期実行 |
+| 家電が「すでに貸し出し中」で予約できない | その時間に同じ家電が付いた予約 (車両のオプション・家電レンタルの両方) が在庫数ぶんある。管理画面「オプション管理」の在庫数が実際の保有数と合っているか |
+| 家電レンタルに貸出停止枠を作れない | 仕様です。家電を貸せない期間は「オプション管理」でその家電の在庫数を 0 にするか、無効にしてください |
 
 ---
 

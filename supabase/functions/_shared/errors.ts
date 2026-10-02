@@ -13,8 +13,34 @@ const FIELD_OF: Record<string, Record<string, string>> = {
   START_TOO_FAR: { start: 'ご予約は400日先まで受け付けています。' },
   OPTION_INVALID: { optionIds: 'この車両では選べないオプションが含まれています。' },
   OPTION_CONFLICT: { optionIds: '同時に選べないオプションが選ばれています。' },
-  DISCOUNT_NOT_APPLICABLE: { discountType: 'この割引は適用できません。' }
+  DISCOUNT_NOT_APPLICABLE: { discountType: 'この割引は適用できません。' },
+  ITEM_REQUIRED: { optionIds: 'お借りになる家電を1つ以上お選びください。' },
+  OPTION_SOLD_OUT: { optionIds: 'ご希望の日時は貸し出し中の家電があります。' }
 };
+
+const OPTION_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{1,39}$/;
+
+/**
+ * OPTION_SOLD_OUT の details (売り切れの家電の id。家電セットを選んだ場合はセット自身の id も)。
+ * DB は detail にカンマ区切りで入れる。配列でも受け付ける (Edge Function で先に確認したとき)。
+ */
+export function soldOutDetails(v: unknown): { optionIds: string[] } {
+  const raw = Array.isArray(v) ? v : String(v ?? '').split(',');
+  const optionIds: string[] = [];
+  for (const x of raw) {
+    const id = String(x ?? '').trim();
+    if (OPTION_ID_RE.test(id) && !optionIds.includes(id)) optionIds.push(id);
+  }
+  return { optionIds };
+}
+
+/** 在庫切れ (OPTION_SOLD_OUT) の ApiError。details.optionIds と fields.optionIds を付ける */
+export function soldOutError(optionIds: unknown): ApiError {
+  return new ApiError('OPTION_SOLD_OUT', STATUS_BY_CODE.OPTION_SOLD_OUT, undefined, {
+    details: soldOutDetails(optionIds),
+    fields: fieldsOfCode('OPTION_SOLD_OUT')
+  });
+}
 
 /**
  * コードに結び付く入力欄のメッセージ (無ければ undefined)。
@@ -41,6 +67,7 @@ export function pgToApiError(err: unknown): ApiError {
   const pgCode = String(e?.code || '');
   const head = msg.split(/[\s:]/)[0] || '';
   const code = ALIASES[head] || head;
+  if (pgCode === 'P0001' && code === 'OPTION_SOLD_OUT') return soldOutError(e?.details);
   if (pgCode === 'P0001' && code && code !== 'INTERNAL' && STATUS_BY_CODE[code]) {
     const fields = fieldsOfCode(code);
     return new ApiError(code, STATUS_BY_CODE[code], undefined, fields ? { fields } : undefined);
