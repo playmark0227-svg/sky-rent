@@ -56,14 +56,15 @@
   <div id="print-area"></div>
 
   <script src="partials.js"></script>
+  <script src="js/rental-record.js"></script>
 
-  <script src="../js/config.js?v=20261003"></script>
-  <script src="../js/store.js?v=20261003"></script>
-  <script src="../js/pricing-core.js?v=20261003"></script>
-  <script src="../js/pricing.js?v=20261003"></script>
-  <script src="../js/api.js?v=20261003"></script>
-  <script src="../js/backend.js?v=20261003"></script>
-  <script src="../js/boot.js?v=20261003"></script>
+  <script src="../js/config.js?v=20261004"></script>
+  <script src="../js/store.js?v=20261004"></script>
+  <script src="../js/pricing-core.js?v=20261004"></script>
+  <script src="../js/pricing.js?v=20261004"></script>
+  <script src="../js/api.js?v=20261004"></script>
+  <script src="../js/backend.js?v=20261004"></script>
+  <script src="../js/boot.js?v=20261004"></script>
   <script type="text/x-deferred">
   (function () {
     const S = window.SkyRentStore;
@@ -143,7 +144,15 @@
     }
 
     // ===== 帳票テンプレート =====
-    function docLoan(r) { // 貸渡証
+    // 貸渡証: 予約一覧・予約表で保存した内容 (無ければ予約の内容からの下書き) を、貸渡簿と同じ項目で出す
+    function docLoan(r, rec) {
+      const st = store(r);
+      const site = S.read('settings.site', null) || {};
+      const RR = window.SkyRentRentalRecord;
+      if (RR) return RR.loanDocHtml(r, RR.effective(r, rec || null), { company: site.company || '株式会社Skyward Growth', shop: 'グロースレンタカー ' + (st.name || ''), address: st.address || '', tel: st.tel || '' });
+      return docLoanSimple(r);
+    }
+    function docLoanSimple(r) { // 貸渡証 (共通部品が読めないときの簡易版)
       const st = store(r), a = S.getAsset(r.assetId) || {};
       return '<div class="doc"><h1>貸　渡　証</h1><div class="meta">発行日: ' + today() + ' ／ 予約番号: ' + esc(r.reservationId) + '</div>' +
         '<div class="parties"><div class="party"><b>貸渡人 (レンタル会社)</b>' + esc(st.name) + '<br>' + esc(st.address) + '<br>TEL: ' + esc(st.tel) + '</div>' +
@@ -230,17 +239,23 @@
     const DOCS = { loan: docLoan, check: docCheck, receipt: docReceipt, itemloan: docItemLoan };
     const TITLES = { loan: '貸渡証', check: '車輌チェックシート', receipt: '領収書', itemloan: '物品貸出書' };
 
-    function openDoc(type, id) {
+    async function openDoc(type, id) {
       const r = S.list('reservations').find(x => x.reservationId === id);
       if (!r) return;
+      // 貸渡証は保存した内容を使う
+      let rec = null;
+      if (type === 'loan') {
+        try { rec = await window.SkyRentBackend.admin.rentalRecord(id); } catch (e) { rec = null; }
+      }
       // 帳票の右上にロゴ (印刷でも同じ画像を使う)
-      const docHtml = DOCS[type](r).replace('<div class="doc">',
-        '<div class="doc"><img class="doc-logo" src="../images/brand/logo.png" alt="グロースレンタカー" width="1200" height="547">');
+      const docHtml = DOCS[type](r, rec).replace(/<div class="doc( [a-z-]+)?">/,
+        m => m + '<img class="doc-logo" src="../images/brand/logo.png" alt="グロースレンタカー" width="1200" height="547">');
       const html =
         '<div class="crud-modal-bg"></div><div class="crud-modal-card" style="min-width:700px;max-width:780px">' +
         '<div class="crud-modal-head"><h3>' + TITLES[type] + ' プレビュー</h3><button class="crud-close" type="button">×</button></div>' +
+        (type === 'loan' && !rec ? '<div style="padding:8px 14px;background:#fff8e6;color:#7a5200;font-size:12.5px">この貸渡証はまだ保存されていません (予約の内容から下書きしています)。免許証番号・住所・走行距離などは、予約一覧の「貸渡証を編集」から入力・保存できます。</div>' : '') +
         '<div style="padding:10px;max-height:70vh;overflow:auto;background:#e9ecef">' + docHtml.replace('class="doc', 'style="background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.12)" class="doc') + '</div>' +
-        '<div class="crud-modal-foot"><span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">閉じる</button><button type="button" class="btn btn-primary" id="d-print">印刷</button></div></div>';
+        '<div class="crud-modal-foot">' + (type === 'loan' && window.SkyRentRentalRecord ? '<button type="button" class="btn btn-gray" id="d-edit">貸渡証を編集</button>' : '') + '<span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">閉じる</button><button type="button" class="btn btn-primary" id="d-print">印刷</button></div></div>';
       let modal = document.getElementById('crud-modal');
       if (!modal) { modal = document.createElement('div'); modal.id = 'crud-modal'; modal.className = 'crud-modal'; document.body.appendChild(modal); }
       modal.innerHTML = html;
@@ -249,6 +264,8 @@
       modal.querySelector('.crud-close').addEventListener('click', close);
       modal.querySelector('.crud-cancel').addEventListener('click', close);
       modal.querySelector('#d-print').addEventListener('click', () => { $('#print-area').innerHTML = docHtml; window.print(); });
+      const ed = modal.querySelector('#d-edit');
+      if (ed) ed.addEventListener('click', () => { close(); window.SkyRentRentalRecord.openEditor(r, { onSaved: () => setTimeout(() => openDoc('loan', id), 0) }); });
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -261,7 +278,15 @@
       if (qid) {
         const r = all.find(x => x.reservationId === qid);
         const cat = r ? S.getCategory(r.categoryId) : null;
+        const want = new URLSearchParams(location.search).get('doc');
         if (r && cat && cat.type === 'item') openDoc('itemloan', r.reservationId);
+        else if (r && want && DOCS[want] && want !== 'itemloan') openDoc(want, r.reservationId);
+      }
+      // 貸渡証の印刷用スタイル
+      if (window.SkyRentRentalRecord) {
+        const st = document.createElement('style');
+        st.textContent = window.SkyRentRentalRecord.LOAN_DOC_CSS;
+        document.head.appendChild(st);
       }
     });
   })();

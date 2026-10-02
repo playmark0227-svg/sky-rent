@@ -797,5 +797,71 @@ set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","
 select ok((public.member_reservations() -> 0) ? 'is_item', '会員の予約一覧に家電レンタルかどうか (is_item) が入る');
 reset role;
 
+-- =====================================================================
+-- 貸渡証 (= 貸渡簿の1行): rental_records と admin_save_rental_record
+-- =====================================================================
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"aaaaaaaa-0000-0000-0000-000000000001","role":"authenticated","aal":"aal2"}';
+select is((public.admin_save_rental_record(current_setting('t.ra'), jsonb_build_object(
+  'renter_name', '会員A', 'renter_address', '北海道北見市テスト1-1', 'license_type', '普通', 'license_no', '123456789012',
+  'birth_date', '1990-04-01', 'plate', '北見300 わ 1234', 'passengers', '2', 'destination', '北見市内', 'odometer_out', '15000'))).version,
+  1, '貸渡証: 管理者は保存できる (版 1)');
+select is((public.admin_save_rental_record(current_setting('t.ra'), '{"odometer_in":"15420","accident":false}'::jsonb, 1)).distance_km,
+  420, '貸渡証: 返却時メーターを足すと走行キロ数 (420 km) が出る・ほかの項目はそのまま');
+select is((select renter_name || '/' || license_no from public.rental_records where id = current_setting('t.ra')), '会員A/123456789012',
+  '貸渡証: 一部の項目だけの保存で、ほかの項目は消えない');
+select throws_ok(format($$select public.admin_save_rental_record(%L, '{"remarks":"x"}'::jsonb, 1)$$, current_setting('t.ra')),
+  'P0001', 'VERSION_CONFLICT', '貸渡証: 古い版のまま保存すると VERSION_CONFLICT');
+select throws_ok(format($$select public.admin_save_rental_record(%L, '{"odometer_in":"14000"}'::jsonb)$$, current_setting('t.ra')),
+  'P0001', 'VALIDATION', '貸渡証: 返却時メーターが貸出時メーターより小さいと保存できない');
+select throws_ok(format($$select public.admin_save_rental_record(%L, '{"passengers":"abc"}'::jsonb)$$, current_setting('t.ra')),
+  'P0001', 'VALIDATION', '貸渡証: 数字の欄に数字以外は入らない');
+select throws_ok(format($$select public.admin_save_rental_record(%L, jsonb_build_object('renter_name', repeat('あ', 101)))$$, current_setting('t.ra')),
+  'P0001', 'VALIDATION', '貸渡証: 文字数の上限を超えると保存できない');
+select throws_ok($$select public.admin_save_rental_record('R99999999', '{}'::jsonb)$$, 'P0001', 'NOT_FOUND', '貸渡証: 無い予約には作れない');
+select is((select count(*)::int from public.rental_records where id = current_setting('t.ra')), 1, '貸渡証: 担当拠点のスタッフは読める');
+reset role;
+-- 変更履歴に運転免許の番号・生年月日の値を残さない
+select ok(not exists (select 1 from public.audit_log where table_name = 'rental_records'
+                       and (diff ->> 'license_no' = '123456789012' or diff ->> 'birth_date' = '1990-04-01')),
+  '貸渡証: 変更履歴に運転免許の番号・生年月日を残さない');
+select ok(exists (select 1 from public.audit_log where table_name = 'rental_records' and row_id = current_setting('t.ra')),
+  '貸渡証: 変更履歴 (audit_log) に残る');
+
+-- 閲覧のみのスタッフは読めるが保存できない
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"aaaaaaaa-0000-0000-0000-000000000002","role":"authenticated","aal":"aal2"}';
+select is((select count(*)::int from public.rental_records where id = current_setting('t.ra')), 1, '貸渡証: 閲覧のみのスタッフも読める');
+select throws_ok(format($$select public.admin_save_rental_record(%L, '{"remarks":"x"}'::jsonb)$$, current_setting('t.ra')),
+  'P0001', 'FORBIDDEN', '貸渡証: 閲覧のみのスタッフは保存できない');
+reset role;
+-- 他の拠点の担当 (釧路限定) は、北見の予約の貸渡証を読めず、保存もできない
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"aaaaaaaa-0000-0000-0000-000000000003","role":"authenticated","aal":"aal2"}';
+select is((select count(*)::int from public.rental_records where id = current_setting('t.ra')), 0, '貸渡証: 他の拠点の担当は読めない');
+select throws_ok(format($$select public.admin_save_rental_record(%L, '{"remarks":"x"}'::jsonb)$$, current_setting('t.ra')),
+  'P0001', 'FORBIDDEN', '貸渡証: 他の拠点の担当は保存できない');
+reset role;
+-- 二段階認証の前 (AAL1) の管理者は保存できない
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"aaaaaaaa-0000-0000-0000-000000000001","role":"authenticated","aal":"aal1"}';
+select throws_ok(format($$select public.admin_save_rental_record(%L, '{"remarks":"x"}'::jsonb)$$, current_setting('t.ra')),
+  'P0001', 'FORBIDDEN', '貸渡証: 二段階認証の前は保存できない');
+reset role;
+-- 会員・匿名は読めない
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated","aal":"aal1"}';
+select is((select count(*)::int from public.rental_records), 0, '貸渡証: 会員 (自分の予約でも) は読めない');
+select throws_ok(format($$select public.admin_save_rental_record(%L, '{"remarks":"x"}'::jsonb)$$, current_setting('t.ra')),
+  'P0001', 'FORBIDDEN', '貸渡証: 会員は保存できない');
+reset role;
+set local role anon;
+set local request.jwt.claims to '{"role":"anon"}';
+select throws_ok('select count(*) from public.rental_records', '42501', null, '貸渡証: 匿名は読めない');
+select throws_ok(format($$select public.admin_save_rental_record(%L, '{}'::jsonb)$$, current_setting('t.ra')), '42501', null, '貸渡証: 匿名は保存の関数を呼べない');
+reset role;
+-- 予約を消すと貸渡証も消える (外部キー)
+select is((select confdeltype from pg_constraint where conname = 'rental_records_id_fkey')::text, 'c', '貸渡証: 予約を消すと一緒に消える');
+
 select * from finish();
 rollback;

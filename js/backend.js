@@ -1627,6 +1627,34 @@
   // asset: アセット (または ID)・予約 ({assetId, categoryId}) → 文書の id の配列 (新しい配列)
   function consentDocIds(asset) { return CONSENT_DOCS[categoryTypeOf(asset)].slice(); }
 
+  // 貸渡証 (rental_records) の列 ⇔ 画面の項目
+  const RENTAL_RECORD_COLS = [
+    ['issuedOn', 'issued_on'], ['renterName', 'renter_name'], ['renterAddress', 'renter_address'], ['renterPhone', 'renter_phone'],
+    ['driverSame', 'driver_same'], ['driverName', 'driver_name'], ['driverAddress', 'driver_address'],
+    ['licenseNo', 'license_no'], ['licenseType', 'license_type'], ['licenseExpiry', 'license_expiry'], ['birthDate', 'birth_date'],
+    ['intlLicense', 'intl_license'], ['vehicleName', 'vehicle_name'], ['plate', 'plate'], ['start', 'start_at'], ['end', 'end_at'],
+    ['passengers', 'passengers'], ['destination', 'destination'], ['purpose', 'purpose'], ['pickupOffice', 'pickup_office'],
+    ['returnOffice', 'return_office'], ['pickupPlace', 'pickup_place'], ['dropoffPlace', 'dropoff_place'],
+    ['odometerOut', 'odometer_out'], ['odometerIn', 'odometer_in'], ['accident', 'accident'], ['accidentNote', 'accident_note'],
+    ['cover', 'cover'], ['optionsText', 'options_text'], ['rentalItems', 'rental_items'], ['service', 'service'],
+    ['baseFee', 'base_fee'], ['optionFee', 'option_fee'], ['total', 'total'], ['payment', 'payment'], ['remarks', 'remarks']
+  ];
+  function rentalRecordFromDb(row) {
+    if (!row) return null;
+    const out = { id: row.id, version: row.version, distanceKm: row.distance_km == null ? null : row.distance_km, createdAt: row.created_at, updatedAt: row.updated_at };
+    RENTAL_RECORD_COLS.forEach(([k, col]) => { out[k] = row[col] === undefined ? null : row[col]; });
+    return out;
+  }
+  function rentalRecordToDb(data) {
+    const out = {};
+    RENTAL_RECORD_COLS.forEach(([k, col]) => {
+      if (data[k] === undefined) return;
+      const v = data[k];
+      out[col] = (k === 'start' || k === 'end') ? (v ? toIso(v) : null) : (v == null ? '' : v);
+    });
+    return out;
+  }
+
   function computeQuote(asset, start, end, options, discountType, coupon) {
     const core = window.SkyRentPricingCore;
     if (core && typeof core.quote === 'function') {
@@ -2288,6 +2316,90 @@
       const r = fromDb.reservation(row);
       replaceInList('reservations', 'reservationId', r);
       return { ok: true, reservation: r };
+    },
+
+    // ---- 予約表 (ガント) からの予約登録 (スタッフ)。料金は料金ルールで計算し、予約時の控えとして保存する ----
+    //   p: {assetId, start, end, optionIds, customerName, customerKana, customerEmail, customerPhone, company,
+    //       paymentMethod, licenseConfirmed, note, staffNote}
+    async createReservation(p) {
+      p = p || {};
+      const a = S.getAsset(p.assetId);
+      if (!a) throw makeError('NOT_FOUND');
+      if (!(toMs(p.end) > toMs(p.start))) throw makeError('INVALID_PERIOD');
+      const fields = {};
+      if (!String(p.customerName || '').trim()) fields.customerName = 'お名前を入力してください。';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(p.customerEmail || '').trim())) fields.customerEmail = 'メールアドレスを正しく入力してください。';
+      if (!String(p.customerPhone || '').trim()) fields.customerPhone = '電話番号を入力してください。';
+      if (Object.keys(fields).length) throw makeError('VALIDATION', '入力内容をご確認ください。', { fields: fields });
+      const all = S.optionsForCategory ? (o => o.common.concat(o.specific))(S.optionsForCategory(a.categoryId)) : [];
+      const ids = Array.isArray(p.optionIds) ? p.optionIds : [];
+      const opts = all.filter(o => ids.indexOf(o.optionId) >= 0);
+      const q = computeQuote(a, toIso(p.start), toIso(p.end), opts, null, null);
+      if (q.errors && q.errors.length) throw makeError(q.errors[0]);
+      const price = { lines: q.lines, base: q.base, subtotal: q.subtotal, discount: q.discount || 0, couponDiscount: 0, total: q.total, rulesVersion: q.rulesVersion || null };
+      const options = opts.map(o => ({ optionId: o.optionId, name: o.name, price: o.price, priceShort: o.priceShort == null ? null : o.priceShort, priceType: o.priceType || 'per_day' }));
+      const item = isItemAsset(a);
+      if (!LIVE) {
+        const r = S.createReservation({
+          assetId: a.assetId, start: toIso(p.start), end: toIso(p.end), optionIds: opts.map(o => o.optionId), options: options,
+          customerName: String(p.customerName).trim(), customerEmail: String(p.customerEmail).trim(), customerPhone: String(p.customerPhone).trim(),
+          company: p.company || '', paymentMethod: p.paymentMethod || 'onsite', price: price,
+          licenseConfirmed: item ? false : !!p.licenseConfirmed, note: p.note || ''
+        });
+        const extra = { total: q.total };
+        if (p.staffNote) extra.staffNote = String(p.staffNote);
+        if (p.customerKana) extra.customerKana = String(p.customerKana);
+        S.upsert('reservations', 'reservationId', Object.assign({ reservationId: r.reservationId }, extra));
+        return { ok: true, reservation: S.findById('reservations', 'reservationId', r.reservationId), demo: true };
+      }
+      const c = await getClient();
+      const row = await rpc(c, 'admin_create_reservation', {
+        p: {
+          kind: 'rental', asset_id: a.assetId, start_at: toIso(p.start), end_at: toIso(p.end),
+          customer_name: String(p.customerName).trim(), customer_kana: String(p.customerKana || '').trim(),
+          customer_email: String(p.customerEmail).trim(), customer_phone: String(p.customerPhone).trim(), company: p.company || '',
+          license_confirmed: item ? false : !!p.licenseConfirmed, payment_method: p.paymentMethod || 'onsite',
+          option_ids: opts.map(o => o.optionId), options: options, price: price, total: q.total,
+          note: p.note || '', staff_note: p.staffNote || '', notify: false
+        }
+      });
+      const r = fromDb.reservation(row);
+      replaceInList('reservations', 'reservationId', r);
+      return { ok: true, reservation: r };
+    },
+
+    // ---- 貸渡証 (= 貸渡簿の1行)。本番は rental_records 表 (担当拠点のスタッフだけが読める) ----
+    async rentalRecord(id) {
+      if (!LIVE) return S.getRentalRecord(id);
+      const c = await getClient();
+      const res = await c.from('rental_records').select('*').eq('id', id).maybeSingle();
+      if (res.error) throw toError(res.error);
+      return rentalRecordFromDb(res.data);
+    },
+    // ids を渡すとその予約の分だけ (貸渡簿の期間の予約)。省略すると全件
+    async rentalRecords(ids) {
+      if (!LIVE) {
+        const want = Array.isArray(ids) ? new Set(ids) : null;
+        return S.listRentalRecords().filter(x => !want || want.has(x.id));
+      }
+      const c = await getClient();
+      if (!Array.isArray(ids)) return (await selectAll(c, 'rental_records', '*', ['id'])).map(rentalRecordFromDb);
+      const out = [];
+      for (let i = 0; i < ids.length; i += 100) {
+        const res = await c.from('rental_records').select('*').in('id', ids.slice(i, i + 100));
+        if (res.error) throw toError(res.error);
+        (res.data || []).forEach(row => out.push(rentalRecordFromDb(row)));
+      }
+      return out;
+    },
+    // version: 画面で読んだときの版 (他のスタッフが先に保存していたら VERSION_CONFLICT)
+    async saveRentalRecord(id, data, version) {
+      if (!LIVE) {
+        try { return S.saveRentalRecord(id, data || {}, version); } catch (e) { throw makeError(e.code || 'VALIDATION', e.message, { fields: e.fields }); }
+      }
+      const c = await getClient();
+      const row = await rpc(c, 'admin_save_rental_record', { p_id: id, p: rentalRecordToDb(data || {}), p_version: version == null ? null : Number(version) });
+      return rentalRecordFromDb(row);
     },
 
     async deleteBlock(id) {

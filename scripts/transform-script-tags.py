@@ -16,7 +16,7 @@ import pathlib
 import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-VER = '20261003'
+VER = '20261004'
 
 # 共通ライブラリ (この順で並べる)。optional は元々読み込んでいたページだけに残す
 CORE = [
@@ -31,7 +31,7 @@ CORE = [
 ]
 CORE_NAMES = {n for n, _ in CORE} | {'boot.js'}
 # 位置を動かさないライブラリ (DOM 部品・CDN)
-KEEP_LIBS = {'partials.js', 'partials-public.js', 'crud.js', 'settings.js',
+KEEP_LIBS = {'partials.js', 'partials-public.js', 'crud.js', 'settings.js', 'rental-record.js',
              'chart.umd.min.js', 'exceljs.min.js'}
 # ページ処理として遅延実行する外部スクリプト
 PAGE_SRC = {'lp.js', 'manage.js'}

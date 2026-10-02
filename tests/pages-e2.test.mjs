@@ -939,10 +939,14 @@ describe('E2 デモモード: 装備オプション (options / reservation-list 
       const r = page.window.SkyRentStore.findById('reservations', 'reservationId', id);
       // 貸渡証
       page.click(page.$('.btnf[data-doc="loan"][data-id="' + id + '"]'));
+      await waitFor(() => page.$('#crud-modal .loan-doc'), 3000);
       let doc = page.text('#crud-modal .doc');
-      assert.match(doc, /補償オプション\s*免責補償制度 \(CDW\)/);
-      assert.match(doc, /装備オプション\s*家電セット \(上記9点まとめ\)、集客セット/);
-      assert.match(doc, /家電セット \(上記9点まとめ\) \(24時間 × 1 \+ 1時間\)\s*¥22,000/);
+      // 貸渡証 (貸渡簿と同じ項目の様式): 補償制度・オプション・料金
+      assert.match(doc, /補償制度\s*免責補償制度 \(CDW\)/);
+      assert.match(doc, /オプション\s*家電セット \(上記9点まとめ\)、集客セット/);
+      const optFee = r.price.lines.filter(l => l.code === 'option').reduce((x, l) => x + l.amount, 0);
+      assert.ok(doc.replace(/\s+/g, '').indexOf('オプション料金¥' + optFee.toLocaleString('ja-JP') + '(税込)') >= 0, 'オプション料金: ' + doc);
+      assert.ok(doc.replace(/\s+/g, '').indexOf('合計¥' + r.total.toLocaleString('ja-JP') + '(税込)') >= 0, '合計: ' + doc);
       page.click('#crud-modal .crud-cancel');
       // チェックシート: 家電セットは中の9品目に分けて、集客セットはそのまま
       page.click(page.$('.btnf[data-doc="check"][data-id="' + id + '"]'));
@@ -969,6 +973,190 @@ describe('E2 デモモード: 装備オプション (options / reservation-list 
 // =====================================================================
 // 本番モード (偽クライアント)
 // =====================================================================
+describe('E2 デモモード: 貸渡証・貸渡簿・予約表 (ガント) からの登録', { skip: NO_JSDOM }, () => {
+  test('reservation-table.html: 空いているマスで予約を登録 (必須項目・料金) → バーから走行距離を入力して貸渡証を保存', async () => {
+    const page = openPage('manage/reservation-table.html');
+    try {
+      assert.equal(await page.ready(8000), true);
+      const w = page.window, S = w.SkyRentStore, P = w.SkyRentPricing;
+      // 空いている日 (60日後から表示して、2つ目のマス)
+      page.set('#from-date', jstYmd(Date.now() + 60 * DAY));
+      page.click('#btn-load');
+      await waitFor(() => page.$$('.gantt-cell[data-add="V003"]').length, 3000);
+      assert.equal(page.$('#add-hint').hidden, false, '登録の案内が出ない');
+      page.click(page.$$('.gantt-cell[data-add="V003"]')[2]);
+      assert.match(page.text('#crud-modal h3'), /予約を登録 — マツダ CX-5/);
+      const start = page.$('#gn-start').value, end = page.$('#gn-end').value;
+      assert.match(start, /T10:00$/, '日単位のマスは 10:00 から');
+      assert.equal(Date.parse(end + ':00Z') - Date.parse(start + ':00Z'), DAY, '既定は24時間');
+      // 必須項目が無いと登録しない
+      page.click('#gn-save');
+      await waitFor(() => !page.$('#gn-err').hidden, 2000);
+      assert.match(page.text('#gn-err'), /入力内容をご確認ください/);
+      assert.equal(page.$('#gn-name').getAttribute('aria-invalid'), 'true');
+      assert.equal(page.$('#gn-email').getAttribute('aria-invalid'), 'true');
+      const before = S.list('reservations').length;
+      page.set('#gn-name', 'ガント 一郎');
+      page.set('#gn-phone', '090-5555-1111');
+      page.set('#gn-email', 'gantt@example.com');
+      page.set('#gn-memo', '電話予約');
+      page.click('[data-opt="OP101"]');
+      page.click('[data-opt="OP102"]');
+      assert.equal(page.$('[data-opt="OP101"]').checked, false, '補償は1つだけ');
+      page.click('[data-opt="OP101"]');
+      const isoS = w.SkyRentBackend.jst.fromInput(start), isoE = w.SkyRentBackend.jst.fromInput(end);
+      const q = P.quote({ assetId: 'V003', start: isoS, end: isoE, optionIds: ['OP101'] });
+      assert.match(page.text('#gn-quote'), new RegExp('合計 ' + P.yen(q.total).replace(/[¥,]/g, m => '\\' + m)));
+      page.click('#gn-save');
+      await waitFor(() => !page.$('#crud-modal'), 2000);
+      assert.equal(S.list('reservations').length, before + 1);
+      const r = S.list('reservations').slice(-1)[0];
+      assert.equal(r.assetId, 'V003');
+      assert.equal(r.customerName, 'ガント 一郎');
+      assert.equal(r.staffNote, '電話予約');
+      deq(r.optionIds, ['OP101']);
+      assert.equal(r.total, q.total);
+      assert.equal(r.start, isoS);
+      assert.ok(page.toasts('success').some(t => t.indexOf(r.reservationId) >= 0));
+      await waitFor(() => page.$('.gantt-bar[data-res="' + r.reservationId + '"]'), 2000);
+
+      // バー → 走行距離を入力 → 貸渡証の編集 (走行距離の欄へ)
+      page.click('.gantt-bar[data-res="' + r.reservationId + '"]');
+      await waitFor(() => /未作成/.test(page.text('#gb-loan')), 2000);
+      assert.match(page.text('#gb-loan'), /貸渡簿に足りない項目: .*運転免許の番号/);
+      page.click('#gb-odo');
+      await waitFor(() => page.$('#rr-odometerOut'), 2000);
+      assert.equal(page.document.activeElement, page.$('#rr-odometerOut'), '貸出時メーターにフォーカスが移らない');
+      assert.equal(page.$('#rr-renterName').value, 'ガント 一郎');
+      assert.equal(page.$('#rr-pickupOffice').value, '北見本店');
+      assert.equal(page.$('#rr-cover').value, '免責補償制度 (CDW)');
+      assert.equal(page.$('#rr-total').value, String(q.total));
+      page.set('#rr-odometerOut', '1000');
+      page.set('#rr-odometerIn', '900');
+      assert.match(page.text('#rr-distance'), /小さくなっています/);
+      page.click('#rr-save');
+      await waitFor(() => !page.$('#rr-err').hidden, 2000);
+      assert.match(page.text('#rr-err'), /返却時メーターは貸出時メーター以上/);
+      assert.equal(S.getRentalRecord(r.reservationId), null, '入力エラーなのに保存した');
+      page.set('#rr-odometerIn', '1250');
+      assert.equal(page.text('#rr-distance'), '250 km');
+      page.set('#rr-renterAddress', '北海道北見市若葉4丁目1-1');
+      page.set('#rr-licenseType', '普通');
+      page.set('#rr-licenseNo', '123456789012');
+      page.set('#rr-plate', '北見300 わ 4625');
+      page.set('#rr-passengers', '2');
+      page.set('#rr-destination', '北見市内〜網走方面');
+      assert.match(page.text('#rr-missing'), /すべて入っています/);
+      page.click('#rr-save');
+      await waitFor(() => !page.$('#crud-modal'), 2000);
+      const rec = S.getRentalRecord(r.reservationId);
+      assert.equal(rec.version, 1);
+      assert.equal(rec.distanceKm, 250);
+      assert.equal(rec.licenseNo, '123456789012');
+      assert.equal(rec.driverSame, true);
+      // もう一度開くと保存した値 (版 1)
+      page.click('.gantt-bar[data-res="' + r.reservationId + '"]');
+      await waitFor(() => /保存済み/.test(page.text('#gb-loan')), 2000);
+      assert.match(page.text('#gb-loan'), /走行 250 km/);
+      assertClean(page, 'gantt-add');
+    } finally { page.close(); }
+  });
+
+  test('forms.html (貸渡証): 保存した内容で出す / 未保存は下書きの案内 / reservation-list の詳細に貸渡証の状況', async () => {
+    const page = openPage('manage/reservation-list.html');
+    let id;
+    try {
+      assert.equal(await page.ready(8000), true);
+      const S = page.window.SkyRentStore;
+      const r = S.list('reservations').find(x => x.kind !== 'block' && x.assetId === 'V001' && x.status === 'confirmed');
+      id = r.reservationId;
+      S.saveRentalRecord(id, { renterName: '帳票 太郎', renterAddress: '北見市1-1', licenseType: '普通', licenseNo: '111122223333', plate: '北見300 わ 1111', passengers: 3, destination: '美幌峠', odometerOut: 5000, odometerIn: 5321, accident: true, accidentNote: '駐車場で接触 (警察へ届出済み)' });
+      await waitFor(() => page.$('.detail-link[data-id="' + id + '"]'), 3000);
+      page.click('.detail-link[data-id="' + id + '"]');
+      await waitFor(() => /保存済み/.test(page.text('#rd-loan')), 2000);
+      assert.match(page.text('#rd-loan'), /走行 321 km/);
+      assert.ok(page.$('#act-loan') && page.$('#act-odometer'));
+      assertClean(page, 'list-loan');
+    } finally { page.close(); }
+
+    const f = openPage('manage/forms.html?id=' + id + '&doc=loan', { local: {} });
+    try {
+      assert.equal(await f.ready(8000), true);
+      const S = f.window.SkyRentStore;
+      S.saveRentalRecord(id, { renterName: '帳票 太郎', plate: '北見300 わ 1111', odometerOut: 5000, odometerIn: 5321, accident: true, accidentNote: '駐車場で接触' });
+      f.window.document.getElementById('crud-modal') && f.window.document.getElementById('crud-modal').remove();
+      // 開き直す
+      f.click('.btnf[data-doc="loan"][data-id="' + id + '"]');
+      await waitFor(() => f.$('.loan-doc'), 3000);
+      const t = f.text('.loan-doc');
+      ['貸渡証', '貸渡番号 ' + id, '帳票 太郎', '北見300 わ 1111', '5,000 km', '5,321 km', '321 km', '有り — 駐車場で接触', '株式会社Skyward Growth', '北見本店', '北海道北見市若葉4丁目6', '注意書き', 'ご署名']
+        .forEach(n => assert.ok(t.indexOf(n) >= 0, '貸渡証に「' + n + '」が無い'));
+      assertClean(f, 'forms-loan');
+    } finally { f.close(); }
+
+    // 未保存の予約は下書きの案内つき
+    const g = openPage('manage/forms.html');
+    try {
+      assert.equal(await g.ready(8000), true);
+      const S = g.window.SkyRentStore;
+      const other = S.list('reservations').find(x => x.kind !== 'block' && x.assetId === 'V004');
+      g.click('.btnf[data-doc="loan"][data-id="' + other.reservationId + '"]');
+      await waitFor(() => g.$('.loan-doc'), 3000);
+      assert.match(g.text('#crud-modal'), /まだ保存されていません/);
+      assert.ok(g.$('#d-edit'), '貸渡証を編集 のボタンが無い');
+      assertClean(g, 'forms-draft');
+    } finally { g.close(); }
+  });
+
+  test('rental-ledger.html (貸渡簿): 車両の貸渡しだけ・記載状況・足りないものだけ・CSV で保存 (数式にならない)', async () => {
+    const page = openPage('manage/rental-ledger.html');
+    try {
+      assert.equal(await page.ready(8000), true);
+      const w = page.window, S = w.SkyRentStore;
+      // 期間を広くとる
+      page.set('#from', jstYmd(Date.now() - 60 * DAY));
+      page.set('#to', jstYmd(Date.now() + 60 * DAY));
+      const ok = S.list('reservations').find(x => x.kind !== 'block' && x.assetId === 'V003' && x.status !== 'cancelled' && x.status !== 'no_show');
+      S.saveRentalRecord(ok.reservationId, { renterName: '=SUM(A1)', renterAddress: '北見市1-1', licenseType: '普通', licenseNo: '1', plate: 'P', passengers: 1, destination: 'D', odometerOut: 10, odometerIn: 20 });
+      page.click('#btn-go');
+      await waitFor(() => page.$$('#tbl tr[data-id]').length, 3000);
+      const ids = page.$$('#tbl tr[data-id]').map(tr => tr.dataset.id);
+      ids.forEach(id => {
+        const r = S.findById('reservations', 'reservationId', id);
+        assert.notEqual(r.assetId, 'A001', '家電レンタルが貸渡簿に入っている');
+        assert.ok(['confirmed', 'in_use', 'returned'].indexOf(r.status) >= 0, 'キャンセルが貸渡簿に入っている: ' + id);
+      });
+      const tr = page.$('#tbl tr[data-id="' + ok.reservationId + '"]');
+      if (ok.status === 'returned' || ok.status === 'in_use' || ok.status === 'confirmed') {
+        assert.ok(tr, '保存した貸渡証の行が無い');
+        assert.match(tr.textContent, /記載済み/);
+        assert.match(tr.textContent, /10 → 20/);
+      }
+      page.set('#only', 'missing');
+      assert.ok(!page.$('#tbl tr[data-id="' + ok.reservationId + '"]'), '記載済みの行が「足りないものだけ」に出ている');
+      page.set('#only', '');
+      // CSV
+      let blob = null, name = null;
+      w.URL.createObjectURL = b => { blob = b; return 'blob:ledger'; };
+      w.URL.revokeObjectURL = () => {};
+      w.HTMLAnchorElement.prototype.click = function () { name = this.download; };
+      page.click('#btn-csv');
+      assert.ok(blob, 'CSV を作らない');
+      assert.match(name, /^貸渡簿_.*\.csv$/);
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      deq([bytes[0], bytes[1], bytes[2]], [0xef, 0xbb, 0xbf], 'BOM が無い (表計算ソフトで文字化けする)');
+      const text = new TextDecoder('utf-8').decode(bytes);
+      const lines = text.split('\r\n');
+      assert.match(lines[0], /^貸渡番号,状態,貸渡日時,返還日時,貸渡時間,貸渡事務所,返還事務所,車両,登録番号,利用者の氏名・名称,利用者の住所,運転者の氏名,運転者の住所,運転免許の種類,運転免許の番号,運行区間・行先,利用人数,使用目的,貸出時メーター\(km\),返却時メーター\(km\),走行キロ数\(km\),事故の有無,事故に関する事項,記載状況$/);
+      const mine = lines.find(l => l.indexOf(ok.reservationId + ',') === 0);
+      assert.ok(mine, 'CSV に保存した行が無い');
+      assert.ok(mine.indexOf(",'=SUM(A1),") >= 0, '数式になる値をそのまま出している: ' + mine);
+      assert.equal(lines.length, ids.length + 1);
+      assertClean(page, 'ledger');
+    } finally { page.close(); }
+  });
+});
+
 describe('E2 本番モード (偽クライアント)', { skip: NO_JSDOM }, () => {
   function fakePage(path, db, log, fetchFn) {
     return openPage(path, { mode: 'fake', fakeClient: fakeClient(db, log), fetch: fetchFn || (() => null) });
@@ -1879,6 +2067,66 @@ describe('E2 本番モード: ローカル Supabase + Edge Functions', { skip: N
         assertClean(pg, p);
         deq(businessKeys(pg.window.localStorage), [], p);
       } finally { pg.close(); }
+    }
+  });
+
+  test('予約表からの登録 (admin_create_reservation) と貸渡証の保存 (admin_save_rental_record) が DB に届く', async t => {
+    if (!ready) return t.skip(why);
+    const page = livePage('manage/reservation-table.html');
+    const created = [];
+    try {
+      assert.equal(await page.ready(20000), true, 'skyrent:ready が発火しない');
+      const B = page.window.SkyRentBackend;
+      const used = new Set();
+      let res = null;
+      for (let i = 0; i < 6 && !res; i++) {
+        const day = randomDay(used);
+        try {
+          res = await B.admin.createReservation({
+            assetId: 'V004', start: jstIso(day, 10), end: jstIso(day, 34), optionIds: ['OP101'],
+            customerName: 'E2 ガント ' + rand, customerPhone: '090-0000-0000', customerEmail: 'e2-gantt-' + rand + '@example.com', staffNote: '電話予約'
+          });
+        } catch (e) { if (e.code !== 'AVAILABILITY_CONFLICT') throw e; }
+      }
+      assert.ok(res, '予約を登録できない');
+      const id = res.reservation.reservationId;
+      created.push(id);
+      const row = (await svcSelect('reservations', 'select=id,asset_id,total,option_ids,staff_note,source,customer_name&id=eq.' + id))[0];
+      assert.equal(row.asset_id, 'V004');
+      assert.equal(row.source, 'staff');
+      deq(row.option_ids, ['OP101']);
+      assert.equal(row.staff_note, '電話予約');
+      assert.equal(row.total, res.reservation.total);
+      assert.ok(row.total > 0);
+      // 必須項目が無いと登録しない
+      const vday = randomDay(used);
+      await assert.rejects(B.admin.createReservation({ assetId: 'V004', start: jstIso(vday, 10), end: jstIso(vday, 34), customerName: '' }), e => e.code === 'VALIDATION' && !!(e.fields && e.fields.customerName));
+
+      // 貸渡証: 保存 → 返却時メーター → 版の食い違い
+      const rec = await B.admin.saveRentalRecord(id, { renterName: 'E2 ガント', licenseNo: '987654321098', odometerOut: '20000', plate: '北見300 わ 9999', passengers: '3' });
+      assert.equal(rec.version, 1);
+      const rec2 = await B.admin.saveRentalRecord(id, { odometerIn: '20125' }, rec.version);
+      assert.equal(rec2.version, 2);
+      assert.equal(rec2.distanceKm, 125);
+      assert.equal(rec2.licenseNo, '987654321098', '一部の項目の保存で、ほかの項目が消えた');
+      await assert.rejects(B.admin.saveRentalRecord(id, { remarks: 'x' }, 1), e => e.code === 'VERSION_CONFLICT');
+      await assert.rejects(B.admin.saveRentalRecord(id, { odometerIn: '100' }), e => e.code === 'VALIDATION');
+      const got = await B.admin.rentalRecord(id);
+      assert.equal(got.licenseNo, '987654321098');
+      assert.equal(got.odometerIn, 20125);
+      assert.equal(got.passengers, 3);
+      const list = await B.admin.rentalRecords([id, 'R99999999']);
+      deq(list.map(x => x.id), [id]);
+      const db = (await svcSelect('rental_records', 'select=renter_name,distance_km,version&id=eq.' + id))[0];
+      deq(db, { renter_name: 'E2 ガント', distance_km: 125, version: 2 });
+      assertClean(page, 'live-gantt');
+    } finally {
+      page.close();
+      for (const id of created) {
+        await svcDelete('rental_records', 'id=eq.' + id);
+        await svcDelete('outbox', 'ref_id=eq.' + id);
+        await svcDelete('reservations', 'id=eq.' + id);
+      }
     }
   });
 });

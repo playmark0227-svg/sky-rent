@@ -15,6 +15,26 @@
     .legend { display: flex; gap: 16px; font-size: 12px; flex-wrap: wrap; align-items: center; }
     .legend span { display: inline-flex; align-items: center; gap: 5px; }
     .legend i { width: 14px; height: 12px; border-radius: 2px; display: inline-block; }
+    .gantt-track .gantt-cell.can-add { cursor: copy; }
+    .gantt-track .gantt-cell.can-add:hover { background: #e8f4ff; }
+    .gantt-bar { cursor: pointer; }
+    .gn-body { padding: 14px 20px; max-height: 66vh; overflow: auto; }
+    .gn-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+    .gn-f { display: flex; flex-direction: column; gap: 3px; }
+    .gn-f.gn-wide { grid-column: 1 / -1; }
+    .gn-f label { font-size: 12px; font-weight: 600; color: #555; }
+    .gn-f input, .gn-f select, .gn-f textarea { width: 100%; padding: 7px 9px; border: 1px solid #ccc; border-radius: 3px; font: inherit; font-size: 13px; box-sizing: border-box; }
+    .gn-f input[aria-invalid=true] { border-color: #c0392b; background: #fff7f6; }
+    .gn-opts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; }
+    .gn-opts label { display: inline-flex; gap: 5px; align-items: center; cursor: pointer; font-weight: 500; color: #333; }
+    .gn-opts label input, .gn-f input[type=checkbox] { width: auto; padding: 0; margin: 0; }
+    .gn-opts label small { color: #888; }
+    .gn-quote { margin-top: 10px; padding: 9px 12px; background: #f6f8fa; border: 1px solid #e3e8ee; border-radius: 4px; font-size: 13px; line-height: 1.7; }
+    .gn-quote.is-error { background: #fdf0ef; border-color: #f3c4bf; color: #8a2419; }
+    .gn-err { color: #c0392b; font-size: 12.5px; padding: 0 20px 8px; }
+    .gn-sum { display: grid; grid-template-columns: 110px 1fr; gap: 6px 10px; font-size: 13px; }
+    .gn-sum > div:nth-child(odd) { color: #777; font-weight: 600; }
+    @media (max-width: 640px) { .gn-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -39,6 +59,7 @@
     </section>
 
     <div class="legend card" style="padding:10px 16px;margin-bottom:12px">
+      <span id="add-hint" style="color:#1c4a7a">空いているマスをクリックすると、その車両・日時で予約を登録できます。予約のバーをクリックすると、貸渡証の編集や走行距離の入力ができます。</span>
       <strong>凡例:</strong>
       <span><i style="background:#4ec5b6"></i>確定</span>
       <span><i style="background:#1d5cb8"></i>貸出中</span>
@@ -52,18 +73,23 @@
   <div id="loading" class="loading" hidden><div class="spinner"></div></div>
 
   <script src="partials.js"></script>
+  <script src="js/rental-record.js"></script>
 
-  <script src="../js/config.js?v=20261003"></script>
-  <script src="../js/store.js?v=20261003"></script>
-  <script src="../js/pricing-core.js?v=20261003"></script>
-  <script src="../js/pricing.js?v=20261003"></script>
-  <script src="../js/api.js?v=20261003"></script>
-  <script src="../js/backend.js?v=20261003"></script>
-  <script src="../js/boot.js?v=20261003"></script>
+  <script src="../js/config.js?v=20261004"></script>
+  <script src="../js/store.js?v=20261004"></script>
+  <script src="../js/pricing-core.js?v=20261004"></script>
+  <script src="../js/pricing.js?v=20261004"></script>
+  <script src="../js/api.js?v=20261004"></script>
+  <script src="../js/backend.js?v=20261004"></script>
+  <script src="../js/boot.js?v=20261004"></script>
   <script type="text/x-deferred">
   (function () {
     const S = window.SkyRentStore;
+    const B = window.SkyRentBackend;
+    const P = window.SkyRentPricing;
+    const RR = window.SkyRentRentalRecord;
     const $ = s => document.querySelector(s);
+    let view = null;   // いま表示している範囲 {start, cellMs, isHour}
     function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
     const DAY = 86400000, HOUR = 3600000;
 
@@ -83,6 +109,7 @@
         if (!isHour) startBase.setHours(0, 0, 0, 0);
         const start = new Date(startBase);
         const end = new Date(start.getTime() + cellCount * cellMs);
+        view = { start: start, cellMs: cellMs, isHour: isHour };
 
         const locF = $('#loc-filter').value, catF = $('#cat-filter').value;
         let assets = S.assets({ activeOnly: true });
@@ -115,6 +142,7 @@
       const showGroup = !$('#loc-filter').value;
       let bodyHtml = '';
 
+      const canAdd = B.admin.can('reservations.write');
       function assetRow(a) {
         const cat = S.getCategory(a.categoryId);
         const isItem = cat && cat.type === 'item';
@@ -126,7 +154,8 @@
           const d = new Date(start.getTime() + i * cellMs);
           const isToday = !isHour && d.toDateString() === now.toDateString();
           const isWeekend = !isHour && (d.getDay() === 0 || d.getDay() === 6);
-          cells.push('<div class="gantt-cell ' + (isWeekend ? 'weekend ' : '') + (isToday ? 'today' : '') + '" style="width:' + cellW + 'px"></div>');
+          cells.push('<div class="gantt-cell ' + (isWeekend ? 'weekend ' : '') + (isToday ? 'today ' : '') + (canAdd ? 'can-add' : '') + '" style="width:' + cellW + 'px"' +
+            (canAdd ? ' data-add="' + esc(a.assetId) + '" data-i="' + i + '" title="' + esc(a.name) + ' — ここに予約を登録"' : '') + '></div>');
         }
         // バー (物品は段積み)
         const rs = reservations.filter(r => String(r.assetId) === String(a.assetId))
@@ -155,7 +184,8 @@
           const qtyTxt = (r.quantity > 1 ? ' ×' + r.quantity : '');
           // 家電レンタルは借りる家電の名前も添える
           const items = isItem ? (r.options || []).map(o => o && o.name).filter(Boolean).join('・') : '';
-          return '<div class="gantt-bar status-' + r.status + '" style="left:' + b.left + 'px;width:' + b.width + 'px;top:' + top + 'px' + (barH ? ';bottom:auto;height:' + barH + 'px' : '') + '" title="' + esc(r.reservationId + ' / ' + r.customerName + ' / ' + fmtDT(r.start) + '〜' + fmtDT(r.end) + ' / ' + (S.STATUS_LABELS[r.status] || r.status) + (items ? ' / ' + items : '')) + '" onclick="location.href=\'reservation-list.html#' + r.reservationId + '\'">' + esc(r.customerName) + qtyTxt + '</div>';
+          const label = r.kind === 'block' ? '🔧 ' + (r.staffNote || '貸出停止') : r.customerName;
+          return '<div class="gantt-bar status-' + r.status + '" data-res="' + esc(r.reservationId) + '" style="left:' + b.left + 'px;width:' + b.width + 'px;top:' + top + 'px' + (barH ? ';bottom:auto;height:' + barH + 'px' : '') + '" title="' + esc(r.reservationId + ' / ' + (r.kind === 'block' ? '貸出停止枠' : r.customerName) + ' / ' + fmtDT(r.start) + '〜' + fmtDT(r.end) + ' / ' + (S.STATUS_LABELS[r.status] || r.status) + (items ? ' / ' + items : '')) + '">' + esc(label) + qtyTxt + '</div>';
         }).join('');
 
         return '<div class="gantt-row" style="min-height:' + rowH + 'px">' +
@@ -177,6 +207,146 @@
       $('#gantt').innerHTML =
         '<div class="gantt-row gantt-header"><div class="gantt-label">車両・物品</div><div class="gantt-track">' + headerCells.join('') + '</div></div>' +
         (bodyHtml || '<div style="padding:30px;text-align:center;color:#888">該当する車両・物品がありません</div>');
+      $('#add-hint').hidden = !canAdd;
+    }
+
+    // ---------------------------------------------------------------
+    // 予約表から予約を登録する (空いているマスをクリック)
+    // ---------------------------------------------------------------
+    function openModal(html) {
+      let modal = document.getElementById('crud-modal');
+      if (!modal) { modal = document.createElement('div'); modal.id = 'crud-modal'; modal.className = 'crud-modal'; document.body.appendChild(modal); }
+      modal.innerHTML = html;
+      const close = () => modal.remove();
+      modal.querySelector('.crud-modal-bg').addEventListener('click', close);
+      modal.querySelectorAll('.crud-close, .crud-cancel').forEach(b => b.addEventListener('click', close));
+      return { modal: modal, close: close };
+    }
+    const toInput = ms => B.jst.toInput(new Date(ms).toISOString());
+    // クリックしたマスの初期日時: 日単位はその日の 10:00〜翌日 10:00 (日本時間)、時間単位はその1時間
+    function slotOf(i) {
+      const ms = view.start.getTime() + i * view.cellMs;
+      if (view.isHour) return { start: toInput(ms), end: toInput(ms + HOUR) };
+      const ymd = toInput(ms + 12 * HOUR).slice(0, 10);
+      const s = Date.parse(B.jst.fromInput(ymd + 'T10:00'));
+      return { start: toInput(s), end: toInput(s + DAY) };
+    }
+    function openNewReservation(assetId, i) {
+      const a = S.getAsset(assetId);
+      if (!a) return;
+      const cat = S.getCategory(a.categoryId);
+      const isItem = cat && cat.type === 'item';
+      const slot = slotOf(i);
+      const og = S.optionsForCategory(a.categoryId);
+      const opts = og.common.concat(og.specific);
+      const isCover = o => (o.kind ? o.kind === 'cover' : o.exclusiveGroup === 'cover');
+      const optBox = list => list.map(o => '<label><input type="checkbox" data-opt="' + esc(o.optionId) + '" data-group="' + esc(o.exclusiveGroup || '') + '"> ' + esc(o.name) + ' <small style="color:#888">' + P.yen(o.price) + '</small></label>').join('');
+      const covers = opts.filter(isCover), equips = opts.filter(o => !isCover(o));
+      const html =
+        '<div class="crud-modal-bg"></div><div class="crud-modal-card" style="min-width:600px;max-width:720px">' +
+        '<div class="crud-modal-head"><h3>予約を登録 — ' + esc(a.name) + '</h3><button class="crud-close" type="button" aria-label="閉じる">×</button></div>' +
+        '<div class="gn-body"><div class="gn-grid">' +
+          '<div class="gn-f"><label>' + (isItem ? 'お受け取り日時' : '貸出日時') + '</label><input type="datetime-local" id="gn-start" value="' + esc(slot.start) + '"></div>' +
+          '<div class="gn-f"><label>' + (isItem ? 'ご返却日時' : '返却日時') + '</label><input type="datetime-local" id="gn-end" value="' + esc(slot.end) + '"></div>' +
+          '<div class="gn-f"><label>お名前 <span style="color:#c0392b">*</span></label><input type="text" id="gn-name" autocomplete="off"></div>' +
+          '<div class="gn-f"><label>フリガナ</label><input type="text" id="gn-kana" autocomplete="off"></div>' +
+          '<div class="gn-f"><label>電話番号 <span style="color:#c0392b">*</span></label><input type="tel" id="gn-phone" autocomplete="off"></div>' +
+          '<div class="gn-f"><label>メールアドレス <span style="color:#c0392b">*</span></label><input type="email" id="gn-email" autocomplete="off"></div>' +
+          '<div class="gn-f"><label>会社名 (法人の場合)</label><input type="text" id="gn-company" autocomplete="off"></div>' +
+          '<div class="gn-f"><label>お支払い方法</label><select id="gn-pay"><option value="onsite">現地決済</option><option value="invoice">請求書払い</option></select></div>' +
+          (covers.length ? '<div class="gn-f gn-wide"><label>補償オプション (どれか1つ)</label><div class="gn-opts">' + optBox(covers) + '</div></div>' : '') +
+          (equips.length ? '<div class="gn-f gn-wide"><label>' + (isItem ? 'お借りになる家電 (1つ以上)' : '装備オプション') + '</label><div class="gn-opts">' + optBox(equips) + '</div></div>' : '') +
+          (isItem ? '' : '<div class="gn-f gn-wide"><label style="display:inline-flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="gn-lic" style="width:auto"> 運転される方全員の運転免許証を確認する (当日店頭で)</label></div>') +
+          '<div class="gn-f gn-wide"><label>備考 (お客様のご要望)</label><input type="text" id="gn-note"></div>' +
+          '<div class="gn-f gn-wide"><label>スタッフメモ</label><input type="text" id="gn-memo" placeholder="例: 電話予約"></div>' +
+        '</div><div class="gn-quote" id="gn-quote">料金を計算しています...</div></div>' +
+        '<div class="gn-err" id="gn-err" role="alert" hidden></div>' +
+        '<div class="crud-modal-foot"><span style="font-size:12px;color:#888">確認メールは送りません (必要ならお客様へ別途ご連絡ください)</span><span style="flex:1"></span>' +
+          '<button type="button" class="btn btn-gray crud-cancel">閉じる</button><button type="button" class="btn btn-primary" id="gn-save">登録する</button></div></div>';
+      const m = openModal(html);
+      const modal = m.modal;
+      const $m = sel => modal.querySelector(sel);
+      const ids = () => [...modal.querySelectorAll('[data-opt]:checked')].map(c => c.dataset.opt);
+      function quote() {
+        const box = $m('#gn-quote');
+        const s = B.jst.fromInput($m('#gn-start').value), e = B.jst.fromInput($m('#gn-end').value);
+        if (!s || !e || Date.parse(e) <= Date.parse(s)) { box.className = 'gn-quote is-error'; box.textContent = '返却日時は貸出日時より後にしてください。'; return; }
+        const q = P.quote({ assetId: a.assetId, start: s, end: e, optionIds: ids() });
+        const av = S.availability ? S.availability(a.assetId, s, e, 1, undefined, ids()) : { ok: true };
+        if (q.errors && q.errors.length) { box.className = 'gn-quote is-error'; box.textContent = B.errorMessage(q.errors[0]); return; }
+        box.className = 'gn-quote' + (av && av.ok === false ? ' is-error' : '');
+        box.innerHTML = (q.lines || []).map(l => esc(l.label) + ' ' + esc(P.yen(l.amount))).join('<br>') + '<br><strong>合計 ' + esc(P.yen(q.total)) + ' (税込)</strong>' +
+          (av && av.ok === false ? '<br>' + esc(av.reason || 'この日時は空いていません。') : '');
+      }
+      modal.querySelectorAll('[data-opt]').forEach(cb => cb.addEventListener('change', () => {
+        if (cb.checked && cb.dataset.group) modal.querySelectorAll('[data-opt]').forEach(o => { if (o !== cb && o.dataset.group === cb.dataset.group) o.checked = false; });
+        quote();
+      }));
+      ['#gn-start', '#gn-end'].forEach(sel => $m(sel).addEventListener('change', quote));
+      quote();
+      $m('#gn-save').addEventListener('click', async () => {
+        const err = $m('#gn-err');
+        err.hidden = true;
+        modal.querySelectorAll('[aria-invalid=true]').forEach(el => el.setAttribute('aria-invalid', 'false'));
+        const btn = $m('#gn-save');
+        btn.disabled = true;
+        try {
+          const res = await B.admin.createReservation({
+            assetId: a.assetId, start: B.jst.fromInput($m('#gn-start').value), end: B.jst.fromInput($m('#gn-end').value),
+            optionIds: ids(), customerName: $m('#gn-name').value, customerKana: $m('#gn-kana').value,
+            customerPhone: $m('#gn-phone').value, customerEmail: $m('#gn-email').value, company: $m('#gn-company').value,
+            paymentMethod: $m('#gn-pay').value, licenseConfirmed: !!($m('#gn-lic') && $m('#gn-lic').checked),
+            note: $m('#gn-note').value, staffNote: $m('#gn-memo').value
+          });
+          m.close();
+          B.toast('予約 ' + res.reservation.reservationId + ' を登録しました。', 'success');
+          load();
+        } catch (e) {
+          btn.disabled = false;
+          const map = { customerName: '#gn-name', customerEmail: '#gn-email', customerPhone: '#gn-phone' };
+          Object.keys((e && e.fields) || {}).forEach(k => { const el = map[k] && $m(map[k]); if (el) el.setAttribute('aria-invalid', 'true'); });
+          err.textContent = (e && e._skyrent && e.message) || B.errorMessage((e && e.code) || 'INTERNAL');
+          err.hidden = false;
+        }
+      });
+    }
+
+    // 予約のバーをクリック: 概要と、貸渡証の編集・走行距離の入力
+    function openBar(id) {
+      const r = S.findById('reservations', 'reservationId', id);
+      if (!r) return;
+      if (r.kind === 'block') { location.href = 'reservation-list.html#' + encodeURIComponent(id); return; }
+      const cat = S.getCategory(r.categoryId);
+      const vehicle = cat && cat.type === 'vehicle';
+      const html =
+        '<div class="crud-modal-bg"></div><div class="crud-modal-card" style="min-width:460px;max-width:560px">' +
+        '<div class="crud-modal-head"><h3>予約 <code style="background:rgba(255,255,255,.2);color:#fff;font-size:12px;margin-left:6px;padding:2px 8px;border-radius:2px">' + esc(id) + '</code></h3><button class="crud-close" type="button" aria-label="閉じる">×</button></div>' +
+        '<div class="gn-body"><div class="gn-sum">' +
+          '<div>状態</div><div>' + esc(S.STATUS_LABELS[r.status] || r.status) + '</div>' +
+          '<div>対象</div><div>' + esc(r.assetName || r.vehicleName) + '</div>' +
+          '<div>期間</div><div>' + esc(B.jst.format(r.start, { weekday: false })) + ' 〜 ' + esc(B.jst.format(r.end, { weekday: false })) + '</div>' +
+          '<div>借受人</div><div>' + esc(r.customerName) + ' 様</div>' +
+          (vehicle ? '<div>貸渡証</div><div id="gb-loan">読み込み中...</div>' : '') +
+        '</div></div>' +
+        '<div class="crud-modal-foot" style="flex-wrap:wrap;gap:8px">' +
+          (vehicle && B.admin.can('reservations.write') ? '<button type="button" class="btn btn-primary" id="gb-odo">走行距離を入力</button><button type="button" class="btn btn-gray" id="gb-loan-edit">貸渡証を編集</button>' : '') +
+          '<span style="flex:1"></span><a class="btn btn-gray" href="reservation-list.html#' + encodeURIComponent(id) + '">予約詳細</a><button type="button" class="btn btn-gray crud-cancel">閉じる</button></div></div>';
+      const m = openModal(html);
+      const el = m.modal.querySelector('#gb-loan');
+      if (el) {
+        B.admin.rentalRecord(id).then(rec => {
+          const v = RR.effective(r, rec);
+          const miss = RR.missing(v, { returned: r.status === 'returned' });
+          el.innerHTML = (rec ? '保存済み' : '未作成') +
+            (v.odometerOut != null && v.odometerOut !== '' ? ' / 貸出時 ' + esc(Number(v.odometerOut).toLocaleString('ja-JP')) + ' km' : '') +
+            (v.odometerIn != null && v.odometerIn !== '' ? ' / 返却時 ' + esc(Number(v.odometerIn).toLocaleString('ja-JP')) + ' km' : '') +
+            (v.distanceKm != null ? ' / 走行 ' + esc(v.distanceKm.toLocaleString('ja-JP')) + ' km' : '') +
+            (miss.length ? '<div style="color:#b56b00;font-size:12px">貸渡簿に足りない項目: ' + esc(miss.join('・')) + '</div>' : '');
+        }).catch(() => { el.textContent = '読み込めませんでした'; });
+      }
+      const odo = m.modal.querySelector('#gb-odo'), ed = m.modal.querySelector('#gb-loan-edit');
+      if (odo) odo.addEventListener('click', () => { m.close(); RR.openEditor(r, { focus: 'odometer' }); });
+      if (ed) ed.addEventListener('click', () => { m.close(); RR.openEditor(r); });
     }
 
     function fmtDT(s){const d=new Date(s);const p=n=>String(n).padStart(2,'0');return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes());}
@@ -185,6 +355,12 @@
       initFilters();
       $('#from-date').value = new Date().toISOString().slice(0, 10);
       $('#btn-load').addEventListener('click', load);
+      $('#gantt').addEventListener('click', e => {
+        const bar = e.target.closest('.gantt-bar[data-res]');
+        if (bar) { openBar(bar.dataset.res); return; }
+        const cell = e.target.closest('.gantt-cell[data-add]');
+        if (cell && view) openNewReservation(cell.dataset.add, Number(cell.dataset.i));
+      });
       ['#unit', '#loc-filter', '#cat-filter'].forEach(s => $(s).addEventListener('change', load));
       load();
     });

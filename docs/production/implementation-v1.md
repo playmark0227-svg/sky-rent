@@ -616,3 +616,16 @@ init({area}), toast(msg, type), errorMessage(code) -> 日本語, call(fn, path, 
 
 変えていないもの: 車両 (cat-rental / cat-kitchen) の予約・料金・キャンセル料・補償・割引の動き。工具・特殊車両・キャンピングカーは取り扱わない。料金表に無い品目は足さない。
 
+## 貸渡証・貸渡簿 (2026-10 追加)
+
+- 表 `rental_records` (マイグレーション `20261003000100_rental_records.sql`): 予約1件につき1行 (`id` = 予約番号 = 貸渡番号)。
+  借受人・運転者・運転免許 (番号・種類・有効期限・生年月日・国際免許証)・車両名・登録番号・実際の貸出/返却日時・利用人数・行先・使用目的・
+  貸渡/返還事務所・迎え/送り場所・貸出時/返却時メーター (`distance_km` は自動計算)・事故の有無と内容・補償制度/オプション/貸出品/サービス・料金・決済方法・備考・版 (`version`)。
+- 読み取り: 担当拠点のスタッフだけ (RLS。会員・ゲスト・匿名は不可)。書き込み: RPC `admin_save_rental_record(p_id, p, p_version)` だけ
+  (権限 `reservations.write`・拠点の権限・二段階認証。無い項目は今の値のまま。版が違えば `VERSION_CONFLICT`、メーターの順序・文字数・数値の形が違えば `VALIDATION`、貸出停止枠は不可)。
+- 変更履歴 (`audit_log`) には運転免許の番号・生年月日・国際免許証・電話番号の値を残さない (`audit_row` の伏せ字に追加)。
+- 予約を消すと貸渡証も消える (外部キー `on delete cascade`)。
+- 画面: `manage/js/rental-record.js` (編集画面・初期値・記載事項の確認・貸渡証の印刷様式)。予約一覧の詳細・貸渡予約表の横棒・帳票の貸渡証から開く。
+  `manage/rental-ledger.html` が貸渡簿 (車両の確定・貸出中・返却済。印刷と BOM 付き UTF-8 の CSV。CSV は数式になる値の先頭に `'` を付ける)。
+- 貸渡予約表 (`manage/reservation-table.html`) の空いているマスから予約を登録できる: `SkyRentBackend.admin.createReservation` → `admin_create_reservation`
+  (料金は料金ルールで計算し、予約時の控えとして保存。確認メールは送らない)。

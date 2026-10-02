@@ -77,14 +77,15 @@
   <div id="loading" class="loading" hidden><div class="spinner"></div></div>
 
   <script src="partials.js"></script>
+  <script src="js/rental-record.js"></script>
 
-  <script src="../js/config.js?v=20261003"></script>
-  <script src="../js/store.js?v=20261003"></script>
-  <script src="../js/pricing-core.js?v=20261003"></script>
-  <script src="../js/pricing.js?v=20261003"></script>
-  <script src="../js/api.js?v=20261003"></script>
-  <script src="../js/backend.js?v=20261003"></script>
-  <script src="../js/boot.js?v=20261003"></script>
+  <script src="../js/config.js?v=20261004"></script>
+  <script src="../js/store.js?v=20261004"></script>
+  <script src="../js/pricing-core.js?v=20261004"></script>
+  <script src="../js/pricing.js?v=20261004"></script>
+  <script src="../js/api.js?v=20261004"></script>
+  <script src="../js/backend.js?v=20261004"></script>
+  <script src="../js/boot.js?v=20261004"></script>
   <script type="text/x-deferred">
   (function () {
     'use strict';
@@ -384,6 +385,13 @@
           rows.push(['キャンセル料', r.cancelFee != null ? yen(r.cancelFee) : '-']);
           if (r.cancelledAt) rows.push(['取消日時', esc(fmtDT(r.cancelledAt)) + (r.cancelledBy ? ' (' + (r.cancelledBy === 'customer' ? 'お客様' : 'スタッフ') + ')' : '')]);
         }
+        // 貸渡証 (= 貸渡簿の1行): 車両の予約だけ。保存状況と走行距離は開いてから読む
+        if (!item && c && c.type === 'vehicle') {
+          rows.push(['貸渡証', '<div id="rd-loan"><span style="color:#888">読み込み中...</span></div>' +
+            '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn btn-gray" id="act-loan" style="padding:5px 12px;font-size:12.5px">貸渡証を編集</button>' +
+            '<button type="button" class="btn btn-gray" id="act-odometer" style="padding:5px 12px;font-size:12.5px">走行距離を入力</button>' +
+            '<a class="btn btn-gray" style="padding:5px 12px;font-size:12.5px" href="forms.html?id=' + encodeURIComponent(r.reservationId) + '&amp;doc=loan">貸渡証を表示・印刷</a></div>']);
+        }
         rows.push(['Googleカレンダー', '<div class="gc-line" id="rd-gcal">' + gcalText(r) + '</div>']);
         rows.push(['備考', esc(r.note || '-')]);
         if (r.staffNote) rows.push(['スタッフメモ', '<span style="white-space:pre-wrap">' + esc(r.staffNote) + '</span>']);
@@ -407,6 +415,7 @@
       const m = openModal(html);
       const modal = m.modal;
       loadGcalJob(r, modal.querySelector('#rd-gcal'));
+      showLoanStatus(r, modal.querySelector('#rd-loan'));
 
       async function run(btn, updates, patch, okMsg) {
         modal.querySelectorAll('#rd-foot button, #rd-panel button').forEach(b => { b.disabled = true; });
@@ -431,6 +440,8 @@
       });
       on('#act-restore', b => { if (confirm('無断キャンセルを取り消して「確定」に戻しますか?')) run(b, { status: 'confirmed', cancelFee: null }, { status: 'confirmed', cancel_fee: 0 }, '予約 ' + id + ' を確定に戻しました。'); });
       on('#act-pay', b => run(b, { payment: Object.assign({}, r.payment, { status: 'paid' }) }, { payment_status: 'paid' }, '予約 ' + id + ' の入金を記録しました。'));
+      on('#act-loan', () => { m.close(); RR.openEditor(r, { onSaved: () => openDetailLater(id) }); });
+      on('#act-odometer', () => { m.close(); RR.openEditor(r, { focus: 'odometer', onSaved: () => openDetailLater(id) }); });
       on('#act-cancel', () => openFeePanel(r, 'cancel', modal, run));
       on('#act-noshow', () => openFeePanel(r, 'no_show', modal, run));
       on('#act-unblock', async b => {
@@ -444,6 +455,22 @@
         } catch (e) { b.disabled = false; showMsg(modal, e); }
       });
     }
+
+    // 貸渡証の保存状況 (保存済みか・貸渡簿に足りない項目・走行距離)
+    const RR = window.SkyRentRentalRecord;
+    async function showLoanStatus(r, el) {
+      if (!el) return;
+      try {
+        const rec = await B.admin.rentalRecord(r.reservationId);
+        const v = RR.effective(r, rec);
+        const miss = RR.missing(v, { returned: r.status === 'returned' });
+        const dist = v.distanceKm != null ? ' / 走行 ' + v.distanceKm.toLocaleString('ja-JP') + ' km' : '';
+        el.innerHTML = (rec ? '<span class="status status-confirmed">保存済み</span> ' + esc(fmtDT(rec.updatedAt)) : '<span class="status status-soon">未作成</span>') + esc(dist) +
+          (miss.length ? '<div class="rl-sub" style="color:#b56b00">貸渡簿に足りない項目: ' + esc(miss.join('・')) + '</div>' : '<div class="rl-sub" style="color:#1e6b3a">貸渡簿の記載事項はすべて入っています</div>');
+      } catch (e) { el.textContent = '読み込めませんでした: ' + describe(e).message; }
+    }
+    // 貸渡証を保存したあと、予約詳細を開き直す
+    function openDetailLater(id) { setTimeout(() => openDetail(id), 0); }
 
     // ---------------------------------------------------------------
     // キャンセル・無断キャンセル: 料金ルールでキャンセル料を示し、減額・免除も入力できる

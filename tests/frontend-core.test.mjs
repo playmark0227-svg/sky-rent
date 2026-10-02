@@ -657,6 +657,46 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
     } finally { page.close(); }
   });
 
+  test('貸渡証 (デモ): 保存・一部の項目だけの更新・版の食い違い・入力の検査 (DB の admin_save_rental_record と同じ)', async () => {
+    const page = openPage('index.html');
+    try {
+      assert.equal(await page.ready(8000), true);
+      const S = page.window.SkyRentStore;
+      const r = S.list('reservations').find(x => x.kind !== 'block' && x.assetId === 'V001');
+      const id = r.reservationId;
+      assert.equal(S.getRentalRecord(id), null);
+      const a = S.saveRentalRecord(id, { renterName: '  貸渡 太郎  ', licenseNo: '123', odometerOut: '1000', passengers: '2', birthDate: '1990-01-02' });
+      assert.equal(a.version, 1);
+      assert.equal(a.renterName, '貸渡 太郎', '前後の空白は取る');
+      assert.equal(a.odometerOut, 1000);
+      assert.equal(a.distanceKm, null);
+      const b = S.saveRentalRecord(id, { odometerIn: 1300 }, 1);
+      assert.equal(b.version, 2);
+      assert.equal(b.distanceKm, 300);
+      assert.equal(b.licenseNo, '123', '一部の項目の保存でほかの項目は消えない');
+      const err = (fn, code) => { try { fn(); } catch (e) { assert.equal(e.code, code, e.message); return e; } assert.fail('エラーにならない: ' + code); };
+      err(() => S.saveRentalRecord(id, { remarks: 'x' }, 1), 'VERSION_CONFLICT');
+      assert.match(err(() => S.saveRentalRecord(id, { odometerIn: 900 }), 'VALIDATION').message, /返却時メーター/);
+      err(() => S.saveRentalRecord(id, { passengers: '0' }), 'VALIDATION');
+      err(() => S.saveRentalRecord(id, { passengers: 'abc' }), 'VALIDATION');
+      err(() => S.saveRentalRecord(id, { renterName: 'あ'.repeat(101) }), 'VALIDATION');
+      err(() => S.saveRentalRecord(id, { licenseExpiry: '2026/01/01' }), 'VALIDATION');
+      err(() => S.saveRentalRecord(id, { start: '2026-12-02T01:00:00Z', end: '2026-12-01T01:00:00Z' }), 'INVALID_PERIOD');
+      err(() => S.saveRentalRecord('R9999', {}), 'NOT_FOUND');
+      const blk = S.list('reservations').find(x => x.kind === 'block');
+      if (blk) err(() => S.saveRentalRecord(blk.reservationId, {}), 'VALIDATION');
+      assert.equal(S.getRentalRecord(id).version, 2, '失敗した保存で版が進んだ');
+      // 画面の共通部品: 初期値と、貸渡簿に足りない項目
+      const RR = page.window.SkyRentRentalRecord;
+      if (RR) {
+        const v = RR.effective(r, null);
+        assert.equal(v.pickupOffice, '北見本店');
+        assert.ok(RR.missing(v).indexOf('運転免許の番号') >= 0);
+      }
+      assertClean(page, 'rental-record');
+    } finally { page.close(); }
+  });
+
   test('エラーコード表 (契約書 §2) の日本語文がすべてある', async () => {
     const page = openPage('manage/login.html');
     try {

@@ -904,6 +904,76 @@
     return r;
   }
 
+  // ===================================================================
+  // 貸渡証 (= 貸渡簿の1行)。予約1件につき1つ (id = 予約番号)。本番は rental_records 表 (admin_save_rental_record)
+  //   検査は DB と同じ: 文字数・数値の範囲・返却時メーター ≥ 貸出時メーター・返却日時 > 貸出日時・版 (version)
+  // ===================================================================
+  const RENTAL_RECORD_TEXT = {
+    renterName: 100, renterAddress: 200, renterPhone: 30, driverName: 100, driverAddress: 200,
+    licenseNo: 30, licenseType: 50, intlLicense: 100, vehicleName: 100, plate: 30,
+    destination: 200, purpose: 200, pickupOffice: 100, returnOffice: 100, pickupPlace: 200, dropoffPlace: 200,
+    accidentNote: 2000, cover: 200, optionsText: 1000, rentalItems: 1000, service: 500, payment: 100, remarks: 2000
+  };
+  const RENTAL_RECORD_INT = { passengers: [1, 99], odometerOut: [0, 9999999], odometerIn: [0, 9999999], baseFee: [0, 999999999], optionFee: [0, 999999999], total: [0, 999999999] };
+  const RENTAL_RECORD_DATE = ['issuedOn', 'licenseExpiry', 'birthDate'];
+  const RENTAL_RECORD_TS = ['start', 'end'];
+  const RENTAL_RECORD_BOOL = { driverSame: true, accident: false };
+
+  function rentalRecordError(code, message, field) {
+    const err = new Error(message || code);
+    err.code = code;
+    if (field) err.fields = { [field]: message || code };
+    return err;
+  }
+  function getRentalRecord(id) { return findById('rentalRecords', 'id', id) || null; }
+  function listRentalRecords() { return list('rentalRecords'); }
+  function saveRentalRecord(id, patch, version) {
+    patch = patch || {};
+    const r = findById('reservations', 'reservationId', id);
+    if (!r) throw rentalRecordError('NOT_FOUND', '予約が見つかりません。');
+    if (r.kind === 'block') throw rentalRecordError('VALIDATION', '貸出停止枠には貸渡証を作れません。');
+    const cur = getRentalRecord(id);
+    if (cur && version != null && Number(version) !== Number(cur.version)) throw rentalRecordError('VERSION_CONFLICT', '他のスタッフが先にこのデータを更新しました。');
+    const next = Object.assign({ id: id, driverSame: true, accident: false, version: 0, createdAt: new Date().toISOString() }, cur || {});
+    Object.keys(RENTAL_RECORD_TEXT).forEach(k => {
+      if (patch[k] === undefined) return;
+      const v = String(patch[k] == null ? '' : patch[k]).trim();
+      if (v.length > RENTAL_RECORD_TEXT[k]) throw rentalRecordError('VALIDATION', RENTAL_RECORD_TEXT[k] + '文字以内で入力してください。', k);
+      next[k] = v;
+    });
+    Object.keys(RENTAL_RECORD_INT).forEach(k => {
+      if (patch[k] === undefined) return;
+      const raw = patch[k] == null ? '' : String(patch[k]).trim();
+      if (raw === '') { next[k] = null; return; }
+      const [lo, hi] = RENTAL_RECORD_INT[k];
+      if (!/^\d{1,9}$/.test(raw) || Number(raw) < lo || Number(raw) > hi) throw rentalRecordError('VALIDATION', lo + '〜' + hi + ' の数字で入力してください。', k);
+      next[k] = Number(raw);
+    });
+    RENTAL_RECORD_DATE.forEach(k => {
+      if (patch[k] === undefined) return;
+      const v = patch[k] == null ? '' : String(patch[k]).trim();
+      if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw rentalRecordError('VALIDATION', '日付の形が正しくありません。', k);
+      next[k] = v || null;
+    });
+    RENTAL_RECORD_TS.forEach(k => {
+      if (patch[k] === undefined) return;
+      next[k] = patch[k] ? isoOr(patch[k]) : null;
+    });
+    Object.keys(RENTAL_RECORD_BOOL).forEach(k => {
+      if (patch[k] === undefined) return;
+      next[k] = patch[k] == null ? RENTAL_RECORD_BOOL[k] : !!patch[k];
+    });
+    if (next.odometerOut != null && next.odometerIn != null && next.odometerIn < next.odometerOut) {
+      throw rentalRecordError('VALIDATION', '返却時メーターは貸出時メーター以上の値にしてください。', 'odometerIn');
+    }
+    if (next.start && next.end && Date.parse(next.end) <= Date.parse(next.start)) throw rentalRecordError('INVALID_PERIOD', '返却日時は貸出日時より後にしてください。', 'end');
+    next.distanceKm = next.odometerOut != null && next.odometerIn != null ? next.odometerIn - next.odometerOut : null;
+    next.version = (Number(next.version) || 0) + 1;
+    next.updatedAt = new Date().toISOString();
+    upsert('rentalRecords', 'id', next);
+    return next;
+  }
+
   function updateReservation(reservationId, updates) {
     updates = updates || {};
     const arr = list('reservations');
@@ -1135,6 +1205,7 @@
     live: LIVE,
     _hydrate: hydrate, _setWriteHook: setWriteHook, _setExtraAvailabilityCheck: setExtraAvailabilityCheck,
     read: read, write: write,
+    getRentalRecord: getRentalRecord, listRentalRecords: listRentalRecords, saveRentalRecord: saveRentalRecord,
     list: list, saveList: saveList, findById: findById, upsert: upsert, removeById: removeById, genId: genId,
     categories: categories, getCategory: getCategory,
     locations: locations, getLocation: getLocation,

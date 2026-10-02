@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>貸渡簿 | グロースレンタカー 管理画面</title>
+  <link rel="stylesheet" href="css/manage.css">
+  <style>
+    .lg-table { font-size: 12px; }
+    .lg-table th { white-space: nowrap; }
+    .lg-table td { vertical-align: top; line-height: 1.6; }
+    .lg-table small { color: #888; display: block; }
+    .lg-miss { color: #b56b00; font-size: 11.5px; display: block; min-width: 220px; }
+    .lg-table td:nth-child(5), .lg-table td:nth-child(6), .lg-table td:nth-child(7) { min-width: 150px; }
+    .lg-ok { color: #1e6b3a; font-size: 11.5px; }
+    .lg-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 2px 10px; align-items: center; }
+    #print-area { display: none; }
+    .lg-print h1 { font-size: 18px; margin: 0 0 6px; }
+    .lg-print .meta { font-size: 11px; margin-bottom: 8px; }
+    .lg-print table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+    .lg-print th, .lg-print td { border: 1px solid #888; padding: 3px 4px; vertical-align: top; text-align: left; }
+    .lg-print th { background: #eef2f6; }
+    @media print {
+      body > *:not(#print-area) { display: none !important; }
+      #print-area { display: block !important; }
+      @page { size: A4 landscape; margin: 10mm; }
+    }
+  </style>
+</head>
+<body>
+  <div data-include="topbar"></div>
+
+  <main class="main">
+    <h1 class="page-title">貸渡簿</h1>
+    <p class="page-note">車両の貸渡しごとの記録です (家電レンタルは含みません)。各予約の「貸渡証」に入力した内容がそのまま載ります。記載事項が足りない行は、「編集」から入力してください。印刷 (A4横) と、表計算ソフトで開けるファイル (CSV) で保存できます。</p>
+
+    <section class="card filter-bar">
+      <div class="filter-group"><label>貸渡日</label><input type="date" id="from"> 〜 <input type="date" id="to"></div>
+      <div class="filter-group"><label>拠点</label><select id="loc"></select></div>
+      <div class="filter-group"><label>表示</label><select id="only"><option value="">すべて</option><option value="missing">記載事項が足りないものだけ</option></select></div>
+      <button class="btn btn-primary" id="btn-go">表 示</button>
+    </section>
+
+    <div class="lg-actions">
+      <span id="count" style="font-size:13px;color:#777"></span>
+      <span style="flex:1"></span>
+      <button type="button" class="btn btn-gray" id="btn-csv">CSV で保存</button>
+      <button type="button" class="btn btn-gray" id="btn-print">印刷</button>
+    </div>
+
+    <section class="card" style="overflow-x:auto">
+      <table class="data-table list lg-table">
+        <thead><tr>
+          <th>貸渡番号</th><th>貸渡日時 〜 返還日時</th><th>貸渡事務所 / 返還事務所</th><th>車両 / 登録番号</th>
+          <th>利用者 (氏名・住所)</th><th>運転者 (氏名・住所・運転免許)</th><th>運行区間・行先 / 人数</th>
+          <th>走行キロ数</th><th>事故</th><th>記載状況</th><th></th>
+        </tr></thead>
+        <tbody id="tbl"><tr class="empty"><td colspan="11">読み込み中...</td></tr></tbody>
+      </table>
+    </section>
+  </main>
+
+  <div id="print-area"></div>
+  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
+
+  <script src="partials.js"></script>
+  <script src="js/rental-record.js"></script>
+
+  <script src="../js/config.js?v=20261004"></script>
+  <script src="../js/store.js?v=20261004"></script>
+  <script src="../js/pricing-core.js?v=20261004"></script>
+  <script src="../js/pricing.js?v=20261004"></script>
+  <script src="../js/api.js?v=20261004"></script>
+  <script src="../js/backend.js?v=20261004"></script>
+  <script src="../js/boot.js?v=20261004"></script>
+  <script type="text/x-deferred">
+  (function () {
+    'use strict';
+    const S = window.SkyRentStore;
+    const B = window.SkyRentBackend;
+    const RR = window.SkyRentRentalRecord;
+    const $ = s => document.querySelector(s);
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+    const DAY = 86400000;
+    const fmt = v => v ? B.jst.format(v, { weekday: false }) : '';
+    const km = n => n == null || n === '' ? '' : Number(n).toLocaleString('ja-JP');
+    let rows = [];   // [{r, v, miss}]
+
+    function isVehicle(r) {
+      if (r.kind === 'block') return false;
+      const c = S.getCategory(r.categoryId);
+      return !!(c && c.type === 'vehicle');
+    }
+
+    async function load() {
+      $('#loading').hidden = false;
+      try {
+        const from = $('#from').value, to = $('#to').value, loc = $('#loc').value;
+        const f = from ? Date.parse(B.jst.fromInput(from + 'T00:00')) : -Infinity;
+        const t = to ? Date.parse(B.jst.fromInput(to + 'T00:00')) + DAY : Infinity;
+        const res = S.list('reservations').filter(r => isVehicle(r) && ['confirmed', 'in_use', 'returned'].indexOf(r.status) >= 0 &&
+          Date.parse(r.start) >= f && Date.parse(r.start) < t && (!loc || r.locationId === loc))
+          .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+        const recs = await B.admin.rentalRecords(res.map(r => r.reservationId));
+        const byId = {};
+        recs.forEach(x => { byId[x.id] = x; });
+        rows = res.map(r => {
+          const v = RR.effective(r, byId[r.reservationId] || null);
+          return { r: r, v: v, miss: RR.missing(v, { returned: r.status === 'returned' }) };
+        });
+        render();
+      } catch (e) {
+        $('#tbl').innerHTML = '<tr class="empty"><td colspan="11">読み込めませんでした: ' + esc(B.errorMessage((e && e.code) || 'INTERNAL')) + '</td></tr>';
+      } finally { $('#loading').hidden = true; }
+    }
+
+    function shown() { return $('#only').value === 'missing' ? rows.filter(x => x.miss.length) : rows; }
+
+    function render() {
+      const list = shown();
+      const missCount = rows.filter(x => x.miss.length).length;
+      $('#count').textContent = rows.length + ' 件 (記載事項が足りないもの ' + missCount + ' 件)';
+      if (!list.length) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="11">該当する貸渡しはありません</td></tr>'; return; }
+      $('#tbl').innerHTML = list.map(({ r, v, miss }) => {
+        const d = RR.driverOf(v);
+        return '<tr data-id="' + esc(r.reservationId) + '">' +
+          '<td><code>' + esc(r.reservationId) + '</code><small>' + esc(S.STATUS_LABELS[r.status] || r.status) + '</small></td>' +
+          '<td style="white-space:nowrap">' + esc(fmt(v.start)) + '<br>〜 ' + esc(fmt(v.end)) + '<small>' + esc(RR.durationText(v.start, v.end)) + '</small></td>' +
+          '<td>' + esc(v.pickupOffice) + '<br>' + esc(v.returnOffice) + '</td>' +
+          '<td>' + esc(v.vehicleName) + '<small>' + esc(v.plate || '登録番号 未入力') + '</small></td>' +
+          '<td>' + esc(v.renterName) + '<small>' + esc(v.renterAddress) + '</small></td>' +
+          '<td>' + esc(d.name) + '<small>' + esc(d.address) + '</small><small>' + esc([v.licenseType, v.licenseNo].filter(Boolean).join(' ')) + '</small></td>' +
+          '<td>' + esc(v.destination) + '<small>' + (v.passengers ? esc(v.passengers) + ' 人' : '') + '</small></td>' +
+          '<td style="white-space:nowrap">' + esc(km(v.odometerOut)) + (v.odometerOut != null && v.odometerOut !== '' ? ' → ' : '') + esc(km(v.odometerIn)) +
+            (v.distanceKm != null ? '<small>' + esc(km(v.distanceKm)) + ' km</small>' : '') + '</td>' +
+          '<td>' + (v.accident ? '有り<small>' + esc(v.accidentNote) + '</small>' : (v.saved ? '無し' : '')) + '</td>' +
+          '<td>' + (miss.length ? '<span class="lg-miss">足りない: ' + esc(miss.join('・')) + '</span>' : '<span class="lg-ok">記載済み</span>') + '</td>' +
+          '<td style="white-space:nowrap"><a href="#" class="detail-link" data-edit="' + esc(r.reservationId) + '">編集</a></td>' +
+          '</tr>';
+      }).join('');
+      $('#tbl').querySelectorAll('[data-edit]').forEach(a => a.addEventListener('click', e => {
+        e.preventDefault();
+        const r = S.findById('reservations', 'reservationId', a.dataset.edit);
+        if (r) RR.openEditor(r, { onSaved: () => setTimeout(load, 0) });
+      }));
+    }
+
+    // ---- 保存 (CSV。表計算ソフトで文字化けしないよう BOM 付きの UTF-8) ----
+    const COLS = [
+      ['貸渡番号', x => x.r.reservationId], ['状態', x => S.STATUS_LABELS[x.r.status] || x.r.status],
+      ['貸渡日時', x => fmt(x.v.start)], ['返還日時', x => fmt(x.v.end)], ['貸渡時間', x => RR.durationText(x.v.start, x.v.end)],
+      ['貸渡事務所', x => x.v.pickupOffice], ['返還事務所', x => x.v.returnOffice],
+      ['車両', x => x.v.vehicleName], ['登録番号', x => x.v.plate],
+      ['利用者の氏名・名称', x => x.v.renterName], ['利用者の住所', x => x.v.renterAddress],
+      ['運転者の氏名', x => RR.driverOf(x.v).name], ['運転者の住所', x => RR.driverOf(x.v).address],
+      ['運転免許の種類', x => x.v.licenseType], ['運転免許の番号', x => x.v.licenseNo],
+      ['運行区間・行先', x => x.v.destination], ['利用人数', x => x.v.passengers == null ? '' : x.v.passengers], ['使用目的', x => x.v.purpose],
+      ['貸出時メーター(km)', x => x.v.odometerOut == null ? '' : x.v.odometerOut], ['返却時メーター(km)', x => x.v.odometerIn == null ? '' : x.v.odometerIn],
+      ['走行キロ数(km)', x => x.v.distanceKm == null ? '' : x.v.distanceKm],
+      ['事故の有無', x => x.v.accident ? '有り' : (x.v.saved ? '無し' : '')], ['事故に関する事項', x => x.v.accidentNote],
+      ['記載状況', x => x.miss.length ? '足りない: ' + x.miss.join('・') : '記載済み']
+    ];
+    function csvCell(v) {
+      const s = String(v == null ? '' : v);
+      // 表計算ソフトの数式として解釈されないようにする
+      const safe = /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
+      return /[",\n\r]/.test(safe) ? '"' + safe.replace(/"/g, '""') + '"' : safe;
+    }
+    function saveCsv() {
+      const list = shown();
+      if (!list.length) { B.toast('保存する行がありません。', 'warn'); return; }
+      const lines = [COLS.map(c => csvCell(c[0])).join(',')].concat(list.map(x => COLS.map(c => csvCell(c[1](x))).join(',')));
+      const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '貸渡簿_' + ($('#from').value || '') + '_' + ($('#to').value || '') + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    }
+
+    function printLedger() {
+      const list = shown();
+      const head = '<tr>' + COLS.filter(c => c[0] !== '状態' && c[0] !== '記載状況').map(c => '<th>' + esc(c[0]) + '</th>').join('') + '</tr>';
+      const body = list.map(x => '<tr>' + COLS.filter(c => c[0] !== '状態' && c[0] !== '記載状況').map(c => '<td>' + esc(c[1](x)) + '</td>').join('') + '</tr>').join('');
+      const loc = S.getLocation($('#loc').value);
+      $('#print-area').innerHTML = '<div class="lg-print"><h1>貸渡簿</h1><div class="meta">株式会社Skyward Growth (グロースレンタカー)' + (loc ? ' ' + esc(loc.name) : '') +
+        ' ／ 貸渡日 ' + esc($('#from').value || '') + ' 〜 ' + esc($('#to').value || '') + ' ／ ' + list.length + ' 件 ／ 出力日 ' + esc(fmt(new Date().toISOString())) + '</div>' +
+        '<table><thead>' + head + '</thead><tbody>' + (body || '<tr><td colspan="22">該当なし</td></tr>') + '</tbody></table></div>';
+      window.print();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      $('#loc').innerHTML = '<option value="">全拠点</option>' + S.locations().map(l => '<option value="' + esc(l.locationId) + '">' + esc(l.name) + '</option>').join('');
+      // 既定: 今月 (日本時間)
+      const ymd = B.jst.toInput(new Date().toISOString()).slice(0, 10);
+      const first = ymd.slice(0, 8) + '01';
+      const [y, mo] = [Number(ymd.slice(0, 4)), Number(ymd.slice(5, 7))];
+      const last = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
+      $('#from').value = first;
+      $('#to').value = last;
+      $('#btn-go').addEventListener('click', load);
+      $('#only').addEventListener('change', render);
+      $('#loc').addEventListener('change', load);
+      $('#btn-csv').addEventListener('click', saveCsv);
+      $('#btn-print').addEventListener('click', printLedger);
+      load();
+    });
+  })();
+  </script>
+</body>
+</html>
