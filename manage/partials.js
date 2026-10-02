@@ -31,7 +31,7 @@
         ['dashboard.html', 'ダッシュボード', 'read'],
         ['reservation-table.html', '貸渡予約表 (ガント)', 'read'],
         ['reservation-list.html', '予約一覧', 'read'],
-        ['forms.html', '帳票出力 (貸渡証・領収書等)', 'read'],
+        ['forms.html', '帳票出力 (貸渡証・貸渡簿)', 'read'],
         ['rental-ledger.html', '貸渡簿', 'read'],
         ['reservation-cancellations.html', '予約キャンセル一覧', 'read'],
         ['shaken-list.html', '車検予約一覧', 'read'],

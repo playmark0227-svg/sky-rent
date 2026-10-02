@@ -153,7 +153,7 @@
       '.rr-body{padding:14px 20px;max-height:68vh;overflow:auto}' +
       '.rr-sec{margin:4px 0 14px}.rr-sec h4{font-size:13.5px;color:var(--primary,#1c4a7a);border-bottom:1px solid #e6ebf0;padding-bottom:4px;margin:0 0 8px}' +
       '.rr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}' +
-      '.rr-f{display:flex;flex-direction:column;gap:3px}.rr-f.rr-wide{grid-column:1/-1}' +
+      '.rr-f{display:flex;flex-direction:column;gap:3px}.rr-wide{grid-column:1/-1}' +
       '.rr-f label{font-size:12px;font-weight:600;color:#555}.rr-req{color:#c0392b}' +
       '.rr-f input,.rr-f textarea,.rr-f select{width:100%;padding:7px 9px;border:1px solid #ccc;border-radius:3px;font:inherit;font-size:13px;box-sizing:border-box}' +
       '.rr-f input[aria-invalid=true]{border-color:#c0392b;background:#fff7f6}' +
@@ -162,6 +162,10 @@
       '.rr-missing{margin:0 0 12px;padding:8px 12px;border-radius:4px;background:#fff8e6;border:1px solid #f1d9a6;color:#7a5200;font-size:12.5px;line-height:1.7}' +
       '.rr-missing.is-ok{background:#eef8f1;border-color:#bfe3cb;color:#1e6b3a}' +
       '.rr-err{color:#c0392b;font-size:12.5px;padding:0 20px 8px}' +
+      '.rr-al{margin:0 0 10px;padding:10px 14px;border-radius:4px;font-size:13px;line-height:1.8}.rr-al ul{margin:4px 0 0;padding-left:18px}' +
+      '.rr-al-odo{background:#fdf0ee;border:1px solid #f0c4bd;color:#8a2a1c}.rr-al-oil{background:#fff8e6;border:1px solid #f1d9a6;color:#6b4a00}' +
+      '.rr-al a{color:inherit}.rr-al small{color:inherit;opacity:.75}.rr-al-btn{margin-left:6px;padding:2px 10px;border:1px solid currentColor;border-radius:3px;background:#fff;color:inherit;font:inherit;font-size:12px;cursor:pointer}' +
+      '.rr-al-btn:hover{background:rgba(255,255,255,.6)}.rr-al-btn:focus-visible{outline:2px solid #1c4a7a;outline-offset:1px}' +
       '@media (max-width:640px){.rr-grid{grid-template-columns:1fr}}';
     document.head.appendChild(st);
   }
@@ -337,10 +341,12 @@
     return m;
   }
 
-  // ===== 貸渡証 (印刷用) =====
-  //   ctx: {company, shop, address, tel}
+  // ===== 貸渡証 / 貸渡簿 (印刷用) =====
+  //   ctx: {company, shop, address, tel, kind}
+  //   kind: 'loan' = 貸渡証 (お客様に渡す) / 'book' = 貸渡簿 (会社で保管する)。中身は同じで、題名だけ変わる
   function loanDocHtml(r, v, ctx) {
     ctx = ctx || {};
+    const book = ctx.kind === 'book';
     const d = driverOf(v);
     const row = (k, val) => '<tr><th>' + esc(k) + '</th><td>' + (val == null || val === '' ? '&nbsp;' : val) + '</td></tr>';
     const sec = (title, rows) => '<table class="ld-t"><thead><tr><th colspan="2">' + esc(title) + '</th></tr></thead><tbody>' + rows + '</tbody></table>';
@@ -370,8 +376,8 @@
       '</ol></div>' +
       '<div class="ld-box"><b>備考</b><div class="ld-remarks">' + esc(v.remarks).replace(/\n/g, '<br>') + '</div></div>' +
       '<div class="ld-box"><b>ご署名</b><div class="ld-sign"></div><small>契約内容及び貸渡約款に同意の上で、ご署名ください。</small></div>';
-    return '<div class="doc loan-doc">' +
-      '<div class="ld-head"><h1>貸渡証</h1><div class="ld-meta">発行日 ' + esc(fmtYmd(v.issuedOn) || fmtYmd(todayYmd())) + '<br>貸渡番号 ' + esc(r.reservationId) + '</div></div>' +
+    return '<div class="doc loan-doc' + (book ? ' book-doc' : '') + '">' +
+      '<div class="ld-head"><h1>' + (book ? '貸渡簿' : '貸渡証') + (book ? '<small class="ld-sub">会社保管用</small>' : '') + '</h1><div class="ld-meta">発行日 ' + esc(fmtYmd(v.issuedOn) || fmtYmd(todayYmd())) + '<br>貸渡番号 ' + esc(r.reservationId) + '</div></div>' +
       '<div class="ld-cols"><div class="ld-col">' + left + '</div><div class="ld-col">' + right + '</div></div></div>';
   }
   // 貸渡証の印刷用スタイル (帳票画面に足す)
@@ -380,6 +386,9 @@
     '.loan-doc .ld-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px}' +
     '.loan-doc .ld-head h1{font-size:24px;letter-spacing:4px;border:0;padding:0;margin:0;text-align:left}' +
     '.loan-doc .ld-meta{text-align:right;font-size:11.5px}' +
+    '.loan-doc .ld-sub{font-size:12px;letter-spacing:1px;margin-left:10px;font-weight:500;color:#555}' +
+    '.doc-pair .loan-doc + .loan-doc{margin-top:28px}' +
+    '@media print{.doc-pair .loan-doc + .loan-doc{page-break-before:always;break-before:page;margin-top:0}}' +
     '.loan-doc .ld-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}' +
     '.loan-doc table.ld-t{width:100%;border-collapse:collapse;margin-bottom:8px}' +
     '.loan-doc table.ld-t thead th{background:#f1f1f1;text-align:left;font-size:12px;padding:3px 6px;border:1px solid #999}' +
@@ -390,9 +399,287 @@
     '.loan-doc .ld-remarks{border:1px solid #999;min-height:90px;padding:6px;border-radius:3px}' +
     '.loan-doc .ld-sign{border:1px solid #999;height:46px;border-radius:3px;margin-bottom:3px}';
 
+  // ===================================================================
+  // 予約の状態を変える (予約一覧・予約表で共通)。本番は admin_update_reservation を待って結果を反映する
+  //   updates: store の形 (デモ)、patch: DB の形 (本番)。版 (version) が違えば VERSION_CONFLICT
+  // ===================================================================
+  async function applyChange(id, updates, patch) {
+    if (!B().live) return S().updateReservation(id, updates);
+    const c = B().client;
+    if (!c) throw new Error('NETWORK');
+    const cur = S().findById('reservations', 'reservationId', id);
+    const version = cur && cur.version != null && isFinite(Number(cur.version)) ? Number(cur.version) : null;
+    const res = await c.rpc('admin_update_reservation', { p_id: id, p_patch: patch, p_version: version });
+    if (res.error) throw res.error;
+    const row = B().fromDb.reservation(res.data);
+    const list = S().list('reservations');
+    const i = list.findIndex(x => x.reservationId === row.reservationId);
+    if (i >= 0) list[i] = row; else list.push(row);
+    S()._hydrate({ reservations: list });
+    return row;
+  }
+  function errText(e) {
+    const msg = String((e && e.message) || '');
+    if (e && e._skyrent && msg) return msg;
+    if (/^[A-Z][A-Z0-9_]{2,}$/.test(msg)) return B().errorMessage(msg);
+    if (e && e.code && /^[A-Z][A-Z_]+$/.test(String(e.code))) return B().errorMessage(e.code);
+    if (e && (e.code === '42501' || /permission denied|row-level security/i.test(msg))) return B().errorMessage('FORBIDDEN');
+    return B().errorMessage('INTERNAL');
+  }
+
+  function isVehicleRes(r) {
+    if (!r || r.kind === 'block') return false;
+    const a = S().getAsset(r.assetId);
+    const c = S().getCategory(r.categoryId || (a && a.categoryId));
+    return !!(c && c.type === 'vehicle');
+  }
+  const kmOf = v => (v == null || v === '' ? null : Number(v));
+
+  // 車両ごとの最新のメーター (貸渡証の貸出時・返却時メーターのうち、いちばん大きい値)
+  //   records: rentalRecords()、戻り値: {assetId: {km, firstKm, at}}
+  function odometerByAsset(records) {
+    const out = {};
+    (records || []).forEach(rec => {
+      const r = S().findById('reservations', 'reservationId', rec.id);
+      if (!r || !isVehicleRes(r)) return;
+      [kmOf(rec.odometerOut), kmOf(rec.odometerIn)].forEach(km => {
+        if (km == null || !isFinite(km)) return;
+        const o = out[r.assetId] || (out[r.assetId] = { km: km, firstKm: km, at: r.end });
+        if (km > o.km) { o.km = km; o.at = r.end; }
+        if (km < o.firstKm) o.firstKm = km;
+      });
+    });
+    return out;
+  }
+
+  // ===== オイル交換の目安 (既定は 5,000 km ごと。残り 500 km から「そろそろ」) =====
+  //   車両の oil = {intervalKm, lastKm, lastDate} (管理画面の車両で設定。本番は assets.extra.oil)
+  //   前回の交換が未登録なら、記録の中でいちばん小さいメーターから数える (目安)
+  const OIL_DEFAULT_KM = 5000, OIL_SOON_KM = 500;
+  function oilStatus(asset, odo) {
+    const oil = (asset && asset.oil) || {};
+    const interval = Number(oil.intervalKm) > 0 ? Number(oil.intervalKm) : OIL_DEFAULT_KM;
+    if (!odo) return { level: 'unknown', intervalKm: interval };
+    const baseKnown = oil.lastKm != null && oil.lastKm !== '' && isFinite(Number(oil.lastKm));
+    const base = baseKnown ? Number(oil.lastKm) : odo.firstKm;
+    const since = odo.km - base;
+    const remaining = interval - since;
+    const level = remaining <= 0 ? 'due' : (remaining <= OIL_SOON_KM ? 'soon' : 'ok');
+    return { level: level, intervalKm: interval, current: odo.km, base: base, baseKnown: baseKnown, since: since, remaining: remaining, lastDate: oil.lastDate || null };
+  }
+  function oilText(asset, st) {
+    if (!st || st.level === 'unknown') return '';
+    if (st.level === 'due') return (asset.name || '') + ': オイル交換の時期を過ぎています (前回から ' + st.since.toLocaleString('ja-JP') + ' km)';
+    return (asset.name || '') + ': そろそろオイル交換です (あと ' + st.remaining.toLocaleString('ja-JP') + ' km)';
+  }
+  // オイル交換が近い・過ぎている車両 [{asset, st, text}]
+  async function oilAlerts(records) {
+    if (!records) records = await B().admin.rentalRecords();
+    const odo = odometerByAsset(records);
+    return S().assets({ activeOnly: true }).filter(a => {
+      const c = S().getCategory(a.categoryId);
+      return c && c.type === 'vehicle';
+    }).map(a => ({ asset: a, st: oilStatus(a, odo[a.assetId]) }))
+      .filter(x => x.st.level === 'due' || x.st.level === 'soon')
+      .map(x => Object.assign(x, { text: oilText(x.asset, x.st) }));
+  }
+  // オイル交換をしたことを記録する (いまのメーターを前回の交換時に)。本番は車両の保存 (catalog.write の権限)
+  function markOilChanged(asset, km) {
+    const oil = Object.assign({}, asset.oil || {}, { lastKm: Number(km), lastDate: todayYmd() });
+    if (!(Number(oil.intervalKm) > 0)) oil.intervalKm = OIL_DEFAULT_KM;
+    S().upsert('assets', 'assetId', { assetId: asset.assetId, oil: oil });
+    return oil;
+  }
+
+  // ===== 走行距離の入れ忘れ (貸出中で貸出時メーターが無い / 返却済みで返却時メーターが無い) =====
+  //   days: 返却済みは、返却がこの日数以内のものだけ見る
+  function mileageGaps(records, days) {
+    const byId = {};
+    (records || []).forEach(x => { byId[x.id] = x; });
+    const since = Date.now() - (days || 60) * DAY;
+    const out = [];
+    S().list('reservations').forEach(r => {
+      if (!isVehicleRes(r)) return;
+      const rec = byId[r.reservationId] || {};
+      if ((r.status === 'in_use' || r.status === 'returned') && kmOf(rec.odometerOut) == null) {
+        if (r.status === 'in_use' || Date.parse(r.end) >= since) out.push({ r: r, missing: 'out' });
+      }
+      if (r.status === 'returned' && kmOf(rec.odometerIn) == null && Date.parse(r.end) >= since) out.push({ r: r, missing: 'in' });
+    });
+    // 貸出中を先に、そのあとは返却の新しい順
+    return out.sort((x, y) => (x.r.status === 'in_use' ? 0 : 1) - (y.r.status === 'in_use' ? 0 : 1) || Date.parse(y.r.end) - Date.parse(x.r.end));
+  }
+
+  // ===== 貸出処理・返却処理 (走行距離の入力つき) =====
+  //   kind: 'out' = 貸出 (出発) / 'in' = 返却。メーターが空のときは「入力されていません」と確かめてから進む。
+  //   opts.onDone(row): 状態を変えたあと
+  async function openHandover(r, kind, opts) {
+    opts = opts || {};
+    ensureStyle();
+    const out = kind === 'out';
+    let rec = null, records = [];
+    try {
+      rec = await B().admin.rentalRecord(r.reservationId);
+      records = await B().admin.rentalRecords(S().list('reservations').filter(x => x.assetId === r.assetId).map(x => x.reservationId));
+    } catch (e) { B().toast(errText(e), 'error'); return null; }
+    const odo = odometerByAsset(records.filter(x => x.id !== r.reservationId))[r.assetId];
+    const v = effective(r, rec);
+    const outKnown = v.odometerOut != null && v.odometerOut !== '';
+    const title = out ? '貸出処理 (出発)' : '返却処理';
+    const html =
+      '<div class="crud-modal-bg"></div><div class="crud-modal-card" style="min-width:440px;max-width:540px">' +
+      '<div class="crud-modal-head"><h3>' + title + ' <code style="background:rgba(255,255,255,.2);color:#fff;font-size:12px;margin-left:6px;padding:2px 8px;border-radius:2px">' + esc(r.reservationId) + '</code></h3><button class="crud-close" type="button" aria-label="閉じる">×</button></div>' +
+      '<div class="rr-body">' +
+        '<p style="margin:0 0 10px;font-size:13px"><strong>' + esc(r.assetName || r.vehicleName) + '</strong> / ' + esc(r.customerName) + ' 様<br>' + esc(fmtDT(r.start)) + ' 〜 ' + esc(fmtDT(r.end)) + '</p>' +
+        '<div class="rr-grid">' +
+          (out
+            ? field('貸出時メーター (km)', num('odoOut', v.odometerOut, ' min="0"'), { req: true, wide: true })
+            : (outKnown
+                ? '<div class="rr-wide" style="font-size:13px;color:#555">貸出時メーター: <b>' + Number(v.odometerOut).toLocaleString('ja-JP') + ' km</b></div>'
+                : field('貸出時メーター (km)', num('odoOut', '', ' min="0" placeholder="未入力です"'), { req: true })) +
+              field('返却時メーター (km)', num('odoIn', v.odometerIn, ' min="0"'), { req: true, wide: outKnown }) +
+              '<div class="rr-wide"><label class="rr-inline" style="margin-right:16px"><input type="radio" name="rr-acc" id="rr-acc-no"' + (v.accident ? '' : ' checked') + '> 事故なし</label>' +
+              '<label class="rr-inline"><input type="radio" name="rr-acc" id="rr-acc-yes"' + (v.accident ? ' checked' : '') + '> 事故あり</label></div>' +
+              field('事故の内容', area('accNote', v.accidentNote, 2), { wide: true })) +
+          '<div class="rr-dist rr-wide" id="rr-ho-info"></div>' +
+        '</div>' +
+        '<p style="font-size:12px;color:#777;margin:10px 0 0">免許証・住所・行先などは「貸渡証を編集」から入力できます。</p>' +
+      '</div>' +
+      '<div class="rr-err" id="rr-ho-err" role="alert" hidden></div>' +
+      '<div class="crud-modal-foot" style="flex-wrap:wrap;gap:8px"><button type="button" class="btn btn-primary" id="rr-ho-go">' + (out ? '貸出処理をする' : '返却処理をする') + '</button>' +
+        '<button type="button" class="btn btn-gray" id="rr-ho-edit">貸渡証を編集</button><span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">閉じる</button></div></div>';
+    const m = openModal(html);
+    const modal = m.modal;
+    const $m = sel => modal.querySelector(sel);
+    const input = $m(out ? '#rr-odoOut' : '#rr-odoIn');
+    const outInput = !out && !outKnown ? $m('#rr-odoOut') : null;   // 返却時に、入れ忘れた貸出時メーターも入れられる
+    const outVal = () => (outInput ? (outInput.value === '' ? null : Number(outInput.value)) : (outKnown ? Number(v.odometerOut) : null));
+    function info() {
+      const val = input.value === '' ? null : Number(input.value);
+      const parts = [];
+      if (odo) parts.push('この車両の最新の記録: ' + odo.km.toLocaleString('ja-JP') + ' km');
+      const first = out ? val : outVal();
+      if (first != null && odo && first < odo.km) parts.push('⚠ 最新の記録より小さい値です');
+      if (!out && val != null && outVal() != null) {
+        const d = val - outVal();
+        parts.push(d >= 0 ? '走行キロ数: ' + d.toLocaleString('ja-JP') + ' km' : '⚠ 貸出時メーターより小さい値です');
+      }
+      $m('#rr-ho-info').textContent = parts.join(' / ');
+      if (!out) $m('#rr-accNote').closest('.rr-f').hidden = !$m('#rr-acc-yes').checked;
+    }
+    modal.querySelectorAll('input, textarea').forEach(el => el.addEventListener('input', info));
+    modal.querySelectorAll('input[type=radio]').forEach(el => el.addEventListener('change', info));
+    info();
+    try { input.focus(); } catch (e) { /* 無視 */ }
+    $m('#rr-ho-edit').addEventListener('click', () => { m.close(); openEditor(r, { focus: 'odometer', onSaved: opts.onSaved }); });
+    $m('#rr-ho-go').addEventListener('click', async () => {
+      const err = $m('#rr-ho-err');
+      err.hidden = true;
+      const raw = input.value.trim();
+      if (outInput && outInput.value.trim() === '' && raw !== '' &&
+          !window.confirm('貸出時の走行距離 (メーター) が入力されていません。\n返却時メーターだけで返却処理をしますか? (走行キロ数は計算できません)')) { try { outInput.focus(); } catch (e) { /* 無視 */ } return; }
+      if (raw === '') {
+        const q = out
+          ? '貸出時の走行距離 (メーター) が入力されていません。\n入力せずに貸出処理をしますか? (あとから「走行距離を入力」で入れられます)'
+          : '返却時の走行距離 (メーター) が入力されていません。\n入力せずに返却処理をしますか? (あとから「走行距離を入力」で入れられます)';
+        if (!window.confirm(q)) { try { input.focus(); } catch (e) { /* 無視 */ } return; }
+      }
+      const btn = $m('#rr-ho-go');
+      btn.disabled = true;
+      try {
+        const patch = out ? { odometerOut: raw } : { odometerIn: raw, accident: $m('#rr-acc-yes').checked, accidentNote: $m('#rr-accNote').value };
+        if (outInput && outInput.value.trim() !== '') patch.odometerOut = outInput.value.trim();
+        if (raw !== '' || !out) rec = await B().admin.saveRentalRecord(r.reservationId, patch, rec ? rec.version : null);
+        const status = out ? 'in_use' : 'returned';
+        const row = await applyChange(r.reservationId, { status: status }, { status: status });
+        m.close();
+        B().toast('予約 ' + r.reservationId + (out ? ' を貸出中にしました。' : ' を返却済にしました。'), 'success');
+        if (raw === '') B().toast((out ? '貸出時' : '返却時') + 'の走行距離が未入力です。忘れずに入力してください。', 'warn');
+        // 返却したら、その車両のオイル交換の目安を確かめる
+        if (!out) {
+          try {
+            const all = await B().admin.rentalRecords(S().list('reservations').filter(x => x.assetId === r.assetId).map(x => x.reservationId));
+            const a = S().getAsset(r.assetId);
+            const st = oilStatus(a, odometerByAsset(all)[r.assetId]);
+            if (st.level === 'due' || st.level === 'soon') window.alert('🛢 ' + oilText(a, st) + '\n(車両・物品管理、または予約表の「オイル交換済みにする」で記録できます)');
+          } catch (e) { /* 目安の表示だけ */ }
+        }
+        if (typeof opts.onDone === 'function') opts.onDone(row);
+      } catch (e) {
+        btn.disabled = false;
+        err.textContent = (e && e.code === 'VALIDATION' && e.detail && /[^\x00-\x7F]/.test(String(e.detail))) ? String(e.detail) : errText(e);
+        // 他のスタッフが先に更新していたら、読み込み直してもらう
+        if (/VERSION_CONFLICT/.test(String((e && (e.code + ' ' + e.message)) || ''))) {
+          const rb = document.createElement('button');
+          rb.type = 'button'; rb.className = 'btn btn-gray'; rb.id = 'rr-ho-reload'; rb.textContent = '最新の内容を読み込む';
+          rb.style.cssText = 'margin-left:10px;padding:3px 10px;font-size:12px';
+          rb.addEventListener('click', () => location.reload());
+          err.appendChild(rb);
+        }
+        err.hidden = false;
+      }
+    });
+    return m;
+  }
+
+  // ===== お知らせ欄 (走行距離の入れ忘れ・オイル交換の目安)。ダッシュボード・予約一覧・予約表の上に出す =====
+  //   el: 入れる場所、opts.records: 読み込み済みの貸渡証 (省略すると読む)、opts.onChange(): 入力・交換の記録のあと (画面を読み直す)
+  async function renderAlerts(el, opts) {
+    if (!el) return;
+    opts = opts || {};
+    ensureStyle();
+    let records = opts.records;
+    if (!records) {
+      try { records = await B().admin.rentalRecords(); } catch (e) { el.hidden = true; return; }
+    }
+    const gaps = mileageGaps(records, 60);
+    const oils = await oilAlerts(records);
+    if (!gaps.length && !oils.length) { el.hidden = true; el.innerHTML = ''; return; }
+    const MAX = 5;
+    const canCatalog = !B().admin.can || B().admin.can('catalog.write');
+    let html = '';
+    // 同じ予約の 貸出時・返却時 は1行にまとめる
+    const byRes = [];
+    gaps.forEach(g => {
+      const hit = byRes.find(x => x.r.reservationId === g.r.reservationId);
+      if (hit) hit.missing.push(g.missing); else byRes.push({ r: g.r, missing: [g.missing] });
+    });
+    if (byRes.length) {
+      html += '<div class="rr-al rr-al-odo" data-alert="odometer"><strong>⚠ 走行距離 (メーター) が入力されていない予約が ' + byRes.length + ' 件あります</strong><ul>' +
+        byRes.slice(0, MAX).map((g, i) => '<li data-gap-id="' + esc(g.r.reservationId) + '">' + esc(g.r.reservationId) + ' ' + esc(fmtDT(g.r.start)) + ' ' + esc(g.r.assetName || g.r.vehicleName) + ' / ' + esc(g.r.customerName) + ' 様 — ' +
+          g.missing.map(x => (x === 'out' ? '貸出時' : '返却時')).join('・') + 'の走行距離が入力されていません ' +
+          '<button type="button" class="rr-al-btn" data-gap="' + i + '">入力する</button></li>').join('') +
+        (byRes.length > MAX ? '<li>ほか ' + (byRes.length - MAX) + ' 件 (<a href="rental-ledger.html">貸渡簿</a>の「足りない項目がある行だけ」で確認できます)</li>' : '') + '</ul></div>';
+    }
+    if (oils.length) {
+      html += '<div class="rr-al rr-al-oil" data-alert="oil"><strong>🛢 オイル交換のお知らせ</strong><ul>' +
+        oils.map((o, i) => '<li>' + esc(o.text) + ' <small>(メーター ' + o.st.current.toLocaleString('ja-JP') + ' km / ' + o.st.intervalKm.toLocaleString('ja-JP') + ' km ごと' + (o.st.baseKnown ? '' : '・前回の交換が未登録のため最初の記録から計算') + ')</small>' +
+          (canCatalog ? ' <button type="button" class="rr-al-btn" data-oil="' + i + '">交換済みにする</button>' : '') + '</li>').join('') + '</ul></div>';
+    }
+    el.innerHTML = html;
+    el.hidden = false;
+    const refresh = () => { renderAlerts(el, opts); if (typeof opts.onChange === 'function') opts.onChange(); };
+    el.querySelectorAll('[data-gap]').forEach(b => b.addEventListener('click', () => {
+      openEditor(byRes[Number(b.dataset.gap)].r, { focus: 'odometer', onSaved: refresh });
+    }));
+    el.querySelectorAll('[data-oil]').forEach(b => b.addEventListener('click', () => {
+      const o = oils[Number(b.dataset.oil)];
+      const v = window.prompt(o.asset.name + ' のオイル交換を記録します。\n交換したときのメーター (km) を入れてください。', String(o.st.current));
+      if (v == null) return;
+      const km = Number(String(v).replace(/[,\s]/g, ''));
+      if (!(km >= 0) || !isFinite(km) || Math.floor(km) !== km) { window.alert('メーターは 0 以上の整数 (km) で入れてください'); return; }
+      markOilChanged(o.asset, km);
+      B().toast(o.asset.name + ' のオイル交換を記録しました (' + km.toLocaleString('ja-JP') + ' km)', 'success');
+      refresh();
+    }));
+  }
+
   window.SkyRentRentalRecord = {
     LICENSE_TYPES: LICENSE_TYPES,
     defaults: defaults, effective: effective, missing: missing, driverOf: driverOf, durationText: durationText,
-    isItemRes: isItemRes, openEditor: openEditor, loanDocHtml: loanDocHtml, LOAN_DOC_CSS: LOAN_DOC_CSS
+    isItemRes: isItemRes, isVehicleRes: isVehicleRes, openEditor: openEditor, loanDocHtml: loanDocHtml, LOAN_DOC_CSS: LOAN_DOC_CSS,
+    applyChange: applyChange, errText: errText, openHandover: openHandover, mileageGaps: mileageGaps,
+    odometerByAsset: odometerByAsset, oilStatus: oilStatus, oilText: oilText, oilAlerts: oilAlerts, markOilChanged: markOilChanged,
+    renderAlerts: renderAlerts, OIL_DEFAULT_KM: OIL_DEFAULT_KM, OIL_SOON_KM: OIL_SOON_KM
   };
 })();

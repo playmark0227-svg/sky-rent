@@ -46,6 +46,9 @@
 
     <div class="print-bar"><span class="badge-new">new</span><button class="btn btn-gray" id="btn-print">貸渡・返却リスト印刷</button></div>
 
+    <!-- 走行距離の入れ忘れ・オイル交換のお知らせ -->
+    <div id="rr-alerts" hidden></div>
+
     <!-- KPI 4枚 -->
     <section class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
       <a class="kpi kpi-1" href="reservation-list.html"><div class="kpi-label">本日の予約受付</div><div class="kpi-value"><span id="kpi-bookings">0</span><span class="kpi-unit">件</span></div></a>
@@ -112,14 +115,15 @@
   <div id="loading" class="loading" hidden><div class="spinner"></div></div>
 
   <script src="partials.js"></script>
+  <script src="js/rental-record.js?v=20261006"></script>
 
-  <script src="../js/config.js?v=20261005"></script>
-  <script src="../js/store.js?v=20261005"></script>
-  <script src="../js/pricing-core.js?v=20261005"></script>
-  <script src="../js/pricing.js?v=20261005"></script>
-  <script src="../js/api.js?v=20261005"></script>
-  <script src="../js/backend.js?v=20261005"></script>
-  <script src="../js/boot.js?v=20261005"></script>
+  <script src="../js/config.js?v=20261006"></script>
+  <script src="../js/store.js?v=20261006"></script>
+  <script src="../js/pricing-core.js?v=20261006"></script>
+  <script src="../js/pricing.js?v=20261006"></script>
+  <script src="../js/api.js?v=20261006"></script>
+  <script src="../js/backend.js?v=20261006"></script>
+  <script src="../js/boot.js?v=20261006"></script>
   <script type="text/x-deferred" data-src="js/manage.js"></script>
 </body>
 </html>

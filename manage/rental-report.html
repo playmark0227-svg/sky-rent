@@ -78,6 +78,7 @@
           <tbody id="cat-tbody"></tbody>
         </table>
       </div>
+      <p id="km-note" style="font-size:12.5px;margin:10px 0 0;line-height:1.7"></p>
       <div class="form-row" style="margin-top:14px">
         <label>事務所数</label>
         <input type="number" id="office-count" class="form-input" style="max-width:100px" value="1" min="1">
@@ -147,13 +148,13 @@
 
   <script src="partials.js"></script>
 
-  <script src="../js/config.js?v=20261005"></script>
-  <script src="../js/store.js?v=20261005"></script>
-  <script src="../js/pricing-core.js?v=20261005"></script>
-  <script src="../js/pricing.js?v=20261005"></script>
-  <script src="../js/api.js?v=20261005"></script>
-  <script src="../js/backend.js?v=20261005"></script>
-  <script src="../js/boot.js?v=20261005"></script>
+  <script src="../js/config.js?v=20261006"></script>
+  <script src="../js/store.js?v=20261006"></script>
+  <script src="../js/pricing-core.js?v=20261006"></script>
+  <script src="../js/pricing.js?v=20261006"></script>
+  <script src="../js/api.js?v=20261006"></script>
+  <script src="../js/backend.js?v=20261006"></script>
+  <script src="../js/boot.js?v=20261006"></script>
   <script type="text/x-deferred">
   (function () {
     const $ = (s) => document.querySelector(s);
@@ -269,20 +270,35 @@
           vehMap[v.vehicleId] = v;
           stats[categorize(v)].count++;
         });
-        reservations.filter(r => r.status !== 'cancelled').forEach(r => {
+        // 数えるのは車両の貸渡 (貸出停止枠・キャンセル・無断キャンセルを除く)
+        const rentals = reservations.filter(r => (r.kind || 'rental') === 'rental' && r.status !== 'cancelled' && r.status !== 'no_show' && vehMap[r.vehicleId]);
+        // 延走行キロ: 貸渡証 (貸渡簿) の 返却時メーター − 貸出時メーター の合計
+        let records = [];
+        try { records = await window.SkyRentBackend.admin.rentalRecords(rentals.map(r => r.reservationId)); } catch (e) { records = []; }
+        const recById = {};
+        records.forEach(x => { recById[x.id] = x; });
+        let noKm = 0;
+        rentals.forEach(r => {
           const v = vehMap[r.vehicleId];
-          if (!v) return;
           const cat = categorize(v);
           const s = new Date(r.start);
           const e = new Date(r.end);
           const days = Math.max(1, Math.ceil((e - s) / 86400000));
           stats[cat].rentals++;
           stats[cat].days += days;
-          stats[cat].revenue += days * (Number(v.pricePerDay) || 0);
-          // km は実走行データなければ 0
+          // 料金は予約の合計 (税込)。記録が無い古いデータは日数 × 日額
+          const total = Number(r.total != null ? r.total : (r.price && r.price.total));
+          stats[cat].revenue += isFinite(total) && total > 0 ? total : days * (Number(v.pricePerDay) || 0);
+          const rec = recById[r.reservationId];
+          const km = rec && rec.distanceKm != null ? Number(rec.distanceKm) : NaN;
+          if (isFinite(km) && km >= 0) stats[cat].km += km; else noKm++;
         });
         aggregated = stats;
         renderCategoryTable(stats);
+        $('#km-note').innerHTML = noKm
+          ? '⚠ 走行距離 (貸出時・返却時メーター) が入っていない貸渡が <strong>' + noKm + ' 件</strong>あります。その分は延走行キロに入っていません。<a href="rental-ledger.html">貸渡簿</a>で入力すると集計に入ります。'
+          : (rentals.length ? '延走行キロは、貸渡簿 (貸渡証) の走行距離 ' + rentals.length + ' 件の合計です。' : '');
+        $('#km-note').style.color = noKm ? '#9a6200' : '#1e6b3a';
       } catch (err) {
         alert('集計失敗: ' + err.message);
       } finally {

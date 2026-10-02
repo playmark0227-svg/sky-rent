@@ -706,7 +706,7 @@ a.kpi:hover {
 }
 .gantt-cell.weekend { background: #f9f9fc; }
 .gantt-row.gantt-header .gantt-cell.weekend { background: var(--topbar-dark); }
-.gantt-date { font-weight: 600; }
+.gantt-date { font-weight: 600; font-size: 11px; letter-spacing: -0.02em; white-space: nowrap; }
 .gantt-dow { font-size: 10px; opacity: 0.8; }
 .gantt-bars {
   position: absolute;

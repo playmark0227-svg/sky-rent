@@ -48,6 +48,7 @@
 
   <main class="main">
     <h1 class="page-title">予約一覧</h1>
+    <div id="rr-alerts" hidden></div>
 
     <section class="card filter-bar">
       <div class="filter-group"><label>期間</label><input type="date" id="from"> 〜 <input type="date" id="to"></div>
@@ -77,15 +78,15 @@
   <div id="loading" class="loading" hidden><div class="spinner"></div></div>
 
   <script src="partials.js"></script>
-  <script src="js/rental-record.js"></script>
+  <script src="js/rental-record.js?v=20261006"></script>
 
-  <script src="../js/config.js?v=20261005"></script>
-  <script src="../js/store.js?v=20261005"></script>
-  <script src="../js/pricing-core.js?v=20261005"></script>
-  <script src="../js/pricing.js?v=20261005"></script>
-  <script src="../js/api.js?v=20261005"></script>
-  <script src="../js/backend.js?v=20261005"></script>
-  <script src="../js/boot.js?v=20261005"></script>
+  <script src="../js/config.js?v=20261006"></script>
+  <script src="../js/store.js?v=20261006"></script>
+  <script src="../js/pricing-core.js?v=20261006"></script>
+  <script src="../js/pricing.js?v=20261006"></script>
+  <script src="../js/api.js?v=20261006"></script>
+  <script src="../js/backend.js?v=20261006"></script>
+  <script src="../js/boot.js?v=20261006"></script>
   <script type="text/x-deferred">
   (function () {
     'use strict';
@@ -390,7 +391,8 @@
           rows.push(['貸渡証', '<div id="rd-loan"><span style="color:#888">読み込み中...</span></div>' +
             '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn btn-gray" id="act-loan" style="padding:5px 12px;font-size:12.5px">貸渡証を編集</button>' +
             '<button type="button" class="btn btn-gray" id="act-odometer" style="padding:5px 12px;font-size:12.5px">走行距離を入力</button>' +
-            '<a class="btn btn-gray" style="padding:5px 12px;font-size:12.5px" href="forms.html?id=' + encodeURIComponent(r.reservationId) + '&amp;doc=loan">貸渡証を表示・印刷</a></div>']);
+            '<a class="btn btn-gray" style="padding:5px 12px;font-size:12.5px" href="forms.html?id=' + encodeURIComponent(r.reservationId) + '&amp;doc=loan">貸渡証を印刷</a>' +
+            '<a class="btn btn-gray" style="padding:5px 12px;font-size:12.5px" href="forms.html?id=' + encodeURIComponent(r.reservationId) + '&amp;doc=book">貸渡簿を印刷</a></div>']);
         }
         rows.push(['Googleカレンダー', '<div class="gc-line" id="rd-gcal">' + gcalText(r) + '</div>']);
         rows.push(['備考', esc(r.note || '-')]);
@@ -430,12 +432,17 @@
         }
       }
       const on = (sel, fn) => { const el = modal.querySelector(sel); if (el) el.addEventListener('click', () => fn(el)); };
+      // 車両の貸出・返却は走行距離 (メーター) を入れる画面を出す。未入力なら確かめてから進む
+      const vehicleRes = RR.isVehicleRes(r);
+      const pointNote = S.pointsEnabled() ? '会員予約の場合はポイントが自動付与されます。' : '';
       on('#act-inuse', b => {
+        if (vehicleRes) { m.close(); RR.openHandover(r, 'out', { onDone: reloadAll, onSaved: () => openDetailLater(id) }); return; }
         const q = item ? 'お受け取り処理を行いますか? (家電をお渡しし、状態を「貸出中」に変更します)\n本人確認書類と、家電の数・動作を確認してください。' : '貸出処理を行いますか? (状態を「貸出中」に変更します)';
         if (confirm(q)) run(b, { status: 'in_use' }, { status: 'in_use' }, '予約 ' + id + ' を貸出中にしました。');
       });
       on('#act-return', b => {
-        const q = item ? 'ご返却処理を行いますか?\n家電の数と動作を確認してください。会員予約の場合はポイントが自動付与されます。' : '返却処理を行いますか?\n会員予約の場合はポイントが自動付与されます。';
+        if (vehicleRes) { m.close(); RR.openHandover(r, 'in', { onDone: reloadAll, onSaved: () => openDetailLater(id) }); return; }
+        const q = item ? 'ご返却処理を行いますか?\n家電の数と動作を確認してください。' + pointNote : '返却処理を行いますか?' + (pointNote ? '\n' + pointNote : '');
         if (confirm(q)) run(b, { status: 'returned' }, { status: 'returned' }, '予約 ' + id + ' を返却済にしました。');
       });
       on('#act-restore', b => { if (confirm('無断キャンセルを取り消して「確定」に戻しますか?')) run(b, { status: 'confirmed', cancelFee: null }, { status: 'confirmed', cancel_fee: 0 }, '予約 ' + id + ' を確定に戻しました。'); });
@@ -465,12 +472,20 @@
         const v = RR.effective(r, rec);
         const miss = RR.missing(v, { returned: r.status === 'returned' });
         const dist = v.distanceKm != null ? ' / 走行 ' + v.distanceKm.toLocaleString('ja-JP') + ' km' : '';
+        const km = x => (x == null || x === '' ? '未入力' : Number(x).toLocaleString('ja-JP') + ' km');
+        // 貸出後・返却後にメーターが空なら目立たせる
+        const warn = [];
+        if ((r.status === 'in_use' || r.status === 'returned') && (v.odometerOut == null || v.odometerOut === '')) warn.push('貸出時の走行距離が入力されていません');
+        if (r.status === 'returned' && (v.odometerIn == null || v.odometerIn === '')) warn.push('返却時の走行距離が入力されていません');
         el.innerHTML = (rec ? '<span class="status status-confirmed">保存済み</span> ' + esc(fmtDT(rec.updatedAt)) : '<span class="status status-soon">未作成</span>') + esc(dist) +
+          '<div class="rl-sub" data-odo>メーター: 貸出時 ' + esc(km(v.odometerOut)) + ' → 返却時 ' + esc(km(v.odometerIn)) + '</div>' +
+          (warn.length ? '<div class="rl-sub" data-odo-warn style="color:#c0392b;font-weight:700">⚠ ' + esc(warn.join(' / ')) + '</div>' : '') +
           (miss.length ? '<div class="rl-sub" style="color:#b56b00">貸渡簿に足りない項目: ' + esc(miss.join('・')) + '</div>' : '<div class="rl-sub" style="color:#1e6b3a">貸渡簿の記載事項はすべて入っています</div>');
       } catch (e) { el.textContent = '読み込めませんでした: ' + describe(e).message; }
     }
-    // 貸渡証を保存したあと、予約詳細を開き直す
-    function openDetailLater(id) { setTimeout(() => openDetail(id), 0); }
+    // 貸渡証を保存したあと、予約詳細を開き直す (お知らせ欄も読み直す)
+    function openDetailLater(id) { RR.renderAlerts($('#rr-alerts'), { onChange: load }); setTimeout(() => openDetail(id), 0); }
+    function reloadAll() { load(); RR.renderAlerts($('#rr-alerts'), { onChange: load }); }
 
     // ---------------------------------------------------------------
     // キャンセル・無断キャンセル: 料金ルールでキャンセル料を示し、減額・免除も入力できる
@@ -616,6 +631,8 @@
         $('#btn-block').addEventListener('click', openBlockForm);
       }
       load().then(() => {
+        // 走行距離の入れ忘れ・オイル交換のお知らせ
+        RR.renderAlerts($('#rr-alerts'), { onChange: load });
         // reservation-list.html#R00012 で詳細を開く
         let id = '';
         try { id = decodeURIComponent(location.hash.slice(1)); } catch (e) { id = ''; }

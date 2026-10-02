@@ -26,6 +26,8 @@
     setYmd(todayYmd());
     load();
     loadTodo();
+    // 走行距離の入れ忘れ・オイル交換のお知らせ (管理画面の権限があるスタッフ)
+    if (window.SkyRentRentalRecord && B.admin && B.admin.can('read')) window.SkyRentRentalRecord.renderAlerts($('#rr-alerts'), { onChange: load });
   }
 
   // ===== 日付 (日本時間の 'YYYY-MM-DD') =====

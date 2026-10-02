@@ -24,9 +24,9 @@
     <section class="card">
       <table class="data-table list">
         <thead>
-          <tr><th>ID</th><th></th><th>名称</th><th>カテゴリ</th><th>拠点</th><th>料金/日</th><th>在庫</th><th>必要免許</th><th>車検</th><th>状態</th><th></th></tr>
+          <tr><th>ID</th><th></th><th>名称</th><th>カテゴリ</th><th>拠点</th><th>料金/日</th><th>在庫</th><th>必要免許</th><th>車検</th><th>メーター・オイル交換</th><th>状態</th><th></th></tr>
         </thead>
-        <tbody id="tbl"><tr class="empty"><td colspan="11">読み込み中...</td></tr></tbody>
+        <tbody id="tbl"><tr class="empty"><td colspan="12">読み込み中...</td></tr></tbody>
       </table>
     </section>
   </main>
@@ -34,18 +34,32 @@
   <div id="loading" class="loading" hidden><div class="spinner"></div></div>
 
   <script src="partials.js"></script>
+  <script src="js/rental-record.js?v=20261006"></script>
 
-  <script src="../js/config.js?v=20261005"></script>
-  <script src="../js/store.js?v=20261005"></script>
-  <script src="../js/pricing-core.js?v=20261005"></script>
-  <script src="../js/pricing.js?v=20261005"></script>
-  <script src="../js/api.js?v=20261005"></script>
-  <script src="../js/backend.js?v=20261005"></script>
-  <script src="../js/boot.js?v=20261005"></script>
+  <script src="../js/config.js?v=20261006"></script>
+  <script src="../js/store.js?v=20261006"></script>
+  <script src="../js/pricing-core.js?v=20261006"></script>
+  <script src="../js/pricing.js?v=20261006"></script>
+  <script src="../js/api.js?v=20261006"></script>
+  <script src="../js/backend.js?v=20261006"></script>
+  <script src="../js/boot.js?v=20261006"></script>
   <script type="text/x-deferred">
   (function () {
     const S = window.SkyRentStore;
+    const B = window.SkyRentBackend;
+    const RR = window.SkyRentRentalRecord;
     const $ = s => document.querySelector(s);
+    let odoByAsset = {};   // 車両ごとの最新のメーター (貸渡証の走行距離から)
+    const kmText = v => Number(v).toLocaleString('ja-JP');
+    // メーターとオイル交換の目安 (既定 5,000 km ごと)
+    function oilCell(a) {
+      const odo = odoByAsset[a.assetId];
+      const st = RR.oilStatus(a, odo);
+      if (!odo) return '<span style="color:#bbb">記録なし</span>';
+      const color = st.level === 'due' ? 'color:#c0392b;font-weight:700' : (st.level === 'soon' ? 'color:#9a6200;font-weight:700' : 'color:#666');
+      const txt = st.level === 'due' ? '交換時期 (超過 ' + kmText(-st.remaining) + ' km)' : (st.level === 'soon' ? 'そろそろ交換 (あと ' + kmText(st.remaining) + ' km)' : 'あと ' + kmText(st.remaining) + ' km');
+      return kmText(odo.km) + ' km<br><small style="' + color + '" data-oil-state="' + st.level + '">オイル: ' + txt + '</small>';
+    }
     function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
     function fmtD(iso){if(!iso)return '';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate());}
     function toISO(dateVal){ return dateVal ? new Date(dateVal + 'T00:00:00').toISOString() : null; }
@@ -64,7 +78,7 @@
       let arr = S.assets({ categoryId: cat || undefined, locationId: loc || undefined });
       if (kw) arr = arr.filter(a => (a.name || '').toLowerCase().includes(kw) || (a.plate || '').toLowerCase().includes(kw));
       const now = new Date();
-      if (!arr.length) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="11" style="text-align:center;padding:24px;color:#888">該当なし</td></tr>'; return; }
+      if (!arr.length) { $('#tbl').innerHTML = '<tr class="empty"><td colspan="12" style="text-align:center;padding:24px;color:#888">該当なし</td></tr>'; return; }
       $('#tbl').innerHTML = arr.map(a => {
         const c = S.getCategory(a.categoryId), l = S.getLocation(a.locationId);
         const isItem = c && c.type === 'item';
@@ -80,6 +94,7 @@
           '<td style="text-align:center">' + (isItem ? (a.stock || 1) + '点' : '1台') + '</td>' +
           '<td>' + (a.requiredLicense ? '<span class="chip">要免許</span>' : '<span style="color:#bbb">不要</span>') + '</td>' +
           '<td>' + (isItem ? '<span style="color:#bbb">-</span>' : shaken) + '</td>' +
+          '<td style="font-size:12.5px;font-variant-numeric:tabular-nums">' + (isItem ? '<span style="color:#bbb">-</span>' : oilCell(a)) + '</td>' +
           '<td><span class="status ' + (a.active !== false ? 'status-confirmed' : 'status-cancelled') + '">' + (a.active !== false ? '稼働中' : '休止中') + '</span></td>' +
           '<td style="text-align:center"><a href="#" class="detail-link" data-edit="' + esc(a.assetId) + '">編集</a></td>' +
           '</tr>';
@@ -117,7 +132,12 @@
         }
         return '<div class="crud-field"><label>必要免許・資格</label><input type="text" id="a-license" value="' + esc(a.requiredLicense || '') + '" placeholder="例: 準中型免許以上 (不要なら空欄)"></div>' +
           '<div class="crud-field"><label>車検満了日</label><input type="date" id="a-shaken" value="' + toDateInput(a.shakenDate) + '"></div>' +
-          '<div class="crud-field"><label>次回点検日</label><input type="date" id="a-maint" value="' + toDateInput(a.maintenanceDate) + '"></div>';
+          '<div class="crud-field"><label>次回点検日</label><input type="date" id="a-maint" value="' + toDateInput(a.maintenanceDate) + '"></div>' +
+          '<div class="crud-field"><label>オイル交換の間隔 (km)</label><input type="number" id="a-oil-int" min="500" step="500" value="' + esc((a.oil && a.oil.intervalKm) || RR.OIL_DEFAULT_KM) + '" style="max-width:140px;flex:none"></div>' +
+          '<div class="crud-field"><label>前回のオイル交換</label><div style="flex:1;display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
+            '<input type="number" id="a-oil-km" min="0" placeholder="メーター (km)" value="' + esc(a.oil && a.oil.lastKm != null ? a.oil.lastKm : '') + '" style="width:150px"> km ' +
+            '<input type="date" id="a-oil-date" value="' + esc((a.oil && a.oil.lastDate) || '') + '" style="width:160px"></div></div>' +
+          '<p style="font-size:11.5px;color:#888;margin:-4px 20px 8px">走行距離 (貸渡証の貸出時・返却時メーター) から、次のオイル交換が近づくとダッシュボード・予約表・返却処理でお知らせします。</p>';
       }
 
       const html =
@@ -189,6 +209,11 @@
           requiredLicense: isItem ? '' : ((modal.querySelector('#a-license') || {}).value || '').trim(),
           shakenDate: isItem ? null : toISO((modal.querySelector('#a-shaken') || {}).value),
           maintenanceDate: isItem ? null : toISO((modal.querySelector('#a-maint') || {}).value),
+          oil: isItem ? (a.oil || null) : {
+            intervalKm: Math.max(500, parseInt((modal.querySelector('#a-oil-int') || {}).value, 10) || RR.OIL_DEFAULT_KM),
+            lastKm: (modal.querySelector('#a-oil-km') || {}).value === '' ? null : Math.max(0, parseInt(modal.querySelector('#a-oil-km').value, 10) || 0),
+            lastDate: (modal.querySelector('#a-oil-date') || {}).value || null
+          },
           active: modal.querySelector('#a-active').value === 'true',
           customFields: collectCustomFields()
         };
@@ -210,6 +235,8 @@
       initFilters();
       $('#btn-add').addEventListener('click', () => openModal(null));
       render();
+      // 走行距離を読んでから、メーター・オイル交換の欄を埋める
+      B.admin.rentalRecords().then(recs => { odoByAsset = RR.odometerByAsset(recs); render(); }).catch(() => { /* 記録なしのまま */ });
     });
   })();
   </script>

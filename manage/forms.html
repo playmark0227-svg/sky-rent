@@ -21,9 +21,6 @@
     .doc .notes li { margin-left: 16px; list-style: disc; }
     .doc .sign { display: flex; justify-content: flex-end; gap: 20px; margin-top: 20px; }
     .doc .sign .box { border: 1px solid #333; width: 120px; height: 60px; text-align: center; font-size: 10px; padding-top: 4px; }
-    .receipt .amt-big { font-size: 30px; font-weight: 700; border-bottom: 2px solid #333; text-align: center; padding: 8px 0; margin: 12px 0; }
-    .check-cols { display: flex; gap: 0; }
-    .stamp-box { display: inline-block; border: 1px dashed #c33; color: #c33; width: 70px; height: 70px; text-align: center; line-height: 70px; font-size: 11px; }
     @media print {
       body > *:not(#print-area) { display: none !important; }
       #print-area { display: block !important; }
@@ -36,7 +33,7 @@
 
   <main class="main">
     <h1 class="page-title">帳票出力</h1>
-    <p class="page-note">予約を選び、レンタル種別に応じた帳票を発行します。車両レンタルは「貸渡証・車輌チェックシート・領収書」、家電レンタル (家電だけのレンタル) は「物品貸出書・領収書」を出力できます。物品貸出書には借りる家電を1点ずつ (家電セットは中の品目に分けて) 並べます。プレビュー後、ブラウザの印刷でA4出力できます。</p>
+    <p class="page-note">予約を選び、レンタル種別に応じた帳票を発行します。車両レンタルは「貸渡証」(お客様に渡す) と「貸渡簿」(会社で保管する。中身は貸渡証と同じ) を出力でき、「両方を印刷」で2枚続けて印刷できます。家電レンタル (家電だけのレンタル) は「物品貸出書」です (借りる家電を1点ずつ、家電セットは中の品目に分けて並べます)。プレビュー後、ブラウザの印刷でA4出力 (PDF保存も可) できます。</p>
 
     <section class="card filter-bar">
       <div class="filter-group"><label>期間</label><input type="date" id="f-from"> 〜 <input type="date" id="f-to"></div>
@@ -56,15 +53,15 @@
   <div id="print-area"></div>
 
   <script src="partials.js"></script>
-  <script src="js/rental-record.js"></script>
+  <script src="js/rental-record.js?v=20261006"></script>
 
-  <script src="../js/config.js?v=20261005"></script>
-  <script src="../js/store.js?v=20261005"></script>
-  <script src="../js/pricing-core.js?v=20261005"></script>
-  <script src="../js/pricing.js?v=20261005"></script>
-  <script src="../js/api.js?v=20261005"></script>
-  <script src="../js/backend.js?v=20261005"></script>
-  <script src="../js/boot.js?v=20261005"></script>
+  <script src="../js/config.js?v=20261006"></script>
+  <script src="../js/store.js?v=20261006"></script>
+  <script src="../js/pricing-core.js?v=20261006"></script>
+  <script src="../js/pricing.js?v=20261006"></script>
+  <script src="../js/api.js?v=20261006"></script>
+  <script src="../js/backend.js?v=20261006"></script>
+  <script src="../js/boot.js?v=20261006"></script>
   <script type="text/x-deferred">
   (function () {
     const S = window.SkyRentStore;
@@ -96,9 +93,10 @@
       $('#tbl').innerHTML = rows.map(r => {
         const cat = S.getCategory(r.categoryId);
         const isItem = cat && cat.type === 'item';
+        const b = (doc, label, primary) => '<button class="btn ' + (primary ? 'btn-primary' : 'btn-gray') + ' btnf" data-doc="' + doc + '" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">' + label + '</button>';
         const btns = isItem
-          ? '<button class="btn btn-primary btnf" data-doc="itemloan" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">物品貸出書</button> <button class="btn btn-gray btnf" data-doc="receipt" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">領収書</button>'
-          : '<button class="btn btn-primary btnf" data-doc="loan" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">貸渡証</button> <button class="btn btn-gray btnf" data-doc="check" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">チェックシート</button> <button class="btn btn-gray btnf" data-doc="receipt" data-id="' + esc(r.reservationId) + '" style="padding:5px 10px;font-size:12px">領収書</button>';
+          ? b('itemloan', '物品貸出書', true)
+          : b('loan', '貸渡証', true) + ' ' + b('book', '貸渡簿', true) + ' ' + b('both', '両方を印刷', false);
         return '<tr>' +
           '<td><code>' + esc(r.reservationId) + '</code></td>' +
           '<td>' + esc(targetText(r, isItem)) + '</td>' +
@@ -120,18 +118,6 @@
       (r.options || []).forEach(x => { (isCover(currentOption(x) || x) ? cover : equip).push(x); });
       return [{ kind: 'cover', title: '補償オプション', list: cover }, { kind: 'equip', title: '装備オプション', list: equip }].filter(g => g.list.length);
     }
-    // 貸出・返却時に数量を確かめる装備の品目 (家電セットなどのセットは、中の品目に分けて並べる)
-    function equipItems(r) {
-      const items = [];
-      optionGroups(r).filter(g => g.kind === 'equip').forEach(g => g.list.forEach(x => {
-        const cur = currentOption(x) || {};
-        const inner = Array.isArray(cur.includes) ? cur.includes : [];
-        if (!inner.length) { items.push(x.name); return; }
-        const setName = String(x.name || '').replace(/\s*[（(].*$/, '') || x.name;
-        inner.forEach(id => { const y = S.findById('options', 'optionId', id); items.push((y ? y.name : id) + ' (' + setName + ')'); });
-      }));
-      return items;
-    }
     function optionsHtml(r) {
       const groups = optionGroups(r);
       if (!groups.length) return '';
@@ -145,11 +131,11 @@
 
     // ===== 帳票テンプレート =====
     // 貸渡証: 予約一覧・予約表で保存した内容 (無ければ予約の内容からの下書き) を、貸渡簿と同じ項目で出す
-    function docLoan(r, rec) {
+    function docLoan(r, rec, kind) {
       const st = store(r);
       const site = S.read('settings.site', null) || {};
       const RR = window.SkyRentRentalRecord;
-      if (RR) return RR.loanDocHtml(r, RR.effective(r, rec || null), { company: site.company || '株式会社Skyward Growth', shop: 'グロースレンタカー ' + (st.name || ''), address: st.address || '', tel: st.tel || '' });
+      if (RR) return RR.loanDocHtml(r, RR.effective(r, rec || null), { company: site.company || '株式会社Skyward Growth', shop: 'グロースレンタカー ' + (st.name || ''), address: st.address || '', tel: st.tel || '', kind: kind === 'book' ? 'book' : 'loan' });
       return docLoanSimple(r);
     }
     function docLoanSimple(r) { // 貸渡証 (共通部品が読めないときの簡易版)
@@ -165,32 +151,6 @@
         optionsHtml(r) +
         '<div class="notes"><b>ご注意事項</b><ul><li>酒気帯び・過労状態での運転は固くお断りします。</li><li>本車両の又貸し (転貸) を禁じます。</li><li>事故・故障の際は速やかに当社まで連絡してください。</li><li>返却時は満タン返しとし、車内清掃にご協力ください。</li></ul></div>' +
         '<div class="sign"><div class="box">貸渡人 確認印</div><div class="box">借受人 署名</div></div></div>';
-    }
-    function docCheck(r) { // 車輌チェックシート
-      const a = S.getAsset(r.assetId) || {};
-      const items = ['外装キズ (前)', '外装キズ (後)', '外装キズ (左)', '外装キズ (右)', 'タイヤ・ホイール', '灯火類', '車内清掃', 'ナビ・ETC', 'フロアマット', '付属品'];
-      return '<div class="doc"><h1>車輌チェックシート</h1><div class="meta">予約番号: ' + esc(r.reservationId) + ' ／ 車両: ' + esc(a.name || r.assetName) + ' (' + esc(a.plate || '') + ')</div>' +
-        '<table class="d-table"><thead><tr><th style="width:40%">点検項目</th><th style="text-align:center">出発時</th><th style="text-align:center">返却時</th><th>特記事項</th></tr></thead><tbody>' +
-        items.map(it => '<tr><td>' + it + '</td><td style="text-align:center">□良 □要確認</td><td style="text-align:center">□良 □要確認</td><td></td></tr>').join('') +
-        equipItems(r).map(it => '<tr><td>装備: ' + esc(it) + ' ×1</td><td style="text-align:center">□有 □要確認</td><td style="text-align:center">□有 □要確認</td><td></td></tr>').join('') +
-        '<tr><td>燃料残量</td><td style="text-align:center">E ─┼─┼─┼─ F</td><td style="text-align:center">E ─┼─┼─┼─ F</td><td></td></tr>' +
-        '<tr><td>走行距離 (km)</td><td>＿＿＿＿＿ km</td><td>＿＿＿＿＿ km</td><td>走行 ＿＿ km</td></tr>' +
-        '</tbody></table>' +
-        '<div class="notes">出発時・返却時に双方立会いのもとチェックしてください。相違があった場合は特記事項に記録します。</div>' +
-        '<div class="sign"><div class="box">担当者確認</div><div class="box">お客様確認</div></div></div>';
-    }
-    function docReceipt(r) { // 領収書
-      const st = store(r), amt = (r.price && r.price.total) || 0, tax = Math.round(amt - amt / 1.1);
-      return '<div class="doc receipt"><h1>領　収　書</h1><div class="meta">No. ' + esc(r.reservationId) + ' ／ 発行日: ' + today() + '</div>' +
-        '<p style="font-size:16px;border-bottom:1px solid #333;padding-bottom:6px"><b>' + esc(r.customerName) + '</b> 様</p>' +
-        '<div class="amt-big">¥ ' + amt.toLocaleString() + ' -</div>' +
-        '<p>但し、レンタル料金として (予約番号 ' + esc(r.reservationId) + ')</p>' +
-        '<p>上記正に領収いたしました。</p>' +
-        '<table class="d-table"><thead><tr><th>内訳</th><th style="text-align:right">金額</th></tr></thead><tbody>' + priceRows(r) + '</tbody></table>' +
-        '<table class="d-table" style="width:60%"><tr><th>税抜金額</th><td style="text-align:right">¥' + (amt - tax).toLocaleString() + '</td></tr><tr><th>消費税 (10%内税)</th><td style="text-align:right">¥' + tax.toLocaleString() + '</td></tr></table>' +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px">' +
-        (amt >= 50000 ? '<div class="stamp-box">収入印紙</div>' : '<div></div>') +
-        '<div style="text-align:right;font-size:12px">' + esc(st.name) + '<br>' + esc(st.address) + '<br>TEL: ' + esc(st.tel) + '</div></div></div>';
     }
     // 家電レンタルで借りる家電を1点ずつ (家電セットは中の品目に分けて並べる)。
     //   料金はその家電の行 (予約時の料金内訳の code 'option') の金額。セットはセットの料金を中の品目の行にまとめて出す
@@ -236,26 +196,30 @@
         '<div class="sign"><div class="box">貸出人 確認印</div><div class="box">借受人 署名</div></div></div>';
     }
 
-    const DOCS = { loan: docLoan, check: docCheck, receipt: docReceipt, itemloan: docItemLoan };
-    const TITLES = { loan: '貸渡証', check: '車輌チェックシート', receipt: '領収書', itemloan: '物品貸出書' };
+    // 貸渡簿: 中身は貸渡証と同じ (会社で保管する) / 両方: 貸渡証と貸渡簿を続けて (印刷は2枚)
+    function docBook(r, rec) { return docLoan(r, rec, 'book'); }
+    function docBoth(r, rec) { return '<div class="doc-pair">' + docLoan(r, rec, 'loan') + docLoan(r, rec, 'book') + '</div>'; }
+    const DOCS = { loan: docLoan, book: docBook, both: docBoth, itemloan: docItemLoan };
+    const TITLES = { loan: '貸渡証', book: '貸渡簿', both: '貸渡証・貸渡簿', itemloan: '物品貸出書' };
 
     async function openDoc(type, id) {
       const r = S.list('reservations').find(x => x.reservationId === id);
       if (!r) return;
-      // 貸渡証は保存した内容を使う
+      // 貸渡証・貸渡簿は保存した内容を使う
       let rec = null;
-      if (type === 'loan') {
+      const loanLike = type === 'loan' || type === 'book' || type === 'both';
+      if (loanLike) {
         try { rec = await window.SkyRentBackend.admin.rentalRecord(id); } catch (e) { rec = null; }
       }
       // 帳票の右上にロゴ (印刷でも同じ画像を使う)
-      const docHtml = DOCS[type](r, rec).replace(/<div class="doc( [a-z-]+)?">/,
+      const docHtml = DOCS[type](r, rec).replace(/<div class="doc( [a-z-]+)*">/g,
         m => m + '<img class="doc-logo" src="../images/brand/logo.png" alt="グロースレンタカー" width="1200" height="547">');
       const html =
         '<div class="crud-modal-bg"></div><div class="crud-modal-card" style="min-width:700px;max-width:780px">' +
         '<div class="crud-modal-head"><h3>' + TITLES[type] + ' プレビュー</h3><button class="crud-close" type="button">×</button></div>' +
-        (type === 'loan' && !rec ? '<div style="padding:8px 14px;background:#fff8e6;color:#7a5200;font-size:12.5px">この貸渡証はまだ保存されていません (予約の内容から下書きしています)。免許証番号・住所・走行距離などは、予約一覧の「貸渡証を編集」から入力・保存できます。</div>' : '') +
+        (loanLike && !rec ? '<div style="padding:8px 14px;background:#fff8e6;color:#7a5200;font-size:12.5px">この貸渡証はまだ保存されていません (予約の内容から下書きしています)。免許証番号・住所・走行距離などは、予約一覧の「貸渡証を編集」から入力・保存できます。</div>' : '') +
         '<div style="padding:10px;max-height:70vh;overflow:auto;background:#e9ecef">' + docHtml.replace('class="doc', 'style="background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.12)" class="doc') + '</div>' +
-        '<div class="crud-modal-foot">' + (type === 'loan' && window.SkyRentRentalRecord ? '<button type="button" class="btn btn-gray" id="d-edit">貸渡証を編集</button>' : '') + '<span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">閉じる</button><button type="button" class="btn btn-primary" id="d-print">印刷</button></div></div>';
+        '<div class="crud-modal-foot">' + (loanLike && window.SkyRentRentalRecord ? '<button type="button" class="btn btn-gray" id="d-edit">貸渡証を編集</button>' : '') + '<span style="flex:1"></span><button type="button" class="btn btn-gray crud-cancel">閉じる</button><button type="button" class="btn btn-primary" id="d-print">印刷</button></div></div>';
       let modal = document.getElementById('crud-modal');
       if (!modal) { modal = document.createElement('div'); modal.id = 'crud-modal'; modal.className = 'crud-modal'; document.body.appendChild(modal); }
       modal.innerHTML = html;
@@ -265,7 +229,7 @@
       modal.querySelector('.crud-cancel').addEventListener('click', close);
       modal.querySelector('#d-print').addEventListener('click', () => { $('#print-area').innerHTML = docHtml; window.print(); });
       const ed = modal.querySelector('#d-edit');
-      if (ed) ed.addEventListener('click', () => { close(); window.SkyRentRentalRecord.openEditor(r, { onSaved: () => setTimeout(() => openDoc('loan', id), 0) }); });
+      if (ed) ed.addEventListener('click', () => { close(); window.SkyRentRentalRecord.openEditor(r, { onSaved: () => setTimeout(() => openDoc(type, id), 0) }); });
     }
 
     document.addEventListener('DOMContentLoaded', () => {

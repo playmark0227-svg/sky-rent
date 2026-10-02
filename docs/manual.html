@@ -206,11 +206,11 @@
     <h2>目　次</h2>
     <ol>
       <li><a href="#ch1"><span class="n">1</span><span class="t">はじめに<small>システムの概要・ログイン方法・スマートフォンでの使い方</small></span></a></li>
-      <li><a href="#ch2"><span class="n">2</span><span class="t">毎日の運用フロー<small>ダッシュボード確認 → 出発・返却 → 貸出・返却処理 → 未処理アラート対応</small></span></a></li>
-      <li><a href="#ch3"><span class="n">3</span><span class="t">予約の管理<small>絞り込み・詳細・状態の変更・キャンセル・入金記録・ガントチャートの見方</small></span></a></li>
-      <li><a href="#ch4"><span class="n">4</span><span class="t">帳票の出力<small>貸渡証・車輌チェックシート・領収書の出し方と印刷</small></span></a></li>
+      <li><a href="#ch2"><span class="n">2</span><span class="t">毎日の運用フロー<small>ダッシュボード確認 → 貸出処理（貸出時メーター）→ 返却処理（返却時メーター）→ 走行距離・オイル交換のお知らせ</small></span></a></li>
+      <li><a href="#ch3"><span class="n">3</span><span class="t">予約の管理<small>絞り込み・詳細・状態の変更・キャンセル・入金記録・ガントチャート（車両／家電タブ・ドラッグで移動・車検の登録）</small></span></a></li>
+      <li><a href="#ch4"><span class="n">4</span><span class="t">帳票の出力<small>貸渡証・貸渡簿・物品貸出書の出し方と印刷</small></span></a></li>
       <li><a href="#ch5"><span class="n">5</span><span class="t"><span class="star">★</span> 新しいカテゴリを追加する<small>例:「冷凍車」を追加する通し手順 (最重要)</small></span></a></li>
-      <li><a href="#ch6"><span class="n">6</span><span class="t">車両・物品の登録と在庫・車検期限の管理</span></a></li>
+      <li><a href="#ch6"><span class="n">6</span><span class="t">車両・物品の登録と在庫・車検期限の管理<small>走行距離とオイル交換の目安（5,000 km ごと）</small></span></a></li>
       <li><a href="#ch7"><span class="n">7</span><span class="t">オプション管理<small>共通オプション（装備）とカテゴリ専用オプション（補償）・家電セット・在庫数</small></span></a></li>
       <li><a href="#ch8"><span class="n">8</span><span class="t">家電レンタル（家電だけの貸し出し）<small>受け付け → お受け取り（本人確認・動作確認・物品貸出書）→ ご返却・在庫の変え方</small></span></a></li>
       <li><a href="#ch9"><span class="n">9</span><span class="t">会員・ポイント・クーポン<small>請求書払い許可の付与・ポイント手動調整・自動発行のしくみ</small></span></a></li>
@@ -292,6 +292,7 @@
     <li>上段の 4 枚のカード（<strong>本日の予約受付／本日の出発／本日の帰着／今月の売上</strong>）で、今日の全体像をつかみます。</li>
     <li><strong>「拠点別サマリー」</strong>で、北見本店それぞれの「出発・帰着・貸出中」の件数を確認します。</li>
     <li>赤い枠の <strong>「未処理アラート」</strong>が出ていたら、内容を確認します（後述 2.4）。</li>
+    <li>上のほうに <strong>「⚠ 走行距離（メーター）が入力されていない予約」</strong>や <strong>「オイル交換のお知らせ」</strong>が出ていたら、その場で対応します（2.4）。</li>
   </ol>
 
   <h3 class="sec">2.2　日中：出発（貸出）の処理をする</h3>
@@ -300,8 +301,9 @@
     <li>ダッシュボードの <strong>「予約一覧へ」</strong>、または <span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">予約一覧</span></span> を開きます。</li>
     <li>該当の予約の行の右端 <strong>「詳細」</strong> を押します。</li>
     <li>予約詳細の <strong>「料金内訳」</strong> に装備オプション（ポータブル電源・家電セットなど）があれば、その品目をそろえ、お客様と一緒に数量と動作を確認してお渡しします。<strong>家電セット</strong>はポータブル冷蔵冷凍庫〜電気ケトルの 9 点です。</li>
-    <li>免許証番号などを確認し、<strong>「🚗 貸出処理（出発）」</strong> ボタンを押します。状態が <span class="badge">確定</span> → <span class="badge">貸出中</span> に変わります。</li>
-    <li>必要に応じて、貸渡証などの帳票を印刷します（第 4 章）。</li>
+    <li>免許証番号などを確認し、<strong>「🚗 貸出処理（出発）」</strong> ボタンを押します。<strong>貸出時メーター（km）</strong>を入れる画面が開くので、車のメーターの値を入れて <strong>「貸出処理をする」</strong> を押します。状態が <span class="badge">確定</span> → <span class="badge">貸出中</span> に変わります。</li>
+    <li>メーターを入れずに押すと <strong>「貸出時の走行距離が入力されていません」</strong> と確認が出ます。あとから入れる場合だけ「OK」で進めてください（入れるまで、ダッシュボード・予約一覧・予約表にお知らせが出続けます）。</li>
+    <li>免許証・住所・行先・人数は <strong>「貸渡証を編集」</strong> から入れます（3.5）。必要に応じて、貸渡証・貸渡簿を印刷します（第 4 章）。</li>
   </ol>
   <p style="font-size:13.5px;color:var(--sub)">※ 家電レンタル（家電だけの予約）は、「貸出／返却」ではなく「お受け取り／ご返却」と表示されます。手順は第 8 章を見てください（運転免許ではなく本人確認書類を確認し、物品貸出書を使います）。</p>
 
@@ -309,16 +311,23 @@
   <p>ダッシュボードの <strong>「本日の帰着予定」</strong>に、返却予定の予約が表示されます。車両が戻ってきたら「返却済」にします。</p>
   <ol class="steps">
     <li>予約一覧で対象予約の <strong>「詳細」</strong> を開きます。</li>
-    <li>車両の傷や燃料、貸し出した装備オプションの数量・破損を確認します（車輌チェックシートを活用）。</li>
-    <li><strong>「✅ 返却処理」</strong> ボタンを押します。状態が <span class="badge">貸出中</span> → <span class="badge gray">返却済</span> に変わります。</li>
+    <li>車両の傷や燃料、貸し出した装備オプションの数量・破損を確認します。</li>
+    <li><strong>「✅ 返却処理」</strong> ボタンを押し、<strong>返却時メーター（km）</strong>と<strong>事故の有無</strong>を入れて <strong>「返却処理をする」</strong> を押します。走行キロ数は自動で計算されます。状態が <span class="badge">貸出中</span> → <span class="badge gray">返却済</span> に変わります。</li>
+    <li>貸出時メーターを入れ忘れていた場合は、この画面で一緒に入れられます。返却時メーターが空のまま押すと <strong>「返却時の走行距離が入力されていません」</strong> と確認が出ます。</li>
+    <li>返却したことでその車両の<strong>オイル交換の時期</strong>が近づいた（または過ぎた）ときは、ポップアップでお知らせします（6.5）。</li>
     <li>現地決済で未入金の場合は、同じ画面の <strong>「入金を記録」</strong> で入金済にします。</li>
   </ol>
-  <div class="call tip"><span class="h">ヒント：ポイントは返却時に自動で付きます</span>
-    会員のお客様の予約を「返却済」にすると、<strong>ポイントが自動で付与</strong>されます。累計が一定に達すると割引クーポンも自動発行されます（第 9 章）。スタッフが手動で付ける必要はありません。
+  <div class="call tip"><span class="h">ヒント：ポイント制度は現在停止中です</span>
+    いまはポイント制度を止めているため、返却してもポイントは付きません。再開した場合は、会員の予約を「返却済」にすると<strong>ポイントが自動で付与</strong>されます（第 9 章）。
   </div>
 
   <h3 class="sec">2.4　未処理アラートへの対応</h3>
   <p>ダッシュボードの赤い枠「未処理アラート」には、<strong>処理が滞っている予約（出発予定なのに未処理、返却予定を過ぎている等）</strong>が表示されます。内容を確認し、2.2／2.3 の手順で処理してください。</p>
+  <p>ダッシュボード・予約一覧・貸渡予約表の上には、次のお知らせも出ます。</p>
+  <ul>
+    <li><strong>⚠ 走行距離（メーター）が入力されていない予約</strong>：貸出中なのに貸出時メーターが無い予約、返却済（60日以内）なのに貸出時・返却時メーターが無い予約です。<strong>「入力する」</strong>で貸渡証の編集が開きます。入れるとお知らせから消えます。</li>
+    <li><strong>🛢 オイル交換のお知らせ</strong>：前回の交換から 5,000 km（車両ごとに変更可）に近づいた・過ぎた車両です。交換したら <strong>「交換済みにする」</strong> を押し、交換したときのメーターを入れます（6.5）。</li>
+  </ul>
 
   <h3 class="sec">2.5　閉店前のチェック</h3>
   <ul>
@@ -347,7 +356,7 @@
     <tbody>
       <tr><td><span class="badge">確定</span></td><td>予約を受け付けた状態（まだ出発していない）</td><td>貸出処理／キャンセル／入金記録</td></tr>
       <tr><td><span class="badge">貸出中</span></td><td>お客様に貸し出し中（出発済み）</td><td>返却処理／キャンセル／入金記録</td></tr>
-      <tr><td><span class="badge gray">返却済</span></td><td>返却が完了した状態</td><td>（会員はこの時点でポイント付与）</td></tr>
+      <tr><td><span class="badge gray">返却済</span></td><td>返却が完了した状態</td><td>走行距離・貸渡証の入力（あとからでも可）</td></tr>
       <tr><td><span class="badge red">キャンセル</span></td><td>取り消された予約</td><td>—</td></tr>
     </tbody>
   </table>
@@ -356,8 +365,9 @@
   <h3 class="sec">3.3　詳細を開いて操作する</h3>
   <p>各行右端の <strong>「詳細」</strong> を押すと、予約の全情報（対象・期間・借受人・連絡先・免許証番号・支払方法・料金内訳）が表示されます。画面下部のボタンで、状態を進めたり入金を記録したりできます。</p>
   <ul>
-    <li><strong>貸出処理（出発）</strong>：<span class="badge">確定</span> の予約を <span class="badge">貸出中</span> にします。</li>
-    <li><strong>返却処理</strong>：<span class="badge">貸出中</span> の予約を <span class="badge gray">返却済</span> にします（会員はポイント自動付与）。</li>
+    <li><strong>貸出処理（出発）</strong>：貸出時メーターを入れて、<span class="badge">確定</span> の予約を <span class="badge">貸出中</span> にします。</li>
+    <li><strong>返却処理</strong>：返却時メーターと事故の有無を入れて、<span class="badge">貸出中</span> の予約を <span class="badge gray">返却済</span> にします。</li>
+    <li><strong>貸渡証</strong>の欄：保存状況・<strong>メーター（貸出時 → 返却時）</strong>・足りない項目が出ます。メーターが入っていないと赤字で「入力されていません」と出ます。<strong>「走行距離を入力」「貸渡証を編集」「貸渡証を印刷」「貸渡簿を印刷」</strong>が使えます。</li>
     <li><strong>予約をキャンセル</strong>：確定・貸出中の予約を取り消します。</li>
     <li><strong>入金を記録</strong>：現地決済で未入金の予約を「入金済」にします。</li>
     <li><strong>帳票出力</strong>：帳票の画面へ移動します（第 4 章）。</li>
@@ -372,10 +382,23 @@
   <ul>
     <li><strong>表示開始日</strong>と<strong>表示単位</strong>（7日／14日／30日／時間単位24時間）を選べます。</li>
     <li><strong>拠点・カテゴリ</strong>で絞り込めます。拠点を「全拠点」にすると、拠点ごとにグループ分けして表示されます。</li>
-    <li>色の意味（凡例）：<span class="badge g">確定=緑</span> <span class="badge">貸出中=青</span> <span class="badge gray">返却済=グレー</span> <span class="badge red">キャンセル=赤</span></li>
-    <li>横棒を<strong>クリック</strong>すると、予約の概要が開きます。<strong>「走行距離を入力」</strong>（貸出時・返却時のメーター）や <strong>「貸渡証を編集」</strong>（3.5）、<strong>「予約詳細」</strong>へ進めます。</li>
+    <li>上の<strong>タブ</strong>で <strong>「車両」</strong>と <strong>「家電」</strong>を切り替えます（最後に開いたタブを覚えます）。</li>
+    <li>色の意味（凡例）：<span class="badge g">確定=緑</span> <span class="badge">貸出中=青</span> <span class="badge gray">返却済=グレー</span> <span class="badge red">キャンセル=赤</span>、しま模様＝貸出停止（車検・点検など）。<strong>黄色い縁と ⚠</strong> は走行距離が入っていない予約です。</li>
+    <li>車両の行の見出しに、その車両の<strong>いまのメーター</strong>（貸渡証の記録のうち一番大きい値）と<strong>オイル交換までの残り km</strong> が出ます。横棒にも、入っていれば走行距離（例：15,320→15,700 km）が出ます。</li>
+    <li>横棒を<strong>クリック</strong>すると、予約の概要（メーターと走行キロ数）が開きます。<strong>「貸出処理（走行距離）」「返却処理（走行距離）」</strong>（2.2／2.3 と同じ画面）、<strong>「走行距離を入力」「貸渡証を編集」</strong>（3.5）、貸渡証・貸渡簿の印刷、<strong>「予約一覧で開く」</strong>へ進めます。</li>
     <li><strong>空いているマスをクリック</strong>すると、その車両・日時で<strong>予約を登録</strong>できます（電話やLINEで受けた予約の入力に）。日単位の表示ではその日の 10:00〜翌日 10:00、時間単位の表示ではその 1 時間が最初に入っています。お名前・電話番号・メールアドレスは必須です。料金は料金ルールで自動計算され、オプション（補償は 1 つまで）も選べます。確認メールは送りません。</li>
-    <li><strong>家電レンタル（北見本店）</strong>の行は、同じ時間に何件でも予約が入るため（家電ごとの在庫で管理しているため。第 8 章）、重なる予約は同じ行の中に<strong>段（レーン）を分けて重ねて</strong>表示されます。バーにマウスを合わせると、借りる家電の名前も表示されます。車両の行は 1 台ずつなので、予約が重なることはありません。</li>
+    <li>同じ画面の上で <strong>「車検・点検など（貸出停止）」</strong>を選ぶと、<strong>車検・定期点検・整備・修理</strong>で貸し出せない期間を登録できます（日単位はその日の 0:00〜翌日 0:00 が最初に入っています）。その期間は予約サイトで予約できなくなります。</li>
+  </ul>
+  <h4 style="margin:16px 0 6px">予約を別の車両・日時へ移す</h4>
+  <ul>
+    <li><span class="badge g">確定</span> の予約と貸出停止枠は、横棒を<strong>ドラッグ</strong>して、ほかの車両の行や、ほかの日（時間単位の表示では時間）へ移せます。離すと「変更前／変更後」の確認が出ます。</li>
+    <li>ドラッグが難しいときは、横棒をクリックして <strong>「車両・日時を変更」</strong> から、車両と日時を選んで変更できます。</li>
+    <li>移す先にほかの予約・停止枠が重なっているときは移しません。<strong>料金は自動では変わらず、お客様へのメールも送りません</strong>（カテゴリが変わるときは確認画面でお知らせします）。貸出中・返却済の予約は移せません。</li>
+  </ul>
+  <h4 style="margin:16px 0 6px">家電タブ</h4>
+  <ul>
+    <li><strong>家電 1 品目ずつ</strong>（ポータブル冷蔵冷凍庫・電子レンジ…）の行で、いつ・誰に貸しているかを表示します。家電だけの予約に加えて、<strong>車両の装備オプションとして貸し出す分（🚗 印）</strong>も表示します（同じ在庫を使うため）。家電セットは中の品目それぞれの行に出ます。</li>
+    <li><strong>在庫がすべて貸出中</strong>のマスは薄い赤で表示します。空いているマスをクリックすると、その家電にチェックが入った状態で家電レンタルを登録できます。</li>
   </ul>
 
   <h3 class="sec">3.5　貸渡証の編集と貸渡簿</h3>
@@ -389,11 +412,12 @@
   </ul>
   <div class="path"><span class="lbl">貸渡簿の開き方</span><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">貸渡簿</span></div>
   <p><strong>貸渡簿</strong>は、期間（貸渡日）・拠点を選ぶと、車両の貸渡し（確定・貸出中・返却済）を1行ずつ並べます。家電レンタルは含みません。記載事項が足りない行は「足りない」と表示され、「編集」から入力できます。<strong>「印刷」</strong>（A4横。PDF保存も可）と、<strong>「CSV で保存」</strong>（表計算ソフトで開けるファイル）で保存できます。</p>
+  <p>1 件ずつの<strong>貸渡簿（会社保管用）</strong>は、帳票出力の <strong>「貸渡簿」</strong> ボタンで印刷できます。中身は貸渡証と同じで、題名が「貸渡簿」になります。<strong>「両方を印刷」</strong>で貸渡証（お客様用）と貸渡簿（会社保管用）を続けて印刷できます（第 4 章）。</p>
   <a class="backtop" href="#toc">▲ 目次へ戻る</a>
 
   <!-- ================= 4. 帳票の出力 ================= -->
   <h2 class="chapter" id="ch4"><span class="no">4</span>帳票の出力</h2>
-  <p class="lead">■ 目的：貸渡証・車輌チェックシート・領収書を印刷（またはPDF保存）する</p>
+  <p class="lead">■ 目的：貸渡証・貸渡簿（家電レンタルは物品貸出書）を印刷（またはPDF保存）する</p>
 
   <h3 class="sec">4.1　帳票画面を開く</h3>
   <div class="path"><span class="lbl">画面の開き方</span><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">帳票出力</span></div>
@@ -402,17 +426,17 @@
   <table class="tbl">
     <thead><tr><th>レンタル種別</th><th>出力できる帳票</th></tr></thead>
     <tbody>
-      <tr><th>車両（一般レンタカー・キッチンカー）</th><td>貸渡証 ／ 車輌チェックシート ／ 領収書</td></tr>
-      <tr><th>家電レンタル（家電だけの予約）</th><td>物品貸出書 ／ 領収書</td></tr>
+      <tr><th>車両（一般レンタカー・キッチンカー）</th><td>貸渡証 ／ 貸渡簿 ／ 両方を印刷</td></tr>
+      <tr><th>家電レンタル（家電だけの予約）</th><td>物品貸出書</td></tr>
     </tbody>
   </table>
   </div>
-  <p style="font-size:13.5px;color:var(--sub)">※ 車両の予約に家電（装備オプション）を付けた場合は、車両の 3 帳票です（貸渡証・チェックシートに家電の欄が付きます）。</p>
+  <p style="font-size:13.5px;color:var(--sub)">※ 車両の予約に家電（装備オプション）を付けた場合は、貸渡証・貸渡簿の「オプション」欄に載ります。車輌チェックシートと領収書は、打ち合わせで不要となったため出していません。</p>
 
   <h3 class="sec">4.2　印刷の手順</h3>
   <ol class="steps">
     <li>期間・状態・キーワードで対象の予約を検索します。</li>
-    <li>対象予約の行にある帳票ボタン（例：<strong>貸渡証</strong>／<strong>チェックシート</strong>／<strong>領収書</strong>）を押します。</li>
+    <li>対象予約の行にある帳票ボタン（<strong>貸渡証</strong>／<strong>貸渡簿</strong>／<strong>両方を印刷</strong>、家電レンタルは<strong>物品貸出書</strong>）を押します。</li>
     <li>プレビューが表示されるので、内容を確認します。</li>
     <li><strong>「印刷」</strong> を押すと、ブラウザの印刷画面が開きます。用紙は <strong>A4</strong> で出力できます。</li>
   </ol>
@@ -426,8 +450,7 @@
     <thead><tr><th>帳票</th><th>記載されるおもな内容</th></tr></thead>
     <tbody>
       <tr><th>貸渡証</th><td>3.5 で保存した内容（まだ保存していなければ予約の内容からの下書き）。貸渡人・借受人・運転者・運転免許証（番号・種類・有効期限・生年月日）・国際免許証・貸出／返却日時と貸渡時間・車両名・ナンバー・利用人数・行先・貸出時／返却時メーターと走行キロ数・事故の有無・補償制度・オプション・貸渡／返却場所・料金（基本料金・オプション料金・合計・決済方法）・注意書き・備考・署名欄</td></tr>
-      <tr><th>車輌チェックシート</th><td>外装キズ・タイヤ・灯火・車内清掃・燃料残量・走行距離を「出発時／返却時」でチェック。装備オプションがあるときは、品目ごとの有無（□有 □要確認）の欄も付きます（<strong>家電セットは中の 9 品目に分けて</strong>出ます）</td></tr>
-      <tr><th>領収書</th><td>金額（税込）・料金の内訳（基本料金・オプションなど）・内税表示。5万円以上は収入印紙欄が付きます</td></tr>
+      <tr><th>貸渡簿</th><td>貸渡証と同じ内容で、題名が「貸渡簿（会社保管用）」。会社で保管する控えです。期間でまとめた一覧は「予約管理 ▸ 貸渡簿」（3.5）</td></tr>
       <tr><th>物品貸出書</th><td>家電レンタルで使います。借りる家電を <strong>1 品目ずつ 1 行</strong>で並べます（<strong>家電セットは中の 9 品目に分けて</strong>出ます）。お受け取り／ご返却の日時・料金・注意事項（延滞・破損・紛失の扱い）・署名欄</td></tr>
     </tbody>
   </table>
@@ -526,6 +549,15 @@
     <li>車検満了日が近い車両は、<strong>ダッシュボード下部「車検の期限が近い車両」</strong>と、車両一覧の<strong>赤字</strong>で知らせます。</li>
     <li>まとめて確認したいときは <span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">予約管理</span><span class="arw">▸</span><span class="crumb">車検予約一覧</span></span> / <span class="path" style="display:inline-flex;margin:0;padding:4px 8px;vertical-align:middle"><span class="crumb">点検予約一覧</span></span> を開きます。</li>
   </ul>
+  <p>車検・点検で貸し出せない期間は、<strong>貸渡予約表（ガント）の空いているマス</strong>から「車検・点検など（貸出停止）」で登録できます（3.4）。</p>
+
+  <h3 class="sec">6.5　走行距離とオイル交換の目安</h3>
+  <ul>
+    <li>車両一覧の <strong>「メーター・オイル交換」</strong> の列に、いまのメーター（貸渡証の貸出時・返却時メーターのうち一番大きい値）と、次のオイル交換までの残り km が出ます。</li>
+    <li>オイル交換の間隔は <strong>既定 5,000 km</strong> です。車両の「編集」で <strong>「オイル交換の間隔（km）」</strong>と <strong>「前回のオイル交換」（メーター・日付）</strong>を変えられます。前回の交換が未登録のときは、記録の中で一番小さいメーターから数えます（目安）。</li>
+    <li>残り <strong>500 km 以下</strong>で「そろそろオイル交換」、超えると「オイル交換の時期」と、ダッシュボード・予約一覧・予約表のお知らせ、予約表の車両の見出し、返却処理のポップアップでお知らせします。</li>
+    <li>交換したら、お知らせの <strong>「交換済みにする」</strong> を押して、交換したときのメーターを入れます（車両の編集で入れても同じです）。</li>
+  </ul>
   <div class="call warn"><span class="h">削除できないとき</span>
     有効な予約が紐づいている車両・物品は削除できません。先に予約を返却・キャンセル処理してから削除してください。使わなくなっただけなら「休止中」で十分です。
   </div>
@@ -596,7 +628,7 @@
       <tr><th>確認するもの</th><td>運転免許証</td><td><strong>本人確認書類</strong>（運転免許証・保険証など）。運転免許は不要</td></tr>
       <tr><th>補償</th><td>CDW・PAP を選べる</td><td>なし。破損・紛失は修理費または再調達費用の実費（物品レンタル規約）</td></tr>
       <tr><th>お客様が同意する規約</th><td>貸渡約款・キャンセル規定・プライバシーポリシー</td><td><strong>物品レンタル規約</strong>・キャンセル規定・プライバシーポリシー</td></tr>
-      <tr><th>帳票</th><td>貸渡証・車輌チェックシート・領収書</td><td><strong>物品貸出書</strong>・領収書</td></tr>
+      <tr><th>帳票</th><td>貸渡証・貸渡簿</td><td><strong>物品貸出書</strong></td></tr>
       <tr><th>キャンセル料</th><td>車種ごとの段階</td><td>コンパクトカーと同じ割合（3 日前まで無料／前日まで 30%／当日 50%。繁忙期は 7 日前まで無料。無断は 100%）。元になる金額は家電の料金の合計</td></tr>
       <tr><th>ポイント</th><td colspan="2">どちらも、会員の予約を「返却済」にすると自動で付きます</td></tr>
     </tbody>
