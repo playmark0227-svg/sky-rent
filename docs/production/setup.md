@@ -311,6 +311,7 @@ select cron.schedule('skyrent-outbox-release', '*/10 * * * *', 'select public.ou
 - 免責補償制度 (CDW・レンタカー) の説明を「免責 最大10万円」に
 - お問い合わせ先のメールを info@skyward-growth.com に
 - 貸渡約款を 2026-10 版にする (予約時の同意の対象。旧版を無効にしてから新しい版を入れる)
+- ポイント制度を一旦停止する (`points.enabled = false`。再開は管理画面のポイント設定から)
 
 ```sql
 -- 北見本店のみ・軽トラック廃止・免責10万円・メール info・貸渡約款 2026-10 版
@@ -341,6 +342,8 @@ update public.options
  where id = 'OP101';
 -- お問い合わせ先のメール
 update public.app_settings set value = jsonb_set(value, '{email}', '"info@skyward-growth.com"'::jsonb) where key = 'site';
+-- ポイント制度を一旦停止 (返却でポイントを付けず、クーポンも発行しない。サイトにも案内を出さない)
+update public.app_settings set value = value || '{"enabled":false}'::jsonb where key = 'points';
 -- 貸渡約款 2026-10 版 (有効な行は id ごとに1件なので、旧版を先に無効にする)
 update public.legal_documents set active = false where id = 'clause' and active and version <> '2026-10';
 insert into public.legal_documents (id, version, title, url, effective_at)

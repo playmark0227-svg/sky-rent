@@ -563,7 +563,7 @@
     ]);
     // ポイント設定・振込先の既定値 (未設定時のみ)
     if (read('settings.points', null) == null) {
-      write('settings.points', { pointPerUse: 1, couponThreshold: 10, couponAmount: 1000, expiryMonths: 12 });
+      write('settings.points', { enabled: false, pointPerUse: 1, couponThreshold: 10, couponAmount: 1000, expiryMonths: 12 });
     }
     if (read('settings.billing', null) == null) {
       write('settings.billing', { bankName: '北洋銀行 北見支店', accountType: '普通', accountNo: '1234567', holder: 'カ) スカイワードグロース' });
@@ -1007,8 +1007,8 @@
     if (updates.status && updates.status !== before.status) {
       const labels = { confirmed: '確定', in_use: '貸出中', returned: '返却済', cancelled: 'キャンセル', no_show: '無断キャンセル' };
       notify('status', '予約 ' + reservationId + ' の状態を「' + (labels[updates.status] || updates.status) + '」に変更しました。通知メールを送信しました', reservationId);
-      // 返却完了 → ポイント付与 (会員のみ・重複防止)
-      if (updates.status === 'returned' && after.memberId && !after.pointGranted) {
+      // 返却完了 → ポイント付与 (会員のみ・重複防止。ポイント制度を使っている間だけ)
+      if (updates.status === 'returned' && after.memberId && !after.pointGranted && pointsEnabled()) {
         grantPointForReservation(after);
         arr[i].pointGranted = true;
         saveList('reservations', arr);
@@ -1019,7 +1019,13 @@
 
   // ===== 会員・ポイント・クーポン =====
   function pointSettings() {
-    return read('settings.points', { pointPerUse: 1, couponThreshold: 10, couponAmount: 1000, expiryMonths: 12 });
+    return read('settings.points', { enabled: false, pointPerUse: 1, couponThreshold: 10, couponAmount: 1000, expiryMonths: 12 });
+  }
+  // ポイント制度を使うか (settings.points.enabled が true のときだけ。未設定は使わない = 2026-10 から一旦停止中)。
+  //   使わない間は、返却でポイントを付けず、クーポンも発行しない (本番は DB のトリガーも同じ判定)。画面ではポイント・クーポンの案内を出さない
+  function pointsEnabled() {
+    const p = pointSettings();
+    return !!(p && p.enabled === true);
   }
   function members() { return list('members'); }
   function getMember(id) { return findById('members', 'memberId', id); }
@@ -1221,7 +1227,7 @@
     members: members, getMember: getMember, findMemberByEmail: findMemberByEmail,
     registerMember: registerMember, loginMember: loginMember, logoutMember: logoutMember, currentMember: currentMember,
     adjustPoints: adjustPoints, issueCouponManually: issueCouponManually, unusedCoupons: unusedCoupons,
-    pointSettings: pointSettings,
+    pointSettings: pointSettings, pointsEnabled: pointsEnabled,
     invoices: invoices, createInvoice: createInvoice, setInvoiceStatus: setInvoiceStatus,
     notify: notify, notifications: function () { return list('notifications'); },
     STATUS_LABELS: STATUS_LABELS, PAYMENT_LABELS: PAYMENT_LABELS

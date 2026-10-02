@@ -15,6 +15,8 @@
 
     <section class="card" style="padding:22px;margin-bottom:14px">
       <strong class="card-section-title">ポイント制度</strong>
+      <div class="form-row"><label>ポイント制度</label><label style="display:inline-flex;gap:6px;align-items:center;cursor:pointer;font-weight:600"><input type="checkbox" id="p-enabled"> ポイント制度を使う</label></div>
+      <p id="p-state" style="font-size:12.5px;margin:-4px 0 12px;line-height:1.7"></p>
       <div class="form-row"><label>1回の利用で付与するポイント</label><input type="number" class="form-input" id="p-per" style="max-width:160px"> pt</div>
       <div class="form-row"><label>クーポン発行に必要なポイント</label><input type="number" class="form-input" id="p-thresh" style="max-width:160px"> pt</div>
       <div class="form-row"><label>自動発行クーポンの額面</label>¥<input type="number" class="form-input" id="p-amount" style="max-width:160px"></div>
@@ -47,13 +49,13 @@
 
   <script src="partials.js"></script>
 
-  <script src="../js/config.js?v=20261004"></script>
-  <script src="../js/store.js?v=20261004"></script>
-  <script src="../js/pricing-core.js?v=20261004"></script>
-  <script src="../js/pricing.js?v=20261004"></script>
-  <script src="../js/api.js?v=20261004"></script>
-  <script src="../js/backend.js?v=20261004"></script>
-  <script src="../js/boot.js?v=20261004"></script>
+  <script src="../js/config.js?v=20261005"></script>
+  <script src="../js/store.js?v=20261005"></script>
+  <script src="../js/pricing-core.js?v=20261005"></script>
+  <script src="../js/pricing.js?v=20261005"></script>
+  <script src="../js/api.js?v=20261005"></script>
+  <script src="../js/backend.js?v=20261005"></script>
+  <script src="../js/boot.js?v=20261005"></script>
   <script type="text/x-deferred">
   (function () {
     const S = window.SkyRentStore;
@@ -65,6 +67,16 @@
     function loadPoints() {
       const p = S.pointSettings();
       $('#p-per').value = p.pointPerUse; $('#p-thresh').value = p.couponThreshold; $('#p-amount').value = p.couponAmount; $('#p-expiry').value = p.expiryMonths;
+      $('#p-enabled').checked = p.enabled === true;
+      renderState();
+    }
+    // 使っていない間: 返却でポイントを付けず、クーポンも発行しない。予約サイトにポイント・クーポンの案内を出さない
+    function renderState() {
+      const on = $('#p-enabled').checked;
+      $('#p-state').style.color = on ? '#1e6b3a' : '#7a5200';
+      $('#p-state').textContent = on
+        ? '使っています: 返却でポイントを付け、しきい値でクーポンを発行します。予約サイト・マイページにポイントとクーポンの案内を表示します。'
+        : '停止中: 返却でポイントを付けず、クーポンも発行しません。予約サイト・マイページ・予約手続きにはポイントとクーポンの案内を表示しません (これまでのポイント・クーポンの記録は残ります)。';
     }
     function loadBilling() {
       const b = S.read('settings.billing', { bankName: '', accountType: '普通', accountNo: '', holder: '' });
@@ -72,6 +84,7 @@
     }
     function renderFlow() {
       const p = S.pointSettings();
+      if (p.enabled !== true) { $('#flow-desc').textContent = 'ポイント制度は停止中です。返却処理をしてもポイントは付かず、クーポンも発行されません。'; return; }
       $('#flow-desc').innerHTML = '返却処理を行うと会員に <strong>+' + p.pointPerUse + 'pt</strong> が付与されます。' +
         '累計 <strong>' + p.couponThreshold + 'pt</strong> に達すると <strong>¥' + Number(p.couponAmount).toLocaleString() + '</strong> のクーポンが自動発行され、' +
         '次回予約時の料金から自動割引されます。ポイントは最終利用日から <strong>' + p.expiryMonths + 'ヶ月</strong> で失効します。';
@@ -83,8 +96,10 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       loadPoints(); loadBilling(); renderFlow(); renderLog();
+      $('#p-enabled').addEventListener('change', renderState);
       $('#p-save').addEventListener('click', () => {
         S.write('settings.points', {
+          enabled: $('#p-enabled').checked,
           pointPerUse: parseInt($('#p-per').value, 10) || 1,
           couponThreshold: parseInt($('#p-thresh').value, 10) || 10,
           couponAmount: parseInt($('#p-amount').value, 10) || 1000,

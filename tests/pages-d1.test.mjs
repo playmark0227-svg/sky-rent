@@ -577,10 +577,16 @@ describe('D1 デモモード: 予約手続き (booking.html)', { skip: NO_JSDOM 
       const w = page.window, S = w.SkyRentStore;
       assert.equal(page.$('#f-email').value, 'corp@example.com');
       assert.ok(page.$('input[name="pay"][value="invoice"]'), '請求書払いが選べない');
-      // クーポンを持たせて再描画
+      // クーポンを持たせて再描画。ポイント制度が停止中 (既定) の間はクーポン欄を出さない
       const m = S.getMember('M002');
       m.coupons = [{ couponId: 'CPTEST1', amount: 1000, reason: 'テスト', issuedAt: new Date().toISOString(), usedAt: null, usedFor: null }];
       S.upsert('members', 'memberId', m);
+      assert.equal(S.pointsEnabled(), false, 'ポイント制度は既定で停止');
+      w.document.dispatchEvent(new w.CustomEvent('sky-rent:langchange'));
+      await sleep(50);
+      assert.equal(page.$('#coupon-wrap').style.display, 'none', 'ポイント制度の停止中にクーポン欄が出ている');
+      // ポイント制度を有効にすると、クーポン欄が出て使える
+      S.write('settings.points', Object.assign({}, S.pointSettings(), { enabled: true }));
       w.document.dispatchEvent(new w.CustomEvent('sky-rent:langchange'));
       await waitFor(() => page.$('#coupon-wrap').style.display === 'block', 2000);
       setValue(page, '#f-coupon', 'CPTEST1');
@@ -973,6 +979,43 @@ describe('D1 デモモード: 家電レンタル (家電だけ。detail.html / b
       assert.equal(r.licenseConfirmed, false);
       assertClean(page, 'booking-item');
     } finally { page.close(); }
+  });
+});
+
+describe('D1 デモモード: ポイント制度の停止 (2026-10。settings.points.enabled)', { skip: NO_JSDOM }, () => {
+  test('停止中 (既定) はトップ・ご利用ガイド・特商法表記のポイントの案内を隠し、有効にすると表示する', async () => {
+    const hidden = (page, el) => page.window.getComputedStyle(el).display === 'none';
+    const page = openPage('index.html');
+    try {
+      assert.equal(await page.ready(8000), true);
+      const S = page.window.SkyRentStore;
+      assert.equal(S.pointsEnabled(), false);
+      assert.equal(page.document.documentElement.classList.contains('points-on'), false);
+      const section = page.$('section.lp-point');
+      assert.ok(section && section.hasAttribute('data-points-only'));
+      assert.equal(hidden(page, section), true, 'ポイントの紹介が出ている');
+      assert.equal(hidden(page, page.$('.reason[data-points-only]')), true);
+      const step = page.$$('.flow-grid .fl')[3];
+      assert.equal(hidden(page, step.querySelector('[data-points-only]')), true);
+      assert.equal(hidden(page, step.querySelector('[data-points-off]')), false, '返却の説明 (ポイントなし) が出ない');
+      // 有効にすると出る (設定の変更を知らせる)
+      S.write('settings.points', Object.assign({}, S.pointSettings(), { enabled: true }));
+      page.window.dispatchEvent(new page.window.Event('skyrent:points-changed'));
+      assert.equal(page.document.documentElement.classList.contains('points-on'), true);
+      assert.equal(hidden(page, section), false);
+      assert.equal(hidden(page, step.querySelector('[data-points-off]')), true);
+      assertClean(page, 'index-points');
+    } finally { page.close(); }
+    for (const path of ['guide.html', 'law.html', 'faq.html']) {
+      const p = openPage(path);
+      try {
+        assert.equal(await p.ready(8000), true);
+        const els = p.$$('[data-points-only]');
+        assert.ok(els.length >= 1, path + ': ポイントの案内に印が無い');
+        els.forEach(el => assert.equal(hidden(p, el), true, path + ': 停止中にポイントの案内が出ている: ' + el.textContent.slice(0, 40)));
+        assertClean(p, path + '-points');
+      } finally { p.close(); }
+    }
   });
 });
 

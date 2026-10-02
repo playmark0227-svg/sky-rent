@@ -80,7 +80,7 @@ on conflict (id) do nothing;
 
 -- 設定
 insert into public.app_settings (key, value) values
-  ('points', '{"pointPerUse":1,"couponThreshold":10,"couponAmount":1000,"expiryMonths":12}'),
+  ('points', '{"enabled":false,"pointPerUse":1,"couponThreshold":10,"couponAmount":1000,"expiryMonths":12}'),
 
   -- version 2026-10: 家電レンタル (家電だけのレンタル) を追加。家電レンタルは土日祝・夜間・繁忙期の割増なし
   --   (itemSurcharges = true でかける)・割引なし。キャンセル料の段階 (item) はコンパクトカーと同じ割合で、

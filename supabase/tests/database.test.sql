@@ -252,6 +252,13 @@ select is(public.staff_role(), 'admin', 'AAL2 の管理者は admin');
 select ok((select count(*) from public.reservations where created_at = now()) >= 5, '管理者は全予約を読める');
 select ok((select count(*) from public.staff) >= 4, '管理者は全スタッフを読める');
 
+-- ポイント制度は 2026-10 から既定で停止 (seed の points.enabled = false)。ここでは有効にして、付与とクーポン発行を確かめる
+reset role;
+select is(public.points_enabled(), false, 'ポイント制度は既定で停止');
+update public.app_settings set value = value || '{"enabled":true}'::jsonb where key = 'points';
+select is(public.points_enabled(), true, 'points.enabled = true で有効');
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"aaaaaaaa-0000-0000-0000-000000000001","role":"authenticated","aal":"aal2"}';
 select is((public.admin_update_reservation(current_setting('t.ra'), '{"status":"in_use"}'::jsonb)).status, 'in_use', '確定 → 貸出中');
 select throws_ok(format($$select public.admin_update_reservation(%L, '{"staff_note":"x"}'::jsonb, 1)$$, current_setting('t.ra')),
   'P0001', 'VERSION_CONFLICT', '古い版で更新すると VERSION_CONFLICT');
@@ -268,6 +275,23 @@ select is((select count(*)::int from public.coupons where user_id = '11111111-11
   1, '¥1,000 クーポンが1枚発行される');
 select is((select count(*)::int from public.outbox where template = 'coupon_issued' and to_email = 'member-a@example.com'),
   1, 'クーポン発行メールがキューに入る');
+
+-- ポイント制度を止めている間は、返却してもポイントを付けず、クーポンも発行しない
+reset role;
+update public.app_settings set value = value || '{"enabled":false}'::jsonb where key = 'points';
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"aaaaaaaa-0000-0000-0000-000000000001","role":"authenticated","aal":"aal2"}';
+select set_config('t.rp', (public.admin_create_reservation(jsonb_build_object(
+  'asset_id', 'V004', 'user_id', '11111111-1111-1111-1111-111111111111', 'customer_name', '会員A', 'customer_email', 'member-a@example.com',
+  'customer_phone', '0', 'start_at', current_setting('t.base')::timestamptz + interval '140 days',
+  'end_at', current_setting('t.base')::timestamptz + interval '141 days'))).id, true);
+select is((public.admin_update_reservation(current_setting('t.rp'), '{"status":"in_use"}'::jsonb)).status, 'in_use', '停止中: 確定 → 貸出中');
+select is((public.admin_update_reservation(current_setting('t.rp'), '{"status":"returned"}'::jsonb)).point_granted, false,
+  '停止中: 返却しても付与済みにならない');
+select is((select count(*)::int from public.point_ledger where reservation_id = current_setting('t.rp')), 0, '停止中: 返却でポイントを付けない');
+select is(public.admin_adjust_points('11111111-1111-1111-1111-111111111111', 10, '確認'), 10, '停止中: 10pt 貯まってもクーポンに交換しない');
+select is((select count(*)::int from public.coupons where user_id = '11111111-1111-1111-1111-111111111111' and amount = 1000), 1,
+  '停止中: クーポンを新たに発行しない');
 
 -- 請求書: 許可なし → 拒否、許可後 → 発行
 select throws_ok($$select public.admin_create_invoice('22222222-2222-2222-2222-222222222222', array[current_setting('t.rb')], '', '', '', null)$$,

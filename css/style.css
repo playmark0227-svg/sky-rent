@@ -329,3 +329,8 @@ html.skyrent-booting body { visibility: hidden; }
   position: absolute; top: 50%; right: 12px; transform: translateY(-50%);
   background: transparent; color: #fff; border: 0; font-size: 20px; line-height: 1; cursor: pointer; padding: 4px 8px;
 }
+
+/* ポイント制度 (settings.points.enabled)。有効のときだけ html に .points-on が付く (js/partials-public.js)。
+   無効の間は [data-points-only] を隠し、代わりの文 [data-points-off] を出す */
+html:not(.points-on) [data-points-only] { display: none !important; }
+html.points-on [data-points-off] { display: none !important; }

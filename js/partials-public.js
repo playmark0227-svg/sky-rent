@@ -107,4 +107,14 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject);
   else inject();
+
+  // ポイント制度 (settings.points.enabled) が有効なときだけ html に .points-on を付ける。
+  //   無効の間は [data-points-only] (ポイント・クーポンの案内) を隠す (css/style.css)。設定はデータの読み込み後に分かる
+  function applyPoints() {
+    const S = window.SkyRentStore;
+    const on = !!(S && typeof S.pointsEnabled === 'function' && S.pointsEnabled());
+    document.documentElement.classList.toggle('points-on', on);
+  }
+  window.addEventListener('skyrent:ready', applyPoints);
+  window.addEventListener('skyrent:points-changed', applyPoints);
 })();

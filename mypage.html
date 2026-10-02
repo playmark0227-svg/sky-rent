@@ -115,7 +115,7 @@
             </div>
             <div class="form-group"><label for="r-pass2">パスワード (確認用)<span class="req">*</span></label><input type="password" id="r-pass2" autocomplete="new-password" required></div>
 
-            <p class="mp-purpose">ご登録いただいた情報は、株式会社Skyward Growth が、会員サービス (予約履歴の表示・ポイント・クーポン) の提供と、ご予約・お問い合わせに関するご連絡のために利用します。詳しくは<a class="mp-link" href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a>をご確認ください。</p>
+            <p class="mp-purpose">ご登録いただいた情報は、株式会社Skyward Growth が、会員サービス (予約履歴の表示<span data-points-only>・ポイント・クーポン</span>) の提供と、ご予約・お問い合わせに関するご連絡のために利用します。詳しくは<a class="mp-link" href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a>をご確認ください。</p>
             <label class="mp-check"><input type="checkbox" id="r-privacy" required><span id="r-privacy-label"><a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a>の内容を確認し、同意します (必須)</span></label>
             <label class="mp-check"><input type="checkbox" id="r-marketing"><span>キャンペーンや空車情報などのお知らせをメールで受け取る (任意)。受け取りはマイページからいつでも停止できます。</span></label>
 
@@ -224,14 +224,14 @@
 
   <footer class="site-footer"><div class="container"><div class="footer-bottom" style="border-top:none"><span data-i18n="footer.copyright">© 2026 グロースレンタカー</span><a href="index.html">← トップへ戻る</a></div></div></footer>
 
-  <script src="js/config.js?v=20261004"></script>
-  <script src="js/store.js?v=20261004"></script>
-  <script src="js/pricing-core.js?v=20261004"></script>
-  <script src="js/pricing.js?v=20261004"></script>
-  <script src="js/i18n.js?v=20261004"></script>
-  <script src="js/api.js?v=20261004"></script>
-  <script src="js/backend.js?v=20261004"></script>
-  <script src="js/boot.js?v=20261004"></script>
+  <script src="js/config.js?v=20261005"></script>
+  <script src="js/store.js?v=20261005"></script>
+  <script src="js/pricing-core.js?v=20261005"></script>
+  <script src="js/pricing.js?v=20261005"></script>
+  <script src="js/i18n.js?v=20261005"></script>
+  <script src="js/api.js?v=20261005"></script>
+  <script src="js/backend.js?v=20261005"></script>
+  <script src="js/boot.js?v=20261005"></script>
   <script type="text/x-deferred">
   (function () {
     'use strict';
@@ -622,7 +622,7 @@
 
       html += '<nav class="mp-jump" aria-label="マイページの項目">' +
         '<button type="button" data-jump="sec-res">ご予約</button>' +
-        '<button type="button" data-jump="sec-points">ポイント・クーポン</button>' +
+        '<button type="button" data-jump="sec-points" data-points-only>ポイント・クーポン</button>' +
         '<button type="button" data-jump="sec-profile">登録情報の変更</button>' +
         '<button type="button" data-jump="sec-password">パスワードの変更</button>' +
         '<button type="button" data-jump="sec-close">退会</button></nav>';
@@ -649,8 +649,8 @@
       }
       html += '</div>';
 
-      // ポイント・クーポン
-      html += '<div id="sec-points"><div class="member-hero mb16">' +
+      // ポイント・クーポン (ポイント制度を使っている間だけ表示。css/style.css の [data-points-only])
+      html += '<div id="sec-points" data-points-only><div class="member-hero mb16">' +
         '<div class="stat-tile"><div class="lbl">' + esc(I.t('mypage.points')) + '</div><div class="val">' + (m.points || 0) + ' <small>pt</small></div>' +
         '<div style="font-size:11px;opacity:.85;margin-top:4px">あと ' + toNext + 'pt で ' + yen(cfg.couponAmount || 1000) + ' クーポン</div></div>' +
         '<div class="stat-tile alt"><div class="lbl">' + esc(I.t('mypage.coupons')) + '</div><div class="val">' + unused.length + ' <small>枚</small></div>' +
@@ -696,7 +696,7 @@
       html += '<div class="p-card mb16" id="sec-close"><h3>退会</h3>' +
         '<ul class="mp-small" style="margin:0 0 12px 1.2em">' +
         '<li style="list-style:disc">退会すると、このアカウントではログインできなくなります。登録情報 (お名前・連絡先) は削除します。</li>' +
-        '<li style="list-style:disc">保有ポイントと未使用のクーポンは失効し、元に戻せません。</li>' +
+        '<li style="list-style:disc" data-points-only>保有ポイントと未使用のクーポンは失効し、元に戻せません。</li>' +
         '<li style="list-style:disc">確定済みのご予約はキャンセルされません。キャンセルが必要な場合は、先に上のご予約一覧からお手続きください。</li>' +
         '<li style="list-style:disc">ご予約・ご請求の記録は、法令・会計上必要な期間、当社で保存します (<a class="mp-link" href="privacy.html">プライバシーポリシー</a>)。</li></ul>' +
         '<form id="close-form" novalidate>' +
