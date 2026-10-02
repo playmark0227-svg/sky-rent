@@ -65,7 +65,7 @@
       'nav.locations': 'Locations', 'nav.mypage': 'My Page', 'nav.admin': 'Admin',
       'nav.appliance': 'Appliance Rental',
       'hero.title': 'Freedom, to the road. Growth Rent a Car.',
-      'hero.lead': 'Compact cars, SUVs, minivans, kei trucks, kitchen cars and appliance rental — book online 24/7.',
+      'hero.lead': 'Compact cars, SUVs, minivans, kitchen cars and appliance rental — book online 24/7.',
       'hero.cta': 'Search Availability',
       'search.title': 'Search Availability',
       'search.category': 'Category', 'search.location': 'Location',

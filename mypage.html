@@ -247,6 +247,8 @@
     // 公開中の法務文書の版 (本番はサーバーの legal_documents。デモは既定値)
     const DEFAULT_LEGAL = { privacy: { id: 'privacy', version: '2026-08', title: 'プライバシーポリシー', url: 'privacy.html' } };
     const VIEWS = ['auth', 'sent', 'reset', 'newpass', 'link', 'member', 'lookup'];
+    // ポイント制度を使っている間だけ、ポイント・クーポンの欄 ([data-points-only]) を出す (このページは共通フッターを読まないので、ここで付ける)
+    document.documentElement.classList.toggle('points-on', S.pointsEnabled());
 
     let current = null;          // 表示中の画面
     let memberNotice = null;     // 会員画面の上に出すお知らせ {type, html}

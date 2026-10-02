@@ -155,12 +155,12 @@
       $('#loading').hidden = false;
       try {
         const unit = $('#unit').value;
-        const startBase = new Date($('#from-date').value || new Date().toISOString().slice(0, 10));
         const isHour = unit.charAt(0) === 'h';
         const cellCount = isHour ? 24 : parseInt(unit.slice(1), 10);
         const cellMs = isHour ? HOUR : DAY;
-        if (!isHour) startBase.setHours(0, 0, 0, 0);
-        const start = new Date(startBase);
+        // 表示開始日の 0:00 (日本時間)。パソコンの時刻設定が日本以外でも同じ表示にする
+        const ymd = $('#from-date').value || B.jst.ymd(new Date());
+        const start = new Date(Date.parse(B.jst.fromInput(ymd + 'T00:00')));
         view = { start: start, cellMs: cellMs, isHour: isHour, cellW: isHour ? 42 : 38, cellCount: cellCount };
 
         // 走行距離 (貸渡証)。読めなくても予約表は出す
@@ -176,14 +176,16 @@
       finally { $('#loading').hidden = true; }
     }
 
-    // ヘッダとマスの共通部分
+    // ヘッダとマスの共通部分 (日付・曜日・時は日本時間)
+    const JST_MS = 9 * HOUR;
+    const jstOf = ms => new Date(ms + JST_MS);   // getUTC* で日本時間の値を読む
     function cellInfo(i) {
-      const d = new Date(view.start.getTime() + i * view.cellMs);
-      const now = new Date();
+      const ms = view.start.getTime() + i * view.cellMs;
+      const j = jstOf(ms);
       return {
-        d: d,
-        today: !view.isHour && d.toDateString() === now.toDateString(),
-        weekend: !view.isHour && (d.getDay() === 0 || d.getDay() === 6)
+        j: j,
+        today: !view.isHour && B.jst.ymd(new Date(ms)) === B.jst.ymd(new Date()),
+        weekend: !view.isHour && (j.getUTCDay() === 0 || j.getUTCDay() === 6)
       };
     }
     // バーの位置 (範囲外なら null)
@@ -214,8 +216,8 @@
       const headerCells = [];
       for (let i = 0; i < view.cellCount; i++) {
         const c = cellInfo(i);
-        const label1 = view.isHour ? c.d.getHours() + '時' : (c.d.getMonth() + 1) + '/' + c.d.getDate();
-        const label2 = view.isHour ? '' : '(' + '日月火水木金土'[c.d.getDay()] + ')';
+        const label1 = view.isHour ? c.j.getUTCHours() + '時' : (c.j.getUTCMonth() + 1) + '/' + c.j.getUTCDate();
+        const label2 = view.isHour ? '' : '(' + '日月火水木金土'[c.j.getUTCDay()] + ')';
         headerCells.push('<div class="gantt-cell ' + (c.weekend ? 'weekend ' : '') + (c.today ? 'today' : '') + '" style="width:' + cellW + 'px"><div class="gantt-date">' + label1 + '</div><div class="gantt-dow">' + label2 + '</div></div>');
       }
       const body = tab === 'item' ? renderItems() : renderVehicles();
@@ -335,10 +337,13 @@
         for (let i = 0; i < view.cellCount; i++) {
           const c = cellInfo(i);
           const cs = view.start.getTime() + i * view.cellMs, ce = cs + view.cellMs;
-          const used = active.filter(r => Date.parse(r.start) < ce && Date.parse(r.end) > cs).length;
+          // 同時に貸している数の最大 (マスの開始時点と、マスの中で始まる各予約の開始時点で数える。サーバーの option_usage と同じ)
+          const over = active.filter(r => Date.parse(r.start) < ce && Date.parse(r.end) > cs);
+          const points = [cs].concat(over.map(r => Date.parse(r.start)).filter(t => t > cs && t < ce));
+          const used = points.reduce((m, t) => Math.max(m, over.filter(r => Date.parse(r.start) <= t && t < Date.parse(r.end)).length), 0);
           const full = used >= stock;
           cells.push('<div class="gantt-cell ' + (c.weekend ? 'weekend ' : '') + (c.today ? 'today ' : '') + (full ? 'full ' : '') + (add ? 'can-add' : '') + '" style="width:' + cellW + 'px"' +
-            ' title="' + esc(o.name + ' — 在庫 ' + stock + ' / 貸出 ' + used + (add ? ' (クリックで家電レンタルを登録)' : '')) + '"' +
+            ' title="' + esc(o.name + ' — 在庫 ' + stock + ' / 同時に貸出 ' + used + (add ? ' (クリックで家電レンタルを登録)' : '')) + '"' +
             (add ? ' data-add="' + esc(win.assetId) + '" data-opt="' + esc(id) + '" data-i="' + i + '"' : '') + '></div>');
         }
         const bars = placeLanes(mine);
@@ -680,7 +685,7 @@
       });
     }
 
-    function fmtDT(s){const d=new Date(s);const p=n=>String(n).padStart(2,'0');return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes());}
+    function fmtDT(s){const d=jstOf(Date.parse(s));const p=n=>String(n).padStart(2,'0');return (d.getUTCMonth()+1)+'/'+d.getUTCDate()+' '+p(d.getUTCHours())+':'+p(d.getUTCMinutes());}
 
     document.addEventListener('DOMContentLoaded', () => {
       initFilters();
@@ -688,7 +693,7 @@
       try { saved = localStorage.getItem(TAB_KEY); } catch (e) { saved = null; }
       const hashTab = /item/.test(location.hash) ? 'item' : null;
       setTab(hashTab || saved || 'vehicle', false);
-      $('#from-date').value = new Date().toISOString().slice(0, 10);
+      $('#from-date').value = B.jst.ymd(new Date());   // 今日 (日本時間)
       $('#btn-load').addEventListener('click', load);
       document.querySelectorAll('.gt-tabs [role=tab]').forEach(b => b.addEventListener('click', () => { setTab(b.dataset.tab, true); render(); }));
       const g = $('#gantt');

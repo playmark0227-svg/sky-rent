@@ -212,7 +212,7 @@
         const opt = document.createElement('option');
         opt.value = i + 1;
         opt.textContent = i === 35 ? '神戸運輸監理部' : i === 52 ? '沖縄総合事務局' : name + '運輸支局';
-        if (name === '東京') opt.selected = true;
+        if (name === '北見') opt.selected = true;   // 北見本店の管轄 (北見運輸支局)
         b.appendChild(opt);
       });
 

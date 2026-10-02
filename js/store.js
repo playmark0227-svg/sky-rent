@@ -1108,7 +1108,9 @@
   }
 
   // 累計ポイントがしきい値到達 → クーポン自動発行 & ポイント消費
+  //   ポイント制度の停止中は発行しない (サーバーの issue_coupons_if_needed と同じ)
   function maybeIssueCoupon(m) {
+    if (!pointsEnabled()) return;
     const cfg = pointSettings();
     const threshold = cfg.couponThreshold || 10;
     let member = getMember(m.memberId);
