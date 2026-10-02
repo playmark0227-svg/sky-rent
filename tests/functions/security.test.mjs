@@ -146,7 +146,7 @@ const RETRY_CODES = ['AVAILABILITY_CONFLICT', 'HANDOVER_CONFLICT', 'STAFF_UNAVAI
  *   token: 'service' / 会員のトークン / 省略 (anon = ゲスト)
  *   hours: 期間。expectedTotal を省略するとサーバーの見積 (service) の金額を使う
  */
-async function reserve({ token, hours, customer, discountType = null, assets = ['V001', 'V002', 'V003', 'V004', 'V005'], headers, expectedTotal, tries = 10 }) {
+async function reserve({ token, hours, customer, discountType = null, assets = ['V001', 'V002', 'V003', 'V004'], headers, expectedTotal, tries = 10 }) {
   let r = null;
   for (let i = 0; i < tries; i++) {
     const assetId = assets[randomInt(0, assets.length)];
@@ -490,15 +490,15 @@ describe('func-1: 無認証の予約で車両を押さえ続けられない', ()
     assert.equal(r.status, 200, JSON.stringify(r.json));
   });
 
-  test('報告の再現: 1人の匿名利用者が6台を31日ずつ押さえようとしても、2台目で止まる', async () => {
+  test('報告の再現: 1人の匿名利用者が全5台を31日ずつ押さえようとしても、2台目で止まる', async () => {
     const email = mail('fleet');
     const ph = phone();
     const codes = [];
-    for (const assetId of ['V001', 'V002', 'V003', 'V004', 'V005', 'K001']) {
+    for (const assetId of ['V001', 'V002', 'V003', 'V004', 'K001']) {
       const r = await reserve({ hours: 31 * 24, assets: [assetId], customer: { name: '攻撃 太郎', email, phone: ph } });
       codes.push(r.status === 200 ? 'ok' : r.json.code);
     }
-    assert.deepEqual(codes, ['ok', 'RESERVATION_LIMIT', 'RESERVATION_LIMIT', 'RESERVATION_LIMIT', 'RESERVATION_LIMIT', 'RESERVATION_LIMIT']);
+    assert.deepEqual(codes, ['ok', 'RESERVATION_LIMIT', 'RESERVATION_LIMIT', 'RESERVATION_LIMIT', 'RESERVATION_LIMIT']);
   });
 });
 

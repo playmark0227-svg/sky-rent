@@ -356,7 +356,7 @@ describe('予約確定 (/api/reservations)', () => {
     assert.ok(m.subject.includes(reservation.id));
     for (const needle of [reservation.id, '日産 ノート', '北見本店', '北海道北見市', lookupUrl, '運転免許証',
       'キャンセル規定', '合計 (税込)', '¥' + reservation.total.toLocaleString('en-US'), 'https://lin.ee/PuLt0Ig',
-      'daichi.fujimoto@skyward-growth.com', '当日店頭']) {
+      'info@skyward-growth.com', '当日店頭']) {
       assert.ok(m.text.includes(needle), 'お客様メールに「' + needle + '」がありません');
     }
     const p = Core.jstParts(reservation.start);
@@ -509,13 +509,13 @@ describe('予約確定 (/api/reservations)', () => {
   test('必須の同意が無い・版が古い → CONSENT_REQUIRED (保存されない)', async () => {
     const s = futureSlot(3);
     const idem = key('consent');
-    let r = await reserve({ assetId: 'V005', start: s.start, end: s.end, idempotencyKey: idem }, { consent: null });
+    let r = await reserve({ assetId: 'V002', start: s.start, end: s.end, idempotencyKey: idem }, { consent: null });
     assert.equal(r.status, 400);
     assert.equal(r.json.code, 'CONSENT_REQUIRED');
     assert.deepEqual(r.json.missing.sort(), ['cancel', 'clause', 'privacy']);
     const old = await consentAll();
     old.documents = old.documents.map((d) => d.id === 'cancel' ? { id: 'cancel', version: '2020-01' } : d);
-    r = await reserve({ assetId: 'V005', start: s.start, end: s.end, idempotencyKey: idem }, { consent: old });
+    r = await reserve({ assetId: 'V002', start: s.start, end: s.end, idempotencyKey: idem }, { consent: old });
     assert.equal(r.status, 400);
     assert.equal(r.json.code, 'CONSENT_REQUIRED');
     assert.deepEqual(r.json.missing, ['cancel']);
@@ -598,7 +598,7 @@ describe('照会・キャンセル', () => {
     assert.equal(l.status, 200);
     assert.equal(l.json.reservation.id, id);
     assert.equal(l.json.reservation.assetName, '日産 ノート e-POWER');
-    assert.equal(l.json.reservation.locationName, '釧路店');
+    assert.equal(l.json.reservation.locationName, '北見本店');
     assert.equal(l.json.cancellation.cancellable, true);
     assert.equal(l.json.cancellation.fee, 0, '150日以上先は無料');
     assert.ok(!('customerEmail' in l.json.reservation) && !('customer_phone' in l.json.reservation));
@@ -617,7 +617,7 @@ describe('照会・キャンセル', () => {
     const start = jstIso(t.y, t.m, t.d, 3, 5 * Math.floor(Math.random() * 10));
     const end = new Date(Date.parse(start) + 2 * HOUR).toISOString();
     const email = mail('cancel');
-    const r = await reserve({ assetId: 'V005', start, end, customer: { name: '取消 三郎', kana: '', email, phone: '070-5555-6666', company: '' } });
+    const r = await reserve({ assetId: 'V002', start, end, customer: { name: '取消 三郎', kana: '', email, phone: '070-5555-6666', company: '' } });
     assert.equal(r.status, 200, JSON.stringify(r.json));
     const { id } = r.json.reservation;
     const token = r.json.guestToken;
@@ -625,7 +625,7 @@ describe('照会・キャンセル', () => {
     const l = await call('/api/reservations/lookup', { body: { id, token } });
     assert.equal(l.status, 200);
     const cat = await catalog();
-    const a = cat.assets.find((x) => x.id === 'V005');
+    const a = cat.assets.find((x) => x.id === 'V002');
     const local = Core.cancellationFee({
       asset: coreAsset(a), category: { id: a.category_id }, start, cancelAt: new Date().toISOString(),
       base: r.json.reservation.price.base, rules: cat.settings.pricing_rules

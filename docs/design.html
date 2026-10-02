@@ -439,7 +439,7 @@
   <h3 class="h-sec" id="c2-2"><span class="sno">2.2</span>管理画面 (ダッシュボード中心)</h3>
   <p class="lead">
     ログイン後は <strong>dashboard</strong> を起点に、共通トップバーのメニューから各管理画面へ遷移する (ハブ&amp;スポーク)。
-    全拠点 (北見・釧路) を一画面で横断把握できる構成。
+    全拠点 (北見) を一画面で横断把握できる構成。
   </p>
   <figure class="fig">
     <div class="fig-frame">
@@ -554,7 +554,7 @@
       <thead><tr><th>エンティティ</th><th>キー</th><th>主キー</th><th>説明</th></tr></thead>
       <tbody>
         <tr><td>categories</td><td class="c-key">categories</td><td class="c-key">categoryId</td><td>カテゴリ + カスタム項目(EAV)定義。車両/物品の区分。</td></tr>
-        <tr><td>locations</td><td class="c-key">locations</td><td class="c-key">locationId</td><td>拠点 (北見本店・釧路店)。営業時間・定休日。</td></tr>
+        <tr><td>locations</td><td class="c-key">locations</td><td class="c-key">locationId</td><td>拠点 (北見本店)。営業時間・定休日。</td></tr>
         <tr><td>assets</td><td class="c-key">assets</td><td class="c-key">assetId</td><td>車両・物品の統合マスタ。料金・在庫・車検・カスタム値。</td></tr>
         <tr><td>options</td><td class="c-key">options</td><td class="c-key">optionId</td><td>オプション。共通(全車両・家電レンタル)/カテゴリ専用の2階層。家電の在庫数。</td></tr>
         <tr><td>members</td><td class="c-key">members</td><td class="c-key">memberId</td><td>会員。ポイント・クーポン・請求書払い許可。</td></tr>
@@ -658,7 +658,7 @@
       </tbody>
     </table>
   </div>
-  <p class="legend">シード: loc-kitami (北見本店) / loc-kushiro (釧路店) の2拠点。</p>
+  <p class="legend">シード: loc-kitami (北見本店) の1拠点 (2026-10 に釧路店を廃止)。</p>
 
   <h3 class="h-sec" id="c3-4"><span class="sno">3.4</span>assets (車両・物品 統合マスタ)<span class="tag">マスタ</span></h3>
   <div class="tbl-wrap">
@@ -1039,7 +1039,7 @@
   <h3 class="h-sec" id="c6-1"><span class="sno">6.1</span>レスポンシブ設計</h3>
   <ul class="bul">
     <li><b>スマホ最優先</b> (要件)。公開サイトは <code>style.css</code> + <code>public.css</code> で流動レイアウト。検索・詳細・予約フローをタッチ操作前提で設計。</li>
-    <li>管理画面は <code>manage.css</code> で共通トップバーをハンバーガーメニューに集約。少人数・非常駐運営が外出先スマホから全拠点 (北見・釧路) を管理できる。</li>
+    <li>管理画面は <code>manage.css</code> で共通トップバーをハンバーガーメニューに集約。少人数・非常駐運営が外出先スマホから全拠点 (北見) を管理できる。</li>
     <li>幅の広いテーブル (予約一覧・ガント) は <code>.card</code> 内で横スクロールさせ、レイアウト崩れを防止。</li>
   </ul>
 

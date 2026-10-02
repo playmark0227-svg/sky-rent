@@ -413,7 +413,7 @@ describe('E2 デモモード', { skip: NO_JSDOM }, () => {
       assert.equal(page.$('#f-one').checked, true);
       assert.equal(page.$('#f-write').checked, true);
       assert.equal(page.$('#f-failopen').checked, false);
-      deq(page.$$('.gc-loc').map(b => b.dataset.loc), ['loc-kitami', 'loc-kushiro']);
+      deq(page.$$('.gc-loc').map(b => b.dataset.loc), ['loc-kitami']);
       const kitami = page.$('.gc-loc[data-loc="loc-kitami"]');
       assert.equal(kitami.querySelector('[data-empty]').hidden, false, '未登録の案内が出ない');
 
@@ -450,7 +450,7 @@ describe('E2 デモモード', { skip: NO_JSDOM }, () => {
       const saved = await waitFor(() => lsJson(page, 'settings.calendar'), 2000);
       deq(saved, {
         enabled: true, mode: 'day', handoverMinutes: 45, oneHandoverAtATime: true, writeEvents: true, failOpen: true,
-        locations: { 'loc-kitami': { calendarIds: ['staff-b@group.calendar.google.com', 'staff-a@example.com'] }, 'loc-kushiro': { calendarIds: [] } }
+        locations: { 'loc-kitami': { calendarIds: ['staff-b@group.calendar.google.com', 'staff-a@example.com'] } }
       });
       assert.equal(page.$('#dirty-note').hidden, true);
       assert.ok(page.toasts('success').some(t => /保存しました/.test(t)));
@@ -606,7 +606,7 @@ describe('E2 デモモード', { skip: NO_JSDOM }, () => {
       page.click('#btn-block');
       assert.ok(page.$('#bk-asset'));
       const d = jstYmd(Date.now() + 200 * DAY);
-      page.set('#bk-asset', 'V005');
+      page.set('#bk-asset', 'V004');
       page.set('#bk-start', d + 'T18:00');
       page.set('#bk-end', d + 'T09:00');
       page.click('#bk-save');
@@ -617,7 +617,7 @@ describe('E2 デモモード', { skip: NO_JSDOM }, () => {
       page.set('#bk-memo', '北見の整備工場');
       page.click('#bk-save');
       await waitFor(() => !page.$('#crud-modal'), 2000);
-      const block = S.list('reservations').find(r => r.kind === 'block' && r.assetId === 'V005');
+      const block = S.list('reservations').find(r => r.kind === 'block' && r.assetId === 'V004');
       assert.ok(block, '停止枠が登録されない');
       assert.equal(block.start, jstIso(d, 9));
       assert.equal(block.end, jstIso(d, 18));
@@ -628,7 +628,7 @@ describe('E2 デモモード', { skip: NO_JSDOM }, () => {
       assert.match(page.text('#tbl'), /停止中/);
       // 重なる停止枠は登録できない
       page.click('#btn-block');
-      page.set('#bk-asset', 'V005');
+      page.set('#bk-asset', 'V004');
       page.set('#bk-start', d + 'T12:00');
       page.set('#bk-end', d + 'T20:00');
       page.click('#bk-save');
@@ -870,7 +870,7 @@ describe('E2 デモモード: 装備オプション (options / reservation-list 
       assert.equal(o.kind, 'cover');
       assert.equal(o.exclusiveGroup, 'cover');
       assert.equal(o.priceShort, 1100);
-      assert.equal(o.description, '事故時の免責負担ゼロ (最大5万円)');
+      assert.equal(o.description, '事故時の免責負担ゼロ (最大10万円)');
 
       // 追加 (装備) → 削除
       page.click('#btn-add');
@@ -1593,10 +1593,10 @@ describe('E2 本番モード: ローカル Supabase + Edge Functions', { skip: N
       await waitFor(() => page.$('#sa-email'), 20000);
       assert.equal(page.$('#sa-email').value, 'skyrent-calendar@skyrent-test.iam.gserviceaccount.com');
       assert.match(page.text('#status-body'), /鍵 \(サービスアカウント\) が登録されています/);
-      assert.ok(page.$$('.gc-loc').length >= 2, '拠点が表示されない');
+      assert.ok(page.$$('.gc-loc').length >= 1, '拠点が表示されない');
       assert.ok(/^\d+$/.test(page.$('#f-minutes').value), '受け渡し時間が表示されない');
 
-      const block = page.$('.gc-loc[data-loc="loc-kushiro"]');
+      const block = page.$('.gc-loc[data-loc="loc-kitami"]');
       const base = block.querySelectorAll('[data-row]').length;
       [W, F, N].forEach(() => page.click(block.querySelector('.gc-add')));
       const rows = Array.from(block.querySelectorAll('[data-row]')).slice(base);
@@ -1640,7 +1640,7 @@ describe('E2 本番モード: ローカル Supabase + Edge Functions', { skip: N
         const start = jstIso(day, 10), end = new Date(Date.parse(start) + DAY).toISOString();
         try {
           const row = await svcInsert('reservations', {
-            asset_id: 'V005', category_id: 'cat-rental', location_id: 'loc-kitami', period: '[' + start + ',' + end + ')',
+            asset_id: 'V002', category_id: 'cat-rental', location_id: 'loc-kitami', period: '[' + start + ',' + end + ')',
             customer_name: 'E2 テスト', customer_email: email, customer_phone: '090-0000-0000', license_confirmed: true,
             total: 7700, price: { base: 7700, total: 7700, lines: [{ code: 'base', label: '基本料金 (24時間 × 1)', amount: 7700 }] }, source: 'staff'
           });
@@ -1706,7 +1706,7 @@ describe('E2 本番モード: ローカル Supabase + Edge Functions', { skip: N
 
       // --- 貸出停止枠の登録 → 解除
       page.click('#btn-block');
-      page.set('#bk-asset', 'V005');
+      page.set('#bk-asset', 'V002');
       page.set('#bk-start', blockDay + 'T09:00');
       page.set('#bk-end', blockDay + 'T18:00');
       page.set('#bk-reason', '整備・修理');

@@ -321,7 +321,7 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
       //   カテゴリの選択肢 = すべて + 一般レンタカー・キッチンカー・家電レンタル
       assert.equal(w.__lpRanBefore, 4, 'data-src の読込完了前に次のスクリプトが動いた');
       assert.equal(page.document.querySelectorAll('#hs-category option').length, 4);
-      assert.equal(page.document.querySelectorAll('#hs-location option').length, 3);
+      assert.equal(page.document.querySelectorAll('#hs-location option').length, 2, 'すべて + 北見本店 (釧路店は廃止)');
       assert.equal(w.SkyRentStore.live, false);
       assert.equal(w.SkyRentBackend.live, false);
       assertBooted(page, 'index');
@@ -501,8 +501,8 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
     try {
       assert.equal(await page.ready(8000), true);
       const w = page.window, S = w.SkyRentStore, B = w.SkyRentBackend;
-      assert.equal(S.DATA_VERSION, 9);
-      assert.equal(w.localStorage.getItem('sky-rent.dataVersion'), '9');
+      assert.equal(S.DATA_VERSION, 10);
+      assert.equal(w.localStorage.getItem('sky-rent.dataVersion'), '10');
       const opts = S.list('options');
       deq(opts.map(o => o.optionId), ['OP101', 'OP102', 'OP201', 'OP202'].concat(EQUIPMENT_IDS));
       const equipment = opts.filter(o => o.kind === 'other');
@@ -545,7 +545,7 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
     } finally { page.close(); }
   });
 
-  test('DATA_VERSION 7 → 9: 予約・会員・編集したオプションは残し、装備オプション (在庫つき) を足す / 6 以前は作り直す', async () => {
+  test('DATA_VERSION 7 → 10: 予約・会員・編集したオプションは残し、装備オプション (在庫つき) を足す / 6 以前は作り直す', async () => {
     const T = '2026-12-01T01:00:00.000Z';
     const myReservation = {
       reservationId: 'R0099', assetId: 'V001', vehicleId: 'V001', assetName: '日産 ノート', vehicleName: '日産 ノート', categoryId: 'cat-rental',
@@ -571,12 +571,12 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
     try {
       assert.equal(await page.ready(8000), true);
       const w = page.window, S = w.SkyRentStore;
-      assert.equal(w.localStorage.getItem('sky-rent.dataVersion'), '9');
+      assert.equal(w.localStorage.getItem('sky-rent.dataVersion'), '10');
       const opts = S.list('options');
       deq(opts.map(o => o.optionId), ['OP101', 'OP102', 'OP201', 'OP202', 'OP0001'].concat(EQUIPMENT_IDS));
       const cdw = S.findById('options', 'optionId', 'OP101');
       assert.equal(cdw.price, 1700, '管理画面で変えた料金は残す');
-      assert.equal(cdw.description, '事故時の免責負担ゼロ (最大5万円)', '無い項目 (説明文) は補う');
+      assert.equal(cdw.description, '事故時の免責負担ゼロ (最大10万円)', '無い項目 (説明文) は補う');
       assert.equal(S.findById('options', 'optionId', 'OP202').active, false, '無効にしたものは無効のまま');
       // 管理画面で追加したオプションは在庫を数えない (stock = null を足すだけ)
       deq(S.findById('options', 'optionId', 'OP0001'), Object.assign({}, v7Options[4], { stock: null }));
@@ -587,7 +587,7 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
       deq(S.list('reservations'), [myReservation]);
       deq(S.list('members'), [myMember]);
       assert.equal(S.pointSettings().pointPerUse, 2);
-      assertClean(page, 'v7-to-v9');
+      assertClean(page, 'v7-to-v10');
     } finally { page.close(); }
 
     // 6 以前 (家電を撤去した版など) は、これまでどおりシードで作り直す
@@ -595,13 +595,65 @@ describe('デモモード: boot が遅延スクリプトを実行して描画す
     try {
       assert.equal(await page.ready(8000), true);
       const S = page.window.SkyRentStore;
-      assert.equal(page.window.localStorage.getItem('sky-rent.dataVersion'), '9');
+      assert.equal(page.window.localStorage.getItem('sky-rent.dataVersion'), '10');
       deq(S.list('options').map(o => o.optionId), ['OP101', 'OP102', 'OP201', 'OP202'].concat(EQUIPMENT_IDS));
       assert.equal(S.findById('options', 'optionId', 'OP101').price, 1650);
       // 車両 18 件 + 家電レンタル 2 件
       assert.equal(S.list('reservations').length, 20);
       deq(S.list('categories').map(c => c.categoryId), ['cat-rental', 'cat-kitchen', 'cat-appliance']);
       assertClean(page, 'v6-reseed');
+    } finally { page.close(); }
+  });
+
+  test('DATA_VERSION 9 → 10: 釧路店と軽トラックをなくす (釧路の車両・予約は北見本店へ、軽トラックの予約は日産 ノートへ)・予約や会員は残す', async () => {
+    const day = n => new Date(Date.UTC(2026, 11, n, 1)).toISOString();
+    const kei = { assetId: 'V005', categoryId: 'cat-rental', locationId: 'loc-kitami', name: '軽トラック', nameEn: 'Kei Truck', plate: '', capacity: 2,
+      priceHour: 1100, priceDay: 7700, stock: 1, image: '🛻', photo: '', active: true, customFields: { bodyType: '軽トラック' } };
+    const res = (id, assetId, locationId, from, to, status) => ({ reservationId: id, assetId, vehicleId: assetId, assetName: assetId, vehicleName: assetId,
+      categoryId: 'cat-rental', locationId, quantity: 1, customerName: id, customerEmail: id + '@example.com', customerPhone: '090', start: day(from), end: day(to),
+      optionIds: [], options: [], payment: { method: 'onsite', status: 'unpaid' }, price: { total: 7700 }, status: status || 'confirmed', note: '', createdAt: day(1) });
+    const local = {
+      'sky-rent.dataVersion': '9',
+      'sky-rent.locations': JSON.stringify([
+        { locationId: 'loc-kitami', name: '北見本店', nameEn: 'Kitami', tel: '', address: '北海道北見市', hours: '9:00-19:00', holiday: 'なし (年中無休)', sort: 1 },
+        { locationId: 'loc-kushiro', name: '釧路店', nameEn: 'Kushiro', tel: '', address: '北海道釧路市', hours: '9:00-18:00', holiday: 'なし (年中無休)', sort: 2 }
+      ]),
+      'sky-rent.assets': JSON.stringify([
+        { assetId: 'V001', categoryId: 'cat-rental', locationId: 'loc-kitami', name: '日産 ノート', priceHour: 1100, priceDay: 7700, stock: 1, active: true, customFields: { bodyType: 'コンパクト' } },
+        { assetId: 'V002', categoryId: 'cat-rental', locationId: 'loc-kushiro', name: '日産 ノート e-POWER', priceHour: 1100, priceDay: 7700, stock: 1, active: true, customFields: { bodyType: 'コンパクト' } },
+        kei
+      ]),
+      'sky-rent.reservations': JSON.stringify([
+        res('R0101', 'V001', 'loc-kitami', 10, 12),               // V001 は 10〜12日が埋まっている
+        res('R0102', 'V005', 'loc-kitami', 5, 6),                 // 軽トラック → V001 (空いている)
+        res('R0103', 'V005', 'loc-kitami', 11, 13),               // 軽トラック → V001 は重なるので V002
+        res('R0104', 'V002', 'loc-kushiro', 20, 21),              // 釧路の予約 → 北見本店
+        res('R0105', 'V005', 'loc-kitami', 20, 22),               // V001 は空き → V001
+        res('R0106', 'V005', 'loc-kitami', 1, 2, 'returned')      // 過去の返却済み → V001 (重なりは見ない)
+      ]),
+      'sky-rent.members': JSON.stringify([{ memberId: 'M009', name: '移行 会員', email: 'm9@example.com', password: 'Demo-1234', points: 4, coupons: [], pointHistory: [] }])
+    };
+    const page = openPage('index.html', { local });
+    try {
+      assert.equal(await page.ready(8000), true);
+      const w = page.window, S = w.SkyRentStore;
+      assert.equal(w.localStorage.getItem('sky-rent.dataVersion'), '10');
+      deq(S.locations().map(l => l.locationId), ['loc-kitami']);
+      const kitami = S.getLocation('loc-kitami');
+      assert.equal(kitami.address, '北海道北見市若葉4丁目6');
+      assert.match(kitami.hours, /^9:00-19:00 .*ご予約/);
+      assert.equal(S.getAsset('V005'), null, '軽トラックが残っている');
+      assert.equal(S.getAsset('V002').locationId, 'loc-kitami');
+      const r = id => S.findById('reservations', 'reservationId', id);
+      deq(['R0102', 'R0103', 'R0105', 'R0106'].map(id => [r(id).assetId, r(id).status]),
+        [['V001', 'confirmed'], ['V002', 'confirmed'], ['V001', 'confirmed'], ['V001', 'returned']]);
+      assert.equal(r('R0104').locationId, 'loc-kitami');
+      assert.equal(r('R0103').assetName, '日産 ノート e-POWER');
+      assert.equal(S.list('reservations').length, 6, '予約は消さない');
+      assert.equal(S.list('members').length, 1, '会員は消さない');
+      assert.equal(S.read('legal').find(d => d.id === 'clause').version, '2026-10', '貸渡約款の版');
+      assert.ok(!JSON.stringify(S.list('categories')).includes('軽トラック'), 'カテゴリに軽トラックが残っている');
+      assertClean(page, 'v9-to-v10');
     } finally { page.close(); }
   });
 
@@ -734,8 +786,8 @@ describe('本番モード: ローカル Supabase', { skip: NO_JSDOM || (SUPABASE
       assert.equal(B.live, true);
       assert.ok(B.client, 'supabase クライアントが作られていない');
       // 車両6台 + 家電レンタルの窓口 (A001)
-      assert.equal(S.assets().length, 7);
-      assert.equal(S.locations().length, 2);
+      assert.equal(S.assets().length, 6);
+      assert.equal(S.locations().length, 1, '北見本店のみ');
       assert.equal(S.list('options').length, 15);
       assert.equal(S.categories().length, 3);
       assert.equal(S.getCategory('cat-appliance').type, 'item');
@@ -777,7 +829,7 @@ describe('本番モード: ローカル Supabase', { skip: NO_JSDOM || (SUPABASE
     try {
       assert.equal(await page.ready(25000), true);
       const w = page.window;
-      assert.equal(w.SkyRentStore.assets().length, 7);
+      assert.equal(w.SkyRentStore.assets().length, 6);
       const n = await waitFor(() => page.document.querySelectorAll('#results > *').length >= 6 && page.document.querySelectorAll('#results > *').length, 4000);
       assert.ok(n >= 6, '検索結果が描画されない');
       // 空き状況: 取れたなら合成予約だけ、取れなかったなら警告トースト
@@ -820,8 +872,8 @@ describe('本番モード: ローカル Supabase', { skip: NO_JSDOM || (SUPABASE
       assert.equal(B.admin.staff.role, 'admin');
       assert.equal(B.admin.staff.name, 'テスト 管理者');
       assert.equal(B.admin.can('settings.write'), true);
-      assert.equal(S.assets().length, 7);
-      assert.equal(S.locations().length, 2);
+      assert.equal(S.assets().length, 6);
+      assert.equal(S.locations().length, 1, '北見本店のみ');
       assert.equal(S.list('options').length, 15);
       assert.ok(S.read('settings.calendar', null), 'スタッフ専用の設定 (calendar) が読めていない');
       assert.ok(Array.isArray(S.list('notifications')));

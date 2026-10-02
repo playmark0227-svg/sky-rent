@@ -52,7 +52,7 @@
 ```js
 { locationId: 'loc-kitami', name: '北見本店', nameEn, tel, address, hours: '9:00-19:00', holiday: 'なし (年中無休)', sort }
 ```
-シード: loc-kitami (北見本店) / loc-kushiro (釧路店)
+シード: loc-kitami (北見本店。北海道北見市若葉4丁目6) のみ (2026-10 に釧路店を廃止)
 
 ### assets (車両マスタ)
 ```js
@@ -65,7 +65,7 @@
   shakenDate: ISO|null, maintenanceDate: ISO|null,   // 車検・点検期限 (車両のみ)
   customFields: { sinks: 2, power: 3000 } }          // categoryのcustomFieldDefsに対応
 ```
-シード: 車両 V001〜V005 (cat-rental) / K001 (cat-kitchen) と、家電レンタルの受け取り窓口 A001。
+シード: 車両 V001〜V004 (cat-rental。2026-10 に軽トラック V005 を廃止) / K001 (cat-kitchen) と、家電レンタルの受け取り窓口 A001。
 ```js
 { assetId: 'A001', categoryId: 'cat-appliance', locationId: 'loc-kitami',
   name: '家電レンタル（北見本店）', nameEn: 'Appliance Rental (Kitami)',
@@ -304,9 +304,9 @@ SkyRentPricing.calculate({ asset, start, end, quantity, options: [optionObj], co
 - 運営会社: **株式会社Skyward Growth**
 - 所在地: 〒090-0042 北海道北見市北二条西2丁目8 KITAMI BASE内
 - 代表取締役: 藤本 大地
-- メール: daichi.fujimoto@skyward-growth.com
+- メール: info@skyward-growth.com
 - 公式LINE: https://lin.ee/PuLt0Ig
-- 拠点: 北見本店 / 釧路店 (※正式名称・TEL は確認中)
+- 拠点: 北見本店 (北海道北見市若葉4丁目6。スタッフはご予約のお時間のみ)
 - 料金・キャンセル規定は「レンタカー 総合料金表 (2026年6月改定版)」に準拠
 
 ---

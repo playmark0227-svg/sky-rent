@@ -253,7 +253,7 @@ CI必須:
 |---|---|---|---|
 | A | Supabase plan、予算、責任者 | 東京 + PITR可能な有料plan | production作成不可 |
 | B | `www/admin/api` domain、送信domain | 分離 | Cookie/Auth不可 |
-| C | v1商品・拠点 | 車両、北見・釧路 | master凍結不可 |
+| C | v1商品・拠点 | 車両、北見 | master凍結不可 |
 | D | 料金・税・端数・season・NOC | 税込JPY整数、version管理 | quote不可 |
 | E | 営業時間、buffer、休業、整備 | 拠点calendar | 空き判定不可 |
 | F | 予約成立、pending、変更・取消 | 15分hold、version同意 | 状態遷移不可 |

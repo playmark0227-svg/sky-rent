@@ -29,7 +29,7 @@
   // 実車写真が未撮影の車両は、ボディタイプに合わない写真を出すと誤解を招くため、写真を出さずアイコンで表示する。
   // (以前ここで指定していた外部の仮写真は、実際には車両と無関係な画像だった)
   // 撮影した写真が届いたら images/cars/ に置き、store.js / 管理画面の asset.photo に設定する。
-  const NO_STOCK_PHOTO_BODY = { '軽トラック': true };
+  const NO_STOCK_PHOTO_BODY = {};
 
   // manage/ 配下など、1階層深いページからでも解決できるようパスを補正
   function resolve(p) {

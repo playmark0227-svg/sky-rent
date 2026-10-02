@@ -88,12 +88,12 @@
   <script src="partials.js"></script>
   <script src="js/settings.js"></script>
 
-  <script src="../js/config.js?v=20261002"></script>
-  <script src="../js/store.js?v=20261002"></script>
-  <script src="../js/pricing-core.js?v=20261002"></script>
-  <script src="../js/pricing.js?v=20261002"></script>
-  <script src="../js/backend.js?v=20261002"></script>
-  <script src="../js/boot.js?v=20261002"></script>
+  <script src="../js/config.js?v=20261003"></script>
+  <script src="../js/store.js?v=20261003"></script>
+  <script src="../js/pricing-core.js?v=20261003"></script>
+  <script src="../js/pricing.js?v=20261003"></script>
+  <script src="../js/backend.js?v=20261003"></script>
+  <script src="../js/boot.js?v=20261003"></script>
   <script type="text/x-deferred">
   (function () {
     'use strict';
@@ -127,7 +127,7 @@
     try {
       const R = P.rules();
       const C = (R && R.cancellation) || {};
-      const names = { compact: 'コンパクト・軽トラック', large: 'SUV・ミニバン', kitchen: 'キッチンカー' };
+      const names = { compact: 'コンパクト', large: 'SUV・ミニバン', kitchen: 'キッチンカー' };
       const rows = Object.keys(names).map(cls =>
         '<tr><th>' + esc(names[cls]) + '</th><td>' + esc(tierText((C.normal || {})[cls])) + '</td><td>' + esc(tierText((C.busy || {})[cls])) + '</td></tr>').join('');
       document.getElementById('cancel-rules').innerHTML =

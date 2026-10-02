@@ -473,7 +473,7 @@ describe('F3 デモモード', { skip: NO_JSDOM }, () => {
       assert.equal(await page.ready(8000), true);
       await toConfirm(page);
       const w = page.window, B = w.SkyRentBackend;
-      deq(consents(page), ['clause@2026-08', 'cancel@2026-10', 'privacy@2026-08']);
+      deq(consents(page), ['clause@2026-10', 'cancel@2026-10', 'privacy@2026-08']);
       const href = () => w.location.href;
       const urlBefore = href();
       // 確定の応答を差し替える: 1回目 = キャンセル規定が 2026-11 版に更新 / 2回目 = documents 無しの CONSENT_REQUIRED / 3回目 = 本物
@@ -486,7 +486,7 @@ describe('F3 デモモード', { skip: NO_JSDOM }, () => {
           e.code = 'CONSENT_REQUIRED';
           e.documents = [
             { id: 'cancel', version: '2026-11', title: 'キャンセル規定 (2026年11月改定)', url: 'law.html#cancel' },
-            { id: 'clause', version: '2026-08', title: '貸渡約款', url: 'clause.html' },
+            { id: 'clause', version: '2026-10', title: '貸渡約款', url: 'clause.html' },
             { id: 'privacy', version: '2026-08', title: 'プライバシーポリシー', url: 'javascript:alert(1)' }
           ];
           e.missing = ['cancel'];
@@ -503,13 +503,13 @@ describe('F3 デモモード', { skip: NO_JSDOM }, () => {
       page.$('#btn-submit').click();
       await waitFor(() => !page.$('#confirm-error').hidden, 3000);
       assert.equal(calls.length, 1);
-      deq(calls[0].consent.documents, [{ id: 'clause', version: '2026-08' }, { id: 'cancel', version: '2026-10' }, { id: 'privacy', version: '2026-08' }]);
+      deq(calls[0].consent.documents, [{ id: 'clause', version: '2026-10' }, { id: 'cancel', version: '2026-10' }, { id: 'privacy', version: '2026-08' }]);
       // 画面はそのまま (再読み込み・画面遷移なし)。同意欄は最新の版で、更新された文書だけチェックし直し
       assert.equal(href(), urlBefore);
       assert.equal(page.$('#pane-confirm').hidden, false);
       assert.match(page.text('#confirm-error'), /「キャンセル規定 \(2026年11月改定\)」の内容が更新されました。最新の版をご確認のうえ、あらためて同意の欄にチェックを入れてから、もう一度「上記の内容で予約を確定する」を押してください。/);
       assert.doesNotMatch(page.text('#confirm-error'), /再読み込み/);
-      deq(consents(page), ['clause@2026-08:on', 'cancel@2026-11', 'privacy@2026-08:on']);
+      deq(consents(page), ['clause@2026-10:on', 'cancel@2026-11', 'privacy@2026-08:on']);
       const cancelBox = page.$('#consent-box input[data-doc="cancel"]');
       assert.equal(w.document.activeElement, cancelBox, '更新された文書のチェック欄にフォーカスが移らない');
       const cancelLabel = cancelBox.closest('label');
@@ -530,10 +530,10 @@ describe('F3 デモモード', { skip: NO_JSDOM }, () => {
       cancelBox.checked = true;
       page.$('#btn-submit').click();
       await waitFor(() => calls.length === 2 && /再読み込み/.test(page.text('#confirm-error')), 3000);
-      deq(calls[1].consent.documents, [{ id: 'clause', version: '2026-08' }, { id: 'cancel', version: '2026-11' }, { id: 'privacy', version: '2026-08' }]);
+      deq(calls[1].consent.documents, [{ id: 'clause', version: '2026-10' }, { id: 'cancel', version: '2026-11' }, { id: 'privacy', version: '2026-08' }]);
       assert.equal(calls[1].idempotencyKey, calls[0].idempotencyKey, '冪等キーが変わった');
       assert.match(page.text('#confirm-error'), /規約が更新された場合は、画面を再読み込みすると最新の版が表示されます/);
-      deq(consents(page), ['clause@2026-08:on', 'cancel@2026-11:on', 'privacy@2026-08:on'], 'documents が無いときは同意欄を変えない');
+      deq(consents(page), ['clause@2026-10:on', 'cancel@2026-11:on', 'privacy@2026-08:on'], 'documents が無いときは同意欄を変えない');
 
       // 3回目は確定
       page.$('#btn-submit').click();
@@ -886,7 +886,7 @@ describe('F3 本番モード (ローカル Supabase)', { skip: NO_JSDOM || (SUPA
     let start = null;
     for (let i = 0; i < 8 && !start; i++) {
       const s = jstAt(150 + Math.floor(Math.random() * 240), 9 + Math.floor(Math.random() * 7), Math.random() < 0.5 ? 0 : 30);
-      const r = await apiCall('/quote', { assetId: 'V005', start: new Date(s).toISOString(), end: new Date(s + 26 * HOUR).toISOString(), optionIds: [] });
+      const r = await apiCall('/quote', { assetId: 'V002', start: new Date(s).toISOString(), end: new Date(s + 26 * HOUR).toISOString(), optionIds: [] });
       if (r.status === 200 && r.json && r.json.availability && !r.json.availability.reasons.length) start = s;
     }
     assert.ok(start, '空いている日時が見つかりません');
@@ -894,7 +894,7 @@ describe('F3 本番モード (ローカル Supabase)', { skip: NO_JSDOM || (SUPA
     const resCalls = [];
     const page = openPage('booking.html', {
       mode: 'live',
-      session: { [PENDING]: JSON.stringify({ assetId: 'V005', start: new Date(start).toISOString(), end: new Date(start + 26 * HOUR).toISOString(), quantity: 1, optionIds: [] }) },
+      session: { [PENDING]: JSON.stringify({ assetId: 'V002', start: new Date(start).toISOString(), end: new Date(start + 26 * HOUR).toISOString(), quantity: 1, optionIds: [] }) },
       fetch: async (url, init, next) => {
         if (/\/functions\/v1\/api\/reservations$/.test(url)) resCalls.push(JSON.parse(init.body));
         // 画面の読み込み時だけ、キャンセル規定を古い版 (2026-07) にする (= 規約の更新前に開いていた画面)
@@ -909,7 +909,7 @@ describe('F3 本番モード (ローカル Supabase)', { skip: NO_JSDOM || (SUPA
     try {
       assert.equal(await page.ready(20000), true);
       await waitFor(() => page.$('#f-licconf') && page.$$('#consent-box input[data-doc]').length === 3, 5000);
-      deq(page.$$('#consent-box input[data-doc]').map(c => c.dataset.doc + '@' + c.dataset.ver), ['clause@2026-08', 'cancel@2026-07', 'privacy@2026-08']);
+      deq(page.$$('#consent-box input[data-doc]').map(c => c.dataset.doc + '@' + c.dataset.ver), ['clause@2026-10', 'cancel@2026-07', 'privacy@2026-08']);
       page.set('#f-name', 'テスト F3');
       page.set('#f-email', email);
       page.set('#f-phone', '090-0000-3333');
@@ -925,7 +925,7 @@ describe('F3 本番モード (ローカル Supabase)', { skip: NO_JSDOM || (SUPA
       assert.equal(page.$('#pane-done').hidden, true, '古い版のまま確定した');
       // サーバーの最新の版で同意欄を出し直す (キャンセル規定だけチェックし直し)
       assert.match(page.text('#confirm-error'), /「キャンセル規定」の内容が更新されました/);
-      deq(page.$$('#consent-box input[data-doc]').map(c => c.dataset.doc + '@' + c.dataset.ver + (c.checked ? ':on' : '')), ['clause@2026-08:on', 'cancel@2026-10', 'privacy@2026-08:on']);
+      deq(page.$$('#consent-box input[data-doc]').map(c => c.dataset.doc + '@' + c.dataset.ver + (c.checked ? ':on' : '')), ['clause@2026-10:on', 'cancel@2026-10', 'privacy@2026-08:on']);
       assert.equal(page.$('#consent-box input[data-doc="cancel"]').closest('label').querySelector('a').getAttribute('href'), 'law.html#cancel');
       page.$('#consent-box input[data-doc="cancel"]').checked = true;
       page.$('#btn-submit').click();
@@ -934,7 +934,7 @@ describe('F3 本番モード (ローカル Supabase)', { skip: NO_JSDOM || (SUPA
       assert.equal(page.$('#pane-done').hidden, false, '完了画面にならない: ' + page.text('#confirm-error'));
       assert.equal(resCalls.length, 2);
       assert.equal(resCalls[1].idempotencyKey, resCalls[0].idempotencyKey);
-      deq(resCalls[1].consent.documents.map(d => d.id + '@' + d.version).sort(), ['cancel@2026-10', 'clause@2026-08', 'privacy@2026-08']);
+      deq(resCalls[1].consent.documents.map(d => d.id + '@' + d.version).sort(), ['cancel@2026-10', 'clause@2026-10', 'privacy@2026-08']);
       lookupUrl = page.$('#lookup-url').value;
       assertClean(page, 'live-booking-consent');
     } finally {

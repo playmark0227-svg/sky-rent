@@ -9,6 +9,12 @@ select * from no_plan();
 -- 既存データ・他の作業と衝突しないよう、テストの予約はすべて 300 日先に置く
 select set_config('t.base', (now() + interval '300 days')::text, true);
 
+-- 拠点ごとの権限を確かめるため、2つ目の拠点 (釧路) を作り、V002 をそこへ置く。
+--   本番の初期データは北見本店のみ (2026-10 に釧路店を廃止)。この準備はテストの取引の中だけで、最後に rollback する
+insert into public.locations (id, name, name_en, address, hours, holiday, sort)
+  values ('loc-kushiro', '釧路店', 'Kushiro', '北海道釧路市', '9:00-18:00', 'なし', 2);
+update public.assets set location_id = 'loc-kushiro' where id = 'V002';
+
 -- ---------------------------------------------------------------------
 -- 準備 (postgres 権限): 会員2名 + スタッフ4名 + 予約
 -- ---------------------------------------------------------------------
@@ -164,10 +170,10 @@ select lives_ok(
 
 select results_eq(
   $$select id, version, effective_at from public.legal_documents where active order by id$$,
-  $$values ('cancel', '2026-10', '2026-10-01'::date), ('clause', '2026-08', '2026-08-01'::date),
+  $$values ('cancel', '2026-10', '2026-10-01'::date), ('clause', '2026-10', '2026-10-01'::date),
            ('item_clause', '2026-10', '2026-10-01'::date),
            ('law', '2026-10', '2026-10-01'::date), ('privacy', '2026-08', '2026-08-01'::date)$$,
-  '法務文書: キャンセル規定は 2026-10 版 (家電レンタルの段階を追加)・物品レンタル規約 (家電レンタルの同意) を追加。約款・プライバシーポリシーは据え置き');
+  '法務文書: キャンセル規定は 2026-10 版 (家電レンタルの段階を追加)・物品レンタル規約 (家電レンタルの同意) を追加・貸渡約款は 2026-10 版 (改訂)。プライバシーポリシーは据え置き');
 select results_eq(
   $$select title, url from public.legal_documents where id = 'item_clause' and active$$,
   $$values ('物品レンタル規約', 'item-terms.html')$$,
@@ -198,7 +204,7 @@ select throws_ok('select count(*) from public.reservations', '42501', null, '匿
 select throws_ok('select count(*) from public.members', '42501', null, '匿名は会員を読めない');
 select throws_ok('select count(*) from public.inquiries', '42501', null, '匿名は問い合わせを読めない');
 select throws_ok('select count(*) from public.assets', '42501', null, '匿名は車両表を直接読めない (カタログRPC経由のみ)');
-select is(jsonb_array_length(public.public_catalog() -> 'assets'), 7, '匿名でも公開カタログは読める (車両6台 + 家電レンタルの受け取り窓口)');
+select is(jsonb_array_length(public.public_catalog() -> 'assets'), 6, '匿名でも公開カタログは読める (車両5台 + 家電レンタルの受け取り窓口)');
 select ok(not ((public.public_catalog() -> 'assets' -> 0) ? 'plate'), '公開カタログにナンバーを含めない');
 select ok(not ((public.public_catalog() -> 'settings') ? 'calendar'), '公開カタログにカレンダー設定 (担当者のカレンダーID) を含めない');
 select ok(not ((public.public_catalog() -> 'settings') ? 'billing'), '公開カタログに振込先を含めない');
@@ -276,12 +282,12 @@ select throws_ok($$select public.admin_create_invoice('22222222-2222-2222-2222-2
   'P0001', 'RESERVATIONS_NOT_INVOICEABLE', '他の会員の予約は請求に含められない');
 
 -- 貸出停止枠 (整備)
-select is((public.admin_create_reservation(jsonb_build_object('kind', 'block', 'asset_id', 'V005',
+select is((public.admin_create_reservation(jsonb_build_object('kind', 'block', 'asset_id', 'V004',
   'start_at', current_setting('t.base')::timestamptz + interval '10 days', 'end_at', current_setting('t.base')::timestamptz + interval '12 days', 'staff_note', '車検'))).kind,
   'block', '整備・車検の貸出停止枠を登録できる');
 select throws_ok(
   $$select public.admin_create_reservation(jsonb_build_object(
-    'asset_id', 'V005', 'customer_name', '電話予約', 'customer_email', 'tel@example.com', 'customer_phone', '0',
+    'asset_id', 'V004', 'customer_name', '電話予約', 'customer_email', 'tel@example.com', 'customer_phone', '0',
     'start_at', current_setting('t.base')::timestamptz + interval '11 days',
     'end_at', current_setting('t.base')::timestamptz + interval '11 days 3 hours'))$$,
   'P0001', 'AVAILABILITY_CONFLICT', '貸出停止枠と重なる予約は (スタッフ登録でも) 入らない');

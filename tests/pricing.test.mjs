@@ -29,7 +29,8 @@ const C = globalThis.SkyRentPricingCore;
 const COMPACT = { id: 'V001', categoryId: 'cat-rental', priceHour: 1100, priceDay: 7700, customFields: { bodyType: 'コンパクト' } };
 const SUV = { id: 'V003', categoryId: 'cat-rental', priceHour: 2200, priceDay: 17000, customFields: { bodyType: 'SUV' } };
 const MINIVAN = { id: 'V004', categoryId: 'cat-rental', priceHour: 2200, priceDay: 17000, customFields: { bodyType: 'ミニバン' } };
-const KEI = { id: 'V005', categoryId: 'cat-rental', priceHour: 1100, priceDay: 7700, customFields: { bodyType: '軽トラック' } };
+// 区分の決まっていないボディタイプ (料金ルールの classOf に無いもの) はコンパクトの段階
+const OTHER_BODY = { id: 'V099', categoryId: 'cat-rental', priceHour: 1100, priceDay: 7700, customFields: { bodyType: 'その他' } };
 const KITCHEN = { id: 'K001', categoryId: 'cat-kitchen', priceHour: null, priceDay: 22000, customFields: {} };
 const CDW = { id: 'OP101', name: '免責補償制度 (CDW)', price: 1650, priceShort: 1100, priceType: 'per_day', categoryIds: ['cat-rental'], exclusiveGroup: 'cover' };
 const PAP = { id: 'OP102', name: '安心保証コース (PAP)', price: 3300, priceShort: 2200, priceType: 'per_day', categoryIds: ['cat-rental'], exclusiveGroup: 'cover' };
@@ -502,7 +503,7 @@ describe('キャンセル料 (base = 24時間の基本料金)', () => {
     assert.equal(fee(COMPACT, '2026-10-17 15:00', 7700).label, '3日前までは無料');
     assert.equal(fee(COMPACT, '2026-10-20 12:00', 7700, { noShow: true }).label, '無断キャンセル (100%)');
     assert.equal(fee(KITCHEN, '2026-10-07 10:00', 22000).label, '13日前 (50%)');
-    assert.equal(fee(KEI, '2026-10-19 15:00', 7700).cls, 'compact');
+    assert.equal(fee(OTHER_BODY, '2026-10-19 15:00', 7700).cls, 'compact');
     assert.equal(fee(MINIVAN, '2026-10-19 15:00', 17000).cls, 'large');
     assert.equal(C.cancellationFee({ asset: {}, start: jst(PICK), cancelAt: jst('2026-10-19 10:00'), base: 7700 }).cls, 'compact');
   });

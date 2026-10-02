@@ -5,7 +5,7 @@
  *   - 車両を対象とした「アセット」モデル。家電などの装備品は、車両の予約に追加するオプションと、
  *     家電だけのレンタル (カテゴリ cat-appliance = type 'item'。アセット A001 は北見本店の受け取り窓口) で貸す
  *   - カテゴリごとのカスタム項目 (EAV/JSON方式) — 管理画面から自由に定義可能
- *   - 拠点 (北見・釧路) / オプション2階層 (共通 = 装備オプション・カテゴリ専用 = 補償) /
+ *   - 拠点 (北見本店) / オプション2階層 (共通 = 装備オプション・カテゴリ専用 = 補償) /
  *     車両の空き判定 (重なり禁止) / 家電 (装備オプション) の在庫判定 (options[].stock。車両のオプションと
  *     家電だけの予約で同じ在庫を使う。家電レンタルの窓口には重なり禁止をかけない)
  *   - 会員・ポイント・クーポン制度 / 請求書払い (法人・行政のみ)
@@ -22,7 +22,7 @@
 (function () {
   'use strict';
   const PREFIX = 'sky-rent.';
-  const DATA_VERSION = 9;
+  const DATA_VERSION = 10;
   const DAY = 86400000;
   const CONFIG = window.SKY_RENT_CONFIG || {};
   const LIVE = !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY);
@@ -150,9 +150,9 @@
 
   const SEED_CATEGORIES = [
     { categoryId: 'cat-rental', name: '一般レンタカー', nameEn: 'Rental Car', type: 'vehicle', icon: '🚗', sort: 1, active: true,
-      description: '通勤・買い物・旅行・お仕事に。コンパクトからSUV・ミニバン・軽トラックまで。',
+      description: '通勤・買い物・旅行・お仕事に。コンパクトからSUV・ミニバンまで。',
       customFieldDefs: [
-        { key: 'bodyType', label: 'ボディタイプ', type: 'select', options: ['コンパクト', 'SUV', 'ミニバン', '軽トラック'], filterable: true },
+        { key: 'bodyType', label: 'ボディタイプ', type: 'select', options: ['コンパクト', 'SUV', 'ミニバン'], filterable: true },
         { key: 'drive',    label: '駆動方式',     type: 'select', options: ['2WD', '4WD'], filterable: true },
         { key: 'mission',  label: 'トランスミッション', type: 'select', options: ['AT', 'MT'], filterable: false },
         { key: 'navi',     label: 'カーナビ',     type: 'select', options: ['有', '無'], filterable: false },
@@ -173,8 +173,8 @@
   ];
 
   const SEED_LOCATIONS = [
-    { locationId: 'loc-kitami',  name: '北見本店', nameEn: 'Kitami',  tel: '', address: '北海道北見市', hours: '9:00-19:00', holiday: 'なし (年中無休)', sort: 1 },
-    { locationId: 'loc-kushiro', name: '釧路店',   nameEn: 'Kushiro', tel: '', address: '北海道釧路市', hours: '9:00-18:00', holiday: 'なし (年中無休)', sort: 2 }
+    // 貸出は北見本店のみ (DATA_VERSION 10 で釧路店を廃止)。スタッフはご予約のあるお時間のみ店舗にいる
+    { locationId: 'loc-kitami',  name: '北見本店', nameEn: 'Kitami',  tel: '', address: '北海道北見市若葉4丁目6', hours: '9:00-19:00 (スタッフはご予約のお時間のみ)', holiday: 'なし (年中無休)', sort: 1 }
   ];
 
   const SEED_ASSETS = [
@@ -183,7 +183,7 @@
       requiredLicense: '', image: '🚗', photo: 'images/cars/note-black.jpg', active: true,
       shakenDate: at(210, 0), maintenanceDate: at(40, 0),
       customFields: { bodyType: 'コンパクト', drive: '2WD', mission: 'AT', navi: '有', etc: '有' } },
-    { assetId: 'V002', categoryId: 'cat-rental', locationId: 'loc-kushiro', name: '日産 ノート e-POWER', nameEn: 'Nissan Note e-POWER',
+    { assetId: 'V002', categoryId: 'cat-rental', locationId: 'loc-kitami', name: '日産 ノート e-POWER', nameEn: 'Nissan Note e-POWER',
       plate: '', capacity: 5, priceHour: 1100, priceDay: 7700, priceWeek: null, priceMonth: null, stock: 1,
       requiredLicense: '', image: '🚗', photo: 'images/cars/note-white.jpg', active: true,
       shakenDate: at(300, 0), maintenanceDate: at(65, 0),
@@ -198,11 +198,6 @@
       requiredLicense: '', image: '🚐', photo: 'images/cars/sienta.jpg', active: true,
       shakenDate: at(160, 0), maintenanceDate: at(50, 0),
       customFields: { bodyType: 'ミニバン', drive: '2WD', mission: 'AT', navi: '有', etc: '有' } },
-    { assetId: 'V005', categoryId: 'cat-rental', locationId: 'loc-kitami', name: '軽トラック', nameEn: 'Kei Truck',
-      plate: '', capacity: 2, priceHour: 1100, priceDay: 7700, priceWeek: null, priceMonth: null, stock: 1,
-      requiredLicense: '', image: '🛻', photo: '', active: true,
-      shakenDate: at(120, 0), maintenanceDate: at(35, 0),
-      customFields: { bodyType: '軽トラック', drive: '4WD', mission: 'AT', navi: '無', etc: '無' } },
     { assetId: 'K001', categoryId: 'cat-kitchen', locationId: 'loc-kitami', name: 'キッチンカー', nameEn: 'Kitchen Car',
       plate: '', capacity: 2, priceHour: null, priceDay: 22000, priceWeek: null, priceMonth: null, stock: 1,
       requiredLicense: '', image: '🍳', photo: '', active: true,
@@ -228,7 +223,7 @@
   //   家電だけのレンタル (cat-appliance) でも、この装備オプション (categoryIds = null) を借りる家電として選ぶ
   const SEED_OPTIONS = [
     // 補償 (レンタカー)
-    { optionId: 'OP101', name: '免責補償制度 (CDW)',   price: 1650, priceShort: 1100, priceType: 'per_day', categoryIds: ['cat-rental'], kind: 'cover', exclusiveGroup: 'cover', active: true, sort: 1, stock: null, description: '事故時の免責負担ゼロ (最大5万円)' },
+    { optionId: 'OP101', name: '免責補償制度 (CDW)',   price: 1650, priceShort: 1100, priceType: 'per_day', categoryIds: ['cat-rental'], kind: 'cover', exclusiveGroup: 'cover', active: true, sort: 1, stock: null, description: '事故時の免責負担ゼロ (最大10万円)' },
     { optionId: 'OP102', name: '安心保証コース (PAP)', price: 3300, priceShort: 2200, priceType: 'per_day', categoryIds: ['cat-rental'], kind: 'cover', exclusiveGroup: 'cover', active: true, sort: 2, stock: null, description: '免責免除・NOC免除' },
     // 補償 (キッチンカー)
     { optionId: 'OP201', name: '免責補償制度 (CDW)',   price: 3300, priceShort: null, priceType: 'per_day', categoryIds: ['cat-kitchen'], kind: 'cover', exclusiveGroup: 'cover', active: true, sort: 3, stock: null, description: '事故時の免責負担ゼロ (最大10万円)' },
@@ -253,10 +248,10 @@
 
   // 公開中の法務文書 (supabase/seed.sql の legal_documents の有効な版と同じ。本番は public_catalog の legal)
   //   予約時の同意: 車両 = clause・cancel・privacy / 家電レンタル = item_clause・cancel・privacy
-  //   cancel は 2026-10 版 (家電レンタルのキャンセル料の段階を足したため)
+  //   cancel は 2026-10 版 (家電レンタルのキャンセル料の段階を足したため)。clause は 2026-10 版 (貸渡約款の改訂)
   const SEED_LEGAL = [
     { id: 'cancel',      version: '2026-10', title: 'キャンセル規定',           url: 'law.html#cancel', effectiveAt: '2026-10-01' },
-    { id: 'clause',      version: '2026-08', title: '貸渡約款',                 url: 'clause.html',     effectiveAt: '2026-08-01' },
+    { id: 'clause',      version: '2026-10', title: '貸渡約款',                 url: 'clause.html',     effectiveAt: '2026-10-01' },
     { id: 'item_clause', version: '2026-10', title: '物品レンタル規約',         url: 'item-terms.html', effectiveAt: '2026-10-01' },
     { id: 'law',         version: '2026-10', title: '特定商取引法に基づく表記', url: 'law.html',        effectiveAt: '2026-10-01' },
     { id: 'privacy',     version: '2026-08', title: 'プライバシーポリシー',     url: 'privacy.html',    effectiveAt: '2026-08-01' }
@@ -306,16 +301,16 @@
     [-20, 2, 'K001', 1, '(株)北海道イベント企画', 'corp@example.com', '011-222-3333', 'returned', 'invoice', 'M002', '夏祭りイベント出店',   -25],
     [-15, 2, 'V001', 1, '鈴木 美咲',   'suzuki@example.com',   '080-2233-4455', 'cancelled', 'onsite',  null,   'お客様都合キャンセル', -17],
     [-10, 4, 'V004', 1, 'デモ 太郎',   'demo@example.com',     '090-0000-1111', 'returned',  'onsite',  'M001', '家族旅行',             -14],
-    [ -8, 1, 'V005', 1, '山本工務店',   'yamamoto-k@example.com', '011-555-6677', 'returned', 'onsite',  null,   '資材運搬',             -9],
+    [ -8, 1, 'V001', 1, '山本工務店',   'yamamoto-k@example.com', '011-555-6677', 'returned', 'onsite',  null,   '現場への移動',         -9],
     [ -6, 2, 'V002', 1, '(株)北海道イベント企画', 'corp@example.com', '011-222-3333', 'returned', 'invoice', 'M002', '出張利用',         -8],
     [ -4, 2, 'V001', 1, '伊藤 翔太',   'ito-s@example.com',    '070-6677-8899', 'returned',  'onsite',  null,   '',                    -5],
     [ -1, 3, 'K001', 1, '中村 由美',   'nakamura@example.com', '090-7788-9900', 'in_use',    'onsite',  null,   'マルシェ出店 (貸出中)', -3],
     [ -1, 2, 'V003', 1, '小林 誠',     'kobayashi@example.com','080-8899-0011', 'in_use',    'onsite',  null,   '道東ドライブ (貸出中)', -2],
     [  0, 1, 'V004', 1, '加藤 健',     'kato@example.com',     '090-1212-3434', 'confirmed', 'onsite',  null,   '本日出発',             -1],
-    [  0, 2, 'V005', 1, '吉田 直樹',   'yoshida@example.com',  '070-2323-4545', 'confirmed', 'onsite',  null,   '引越し',                0],
+    [  0, 2, 'V001', 1, '吉田 直樹',   'yoshida@example.com',  '070-2323-4545', 'confirmed', 'onsite',  null,   '帰省',                  0],
     [  1, 2, 'V002', 1, '佐々木 玲奈', 'sasaki@example.com',   '080-3434-5656', 'confirmed', 'onsite',  null,   '',                    -1],
     [  2, 4, 'V001', 1, 'デモ 太郎',   'demo@example.com',     '090-0000-1111', 'confirmed', 'onsite',  'M001', '週末利用',              0],
-    [  3, 2, 'V005', 1, '松本 浩二',   'matsumoto@example.com','090-4545-6767', 'confirmed', 'onsite',  null,   '農作業',               -2],
+    [  3, 2, 'V002', 1, '松本 浩二',   'matsumoto@example.com','090-4545-6767', 'confirmed', 'onsite',  null,   '観光',                 -2],
     [  5, 3, 'K001', 1, '井上 美穂',   'inoue@example.com',    '070-5656-7878', 'confirmed', 'onsite',  null,   'クレープ移動販売',      0],
     [  8, 2, 'V003', 1, '木村 拓也',   'kimura@example.com',   '080-6767-8989', 'confirmed', 'onsite',  null,   '出張',                 -1],
     [ 12, 2, 'V004', 1, '渡辺 さやか', 'watanabe@example.com', '090-7878-9090', 'confirmed', 'onsite',  null,   '記念日利用',            0],
@@ -390,7 +385,7 @@
     if (r6) {
       inv.push({
         invoiceId: 'INV-0002', memberId: 'M002', company: '株式会社北海道イベント企画',
-        address: '北海道北見市大通西2-1', caseName: '資材運搬 軽トラックレンタル',
+        address: '北海道北見市大通西2-1', caseName: '出張利用 レンタカー',
         reservationIds: ['R0006'], amount: r6.price.total,
         status: 'unpaid', issuedAt: at(-4, 10), dueDate: at(26, 0), paidAt: null
       });
@@ -444,6 +439,70 @@
     patchPricingRules();
   }
 
+  // 9 → 10: 貸出拠点を北見本店だけにし、軽トラックの取扱いをやめる。予約・会員などのデータは消さない
+  //   - 釧路店を削除し、釧路店の車両・予約は北見本店へ移す
+  //   - 北見本店の所在地・営業時間 (スタッフはご予約のお時間のみ) を、初期値のままなら新しい値にする
+  //   - 軽トラック (V005) を削除し、その予約は同じ料金の日産 ノート (V001 → V002 の順で空いている方) へ移す。
+  //     どちらも空いていなければ、取消済みにする (デモデータのため)
+  //   - カテゴリのボディタイプ・料金ルールの区分・CDW の説明・貸渡約款の版を新しい値にする
+  const OLD_LOCATION_ID = 'loc-kushiro';
+  const OLD_KEI_TRUCK_ID = 'V005';
+  function migrateToV10() {
+    const kitami = SEED_LOCATIONS[0];
+    write('locations', list('locations').filter(l => l && l.locationId !== OLD_LOCATION_ID).map(l => {
+      if (l.locationId !== kitami.locationId) return l;
+      const next = Object.assign({}, l);
+      if (!next.address || next.address === '北海道北見市') next.address = kitami.address;
+      if (!next.hours || next.hours === '9:00-19:00') next.hours = kitami.hours;
+      return next;
+    }));
+    write('assets', list('assets').filter(a => a && a.assetId !== OLD_KEI_TRUCK_ID).map(a =>
+      a.locationId === OLD_LOCATION_ID ? Object.assign({}, a, { locationId: kitami.locationId }) : a));
+    const byId = {};
+    list('assets').forEach(a => { byId[a.assetId] = a; });
+    const active = r => r && r.kind !== 'block' && (r.status === 'confirmed' || r.status === 'in_use');
+    const overlaps = (r, assetId, all) => all.some(x => x !== r && x.assetId === assetId && (active(x) || x.kind === 'block') &&
+      Date.parse(x.start) < Date.parse(r.end) && Date.parse(r.start) < Date.parse(x.end));
+    const reservations = list('reservations');
+    reservations.forEach(r => {
+      if (r.locationId === OLD_LOCATION_ID) r.locationId = kitami.locationId;
+      if (r.assetId !== OLD_KEI_TRUCK_ID) return;
+      const to = ['V001', 'V002'].find(id => byId[id] && (!active(r) || !overlaps(r, id, reservations)));
+      if (to) {
+        r.assetId = r.vehicleId = to;
+        r.assetName = r.vehicleName = byId[to].name;
+        r.locationId = byId[to].locationId;
+      } else {
+        r.status = 'cancelled';
+        r.note = (r.note ? r.note + ' / ' : '') + '軽トラックの取扱い終了のため取消';
+      }
+    });
+    write('reservations', reservations);
+    write('notifications', list('notifications').map(n => n && typeof n.message === 'string'
+      ? Object.assign({}, n, { message: n.message.replace('(軽トラック /', '(日産 ノート /') }) : n));
+    write('invoices', list('invoices').map(v => v && v.caseName === '資材運搬 軽トラックレンタル'
+      ? Object.assign({}, v, { caseName: '出張利用 レンタカー' }) : v));
+    const seedRental = SEED_CATEGORIES.find(c => c.categoryId === 'cat-rental');
+    write('categories', list('categories').map(c => {
+      if (!c || c.categoryId !== 'cat-rental') return c;
+      const next = clone(c);
+      if (typeof next.description === 'string' && next.description.indexOf('軽トラック') >= 0) next.description = seedRental.description;
+      (next.customFieldDefs || []).forEach(d => {
+        if (d && Array.isArray(d.options)) d.options = d.options.filter(o => o !== '軽トラック');
+      });
+      return next;
+    }));
+    write('options', list('options').map(o => o && o.optionId === 'OP101' && o.description === '事故時の免責負担ゼロ (最大5万円)'
+      ? Object.assign({}, o, { description: '事故時の免責負担ゼロ (最大10万円)' }) : o));
+    const rules = read('settings.pricing_rules', null);
+    if (rules && rules.cancellation && rules.cancellation.classOf && rules.cancellation.classOf['軽トラック']) {
+      const next = clone(rules);
+      delete next.cancellation.classOf['軽トラック'];
+      write('settings.pricing_rules', next);
+    }
+    seedLegal();
+  }
+
   // 法務文書: 無い文書を足し、seed より古い版を seed の版にする (新しい版・追加した文書はそのまま)
   function seedLegal() {
     const cur = read('legal', null);
@@ -477,9 +536,10 @@
   function ensureSeeded() {
     const ver = read('dataVersion', 0);
     if (ver === DATA_VERSION) return;
-    if (ver === 7 || ver === 8) {
+    if (ver === 7 || ver === 8 || ver === 9) {
       if (ver === 7) migrateToV8();
-      migrateToV9();
+      if (ver <= 8) migrateToV9();
+      migrateToV10();
       write('dataVersion', DATA_VERSION);
       return;
     }
@@ -499,7 +559,7 @@
     write('invoices', invoices);
     write('notifications', [
       { at: at(-1, 9), type: 'reservation', message: '新規予約 R0009 (マツダ CX-5 / 小林 誠 様) を受け付けました', refId: 'R0009' },
-      { at: at(0, 8),  type: 'reservation', message: '新規予約 R0011 (軽トラック / 吉田 直樹 様) を受け付けました', refId: 'R0011' }
+      { at: at(0, 8),  type: 'reservation', message: '新規予約 R0011 (日産 ノート / 吉田 直樹 様) を受け付けました', refId: 'R0011' }
     ]);
     // ポイント設定・振込先の既定値 (未設定時のみ)
     if (read('settings.points', null) == null) {

@@ -786,10 +786,11 @@ describe('装備オプションの案内 (faq / fleet / law / guide / index / co
       const t = text(idx, 'body');
       assert.match(t, /装備もオプションも、まとめて一式。/);
       assert.match(t, /オプションを選んで情報を入力/);
-      // 2026-10-02: 「装備だけの単体レンタルは行っていない」から「家電だけでも借りられる」に変わった
-      const faq = [...idx.document.querySelectorAll('.lp-faq .faq')].find(d => /車を借りずに、家電だけ借りられますか/.test(d.textContent));
-      assert.ok(faq, 'トップの FAQ に家電レンタルの質問が無い');
-      assert.match(faq.textContent, /家電だけでもお借りいただけます/);
+      // 2026-10: 「装備オプションだけ追加できますか？」→「はい、できます。」(車を借りずに家電だけでも借りられる)
+      const faq = [...idx.document.querySelectorAll('.lp-faq .faq')].find(d => /装備オプションだけ追加できますか/.test(d.textContent));
+      assert.ok(faq, 'トップの FAQ に「装備オプションだけ追加できますか？」が無い');
+      assert.match(faq.querySelector('.a').textContent, /^はい、できます。/);
+      assert.match(faq.textContent, /家電\) だけでもお借りいただけます/);
       assert.match(faq.textContent, /家電セット/);
       assert.match(faq.textContent, /北見本店/);
       assert.match(faq.textContent, /運転免許証は不要/);
@@ -896,7 +897,7 @@ async function followAuthLink(link) {
 async function createReservation(opts) {
   const catalog = await api('/rest/v1/rpc/public_catalog', { body: {} });
   const docs = (catalog.legal || []).filter(d => ['clause', 'cancel', 'privacy'].includes(d.id)).map(d => ({ id: d.id, version: d.version }));
-  const assets = ['V001', 'V003', 'V004', 'V005', 'V002'];
+  const assets = ['V001', 'V003', 'V004', 'V002'];
   let lastErr = null;
   for (let attempt = 0; attempt < 8; attempt++) {
     const day = 150 + Math.floor(Math.random() * 241);

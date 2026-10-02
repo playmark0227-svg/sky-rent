@@ -404,7 +404,8 @@ describe('D1 デモモード: 予約手続き (booking.html)', { skip: NO_JSDOM 
       assert.ok(q.lines.some(l => l.code === 'discount' && l.amount === -1100));
       assert.match(body, /学生割引/);
       // キャンセル規定: コンパクト (通常期) の段階表 + いま取り消した場合
-      assert.match(body, /コンパクト・軽トラック/);
+      assert.match(body, /コンパクト/);
+      assert.doesNotMatch(body, /軽トラック/);
       assert.match(body, /通常期/);
       const rows = page.$$('#confirm-body .bk-table tr').map(r => r.textContent);
       assert.ok(rows.some(r => /3日前 \(.+\) まで/.test(r) && /無料/.test(r)), '3日前まで無料の行: ' + rows.join(' | '));
@@ -414,7 +415,7 @@ describe('D1 デモモード: 予約手続き (booking.html)', { skip: NO_JSDOM 
       assert.match(page.text('#cancel-now'), /¥0/);   // 30日前なので無料
       // 同意は文書ごとに版つき
       const consents = page.$$('#consent-box input[data-doc]');
-      deq(consents.map(c => c.dataset.doc + '@' + c.dataset.ver), ['clause@2026-08', 'cancel@2026-10', 'privacy@2026-08']);
+      deq(consents.map(c => c.dataset.doc + '@' + c.dataset.ver), ['clause@2026-10', 'cancel@2026-10', 'privacy@2026-08']);
       assert.match(page.text('#consent-box'), /2026-08版/);
       assert.equal(page.text('#btn-submit'), '上記の内容で予約を確定する');
 
@@ -558,7 +559,7 @@ describe('D1 デモモード: 予約手続き (booking.html)', { skip: NO_JSDOM 
       // 送信内容の形 (契約書 §2.1-3)
       const p = sent[0];
       deq(Object.keys(p).sort(), ['assetId', 'consent', 'couponId', 'customer', 'discountType', 'end', 'expectedTotal', 'idempotencyKey', 'licenseConfirmed', 'note', 'optionIds', 'paymentMethod', 'start'].sort());
-      deq(p.consent.documents, [{ id: 'clause', version: '2026-08' }, { id: 'cancel', version: '2026-10' }, { id: 'privacy', version: '2026-08' }]);
+      deq(p.consent.documents, [{ id: 'clause', version: '2026-10' }, { id: 'cancel', version: '2026-10' }, { id: 'privacy', version: '2026-08' }]);
       assert.equal(p.licenseConfirmed, true);
       assert.equal(p.customer.license, undefined);
       assertClean(page, 'booking-errors');
@@ -1064,8 +1065,7 @@ describe('D1 本番モード: ローカル Supabase + Edge Functions', { skip: N
         j.staff = {
           enabled: true, mode: 'handover', handoverMinutes: 30, oneHandoverAtATime: true,
           locations: {
-            'loc-kitami': { configured: true, busy: [staffBusy], calendars: [{ busy: [staffBusy] }, { busy: [staffBusy] }] },
-            'loc-kushiro': { configured: false, busy: [], calendars: [] }
+            'loc-kitami': { configured: true, busy: [staffBusy], calendars: [{ busy: [staffBusy] }, { busy: [staffBusy] }] }
           }
         };
         return jsonResponse(j);
@@ -1086,15 +1086,14 @@ describe('D1 本番モード: ローカル Supabase + Edge Functions', { skip: N
       assert.equal(await page.ready(20000), true);
       await waitFor(() => page.$$('#results .asset-card').length >= 6, 4000);
       const cards = page.$$('#results .asset-card');
+      // 貸出は北見本店のみ (車両5台 + 家電レンタルの窓口)
       const kitami = cards.filter(c => /北見/.test(c.textContent));
-      const kushiro = cards.filter(c => /釧路/.test(c.textContent));
-      assert.ok(kitami.length >= 4 && kushiro.length >= 1);
+      assert.equal(kitami.length, cards.length);
+      assert.ok(kitami.length >= 6);
       kitami.forEach(c => {
         assert.ok(c.classList.contains('ng'), '北見の車両が予約可になっている: ' + c.textContent);
         assert.match(c.textContent, /受け渡し担当者の予定が埋まっています/);
       });
-      // 釧路はカレンダー未設定 → 判定しない
-      assert.ok(kushiro.some(c => c.classList.contains('ok')), '釧路の車両が予約不可');
       assertClean(page, 'live-search-staff');
     } finally { page.close(); }
 
@@ -1157,10 +1156,10 @@ describe('D1 本番モード: ローカル Supabase + Edge Functions', { skip: N
 
   test('booking.html: 確定 (PRICE_CHANGED → 新金額で再確認 → 確定)・送信は1回ずつ・DB と照会URL・メール送信状態', async t => {
     if (!up) return t.skip('ローカル Supabase / Edge Functions に接続できません');
-    const start = await freeSlot('V005', 26);
+    const start = await freeSlot('V002', 26);
     const tag = 'd1-' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
     const email = tag + '@example.com';
-    const pending = JSON.stringify({ assetId: 'V005', start: new Date(start).toISOString(), end: new Date(start + 26 * HOUR).toISOString(), quantity: 1, optionIds: ['OP101'] });
+    const pending = JSON.stringify({ assetId: 'V002', start: new Date(start).toISOString(), end: new Date(start + 26 * HOUR).toISOString(), quantity: 1, optionIds: ['OP101'] });
     const resCalls = [];
     const page = openPage('booking.html', {
       mode: 'live', session: { [PENDING]: pending },

@@ -8,7 +8,7 @@
 (function () {
   'use strict';
   const LINE = 'https://lin.ee/PuLt0Ig';
-  const MAIL = 'daichi.fujimoto@skyward-growth.com';
+  const MAIL = 'info@skyward-growth.com';
 
   function header(active) {
     const nav = [
@@ -36,7 +36,7 @@
       '<div class="footer-top">' +
         '<div class="footer-brand">' +
           '<a href="index.html" class="fb-logo"><img src="images/brand/logo-white.png" alt="グロースレンタカー" width="1200" height="547" loading="lazy"></a>' +
-          '<p>コンパクトカー・SUV・ミニバン・軽トラック・キッチンカー。家電だけのレンタルも。<br>北海道 北見・釧路からお貸しします。</p>' +
+          '<p>コンパクトカー・SUV・ミニバン・キッチンカー。家電だけのレンタルも。<br>北見本店: 北海道北見市若葉4丁目6</p>' +
         '</div>' +
         '<div class="footer-col"><h4>Rental</h4>' +
           '<a href="search.html">空き検索・予約</a>' +

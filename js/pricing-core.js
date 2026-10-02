@@ -53,7 +53,7 @@
       shusei_club:    { label: '守成クラブ会員割引', amount: 3000, minHours: 24, proof: '守成クラブ会員であることが分かるもの', categoryIds: ['cat-kitchen'] }
     },
     cancellation: {
-      classOf: { 'コンパクト': 'compact', '軽トラック': 'compact', 'SUV': 'large', 'ミニバン': 'large' },
+      classOf: { 'コンパクト': 'compact', 'SUV': 'large', 'ミニバン': 'large' },
       categoryClass: { 'cat-kitchen': 'kitchen', 'cat-appliance': 'item' },
       normal: {
         compact: [{ minDays: 3, pct: 0 }, { minDays: 1, pct: 30 }, { minDays: 0, pct: 50 }],

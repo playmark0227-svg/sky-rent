@@ -4,15 +4,15 @@
 --   料金は「レンタカー 総合料金表 (2026年6月改定版)」に準拠。
 -- =====================================================================
 
+-- 貸出は北見本店のみ。スタッフはご予約のあるお時間のみ店舗にいる (営業時間の欄に添える)
 insert into public.locations (id, name, name_en, tel, address, hours, holiday, sort) values
-  ('loc-kitami',  '北見本店', 'Kitami',  '', '北海道北見市', '9:00-19:00', 'なし (年中無休)', 1),
-  ('loc-kushiro', '釧路店',   'Kushiro', '', '北海道釧路市', '9:00-18:00', 'なし (年中無休)', 2)
+  ('loc-kitami',  '北見本店', 'Kitami',  '', '北海道北見市若葉4丁目6', '9:00-19:00 (スタッフはご予約のお時間のみ)', 'なし (年中無休)', 1)
 on conflict (id) do nothing;
 
 insert into public.categories (id, name, name_en, type, icon, description, sort, custom_field_defs) values
   ('cat-rental', '一般レンタカー', 'Rental Car', 'vehicle', '🚗',
-   '通勤・買い物・旅行・お仕事に。コンパクトからSUV・ミニバン・軽トラックまで。', 1,
-   '[{"key":"bodyType","label":"ボディタイプ","type":"select","options":["コンパクト","SUV","ミニバン","軽トラック"],"filterable":true},
+   '通勤・買い物・旅行・お仕事に。コンパクトからSUV・ミニバンまで。', 1,
+   '[{"key":"bodyType","label":"ボディタイプ","type":"select","options":["コンパクト","SUV","ミニバン"],"filterable":true},
      {"key":"drive","label":"駆動方式","type":"select","options":["2WD","4WD"],"filterable":true},
      {"key":"mission","label":"トランスミッション","type":"select","options":["AT","MT"],"filterable":false},
      {"key":"navi","label":"カーナビ","type":"select","options":["有","無"],"filterable":false},
@@ -33,14 +33,12 @@ insert into public.assets (id, category_id, location_id, name, name_en, capacity
                            image, photo, sort, custom_fields) values
   ('V001', 'cat-rental', 'loc-kitami',  '日産 ノート',         'Nissan Note',         5, 1100,  7700, '🚗', 'images/cars/note-black.jpg', 1,
    '{"bodyType":"コンパクト","drive":"2WD","mission":"AT","navi":"有","etc":"有"}'),
-  ('V002', 'cat-rental', 'loc-kushiro', '日産 ノート e-POWER', 'Nissan Note e-POWER', 5, 1100,  7700, '🚗', 'images/cars/note-white.jpg', 2,
+  ('V002', 'cat-rental', 'loc-kitami',  '日産 ノート e-POWER', 'Nissan Note e-POWER', 5, 1100,  7700, '🚗', 'images/cars/note-white.jpg', 2,
    '{"bodyType":"コンパクト","drive":"2WD","mission":"AT","navi":"有","etc":"有"}'),
   ('V003', 'cat-rental', 'loc-kitami',  'マツダ CX-5',         'Mazda CX-5',          5, 2200, 17000, '🚙', 'images/cars/cx5.jpg',        3,
    '{"bodyType":"SUV","drive":"4WD","mission":"AT","navi":"有","etc":"有"}'),
   ('V004', 'cat-rental', 'loc-kitami',  'トヨタ シエンタ',     'Toyota Sienta',       7, 2200, 17000, '🚐', 'images/cars/sienta.jpg',     4,
    '{"bodyType":"ミニバン","drive":"2WD","mission":"AT","navi":"有","etc":"有"}'),
-  ('V005', 'cat-rental', 'loc-kitami',  '軽トラック',          'Kei Truck',           2, 1100,  7700, '🛻', '',                           5,
-   '{"bodyType":"軽トラック","drive":"4WD","mission":"AT","navi":"無","etc":"無"}'),
   ('K001', 'cat-kitchen', 'loc-kitami', 'キッチンカー',        'Kitchen Car',         2, null, 22000, '🍳', '',                           6,
    '{"kitchenSize":"2400×1800×1900mm","equipment":"2槽シンク・換気扇・作業台・給排水タンク・冷蔵庫","sinks":2,"power":3000}'),
   -- 家電レンタルの受け取り窓口 (家電そのものではない。同じ時間に何件でも予約が入り、家電ごとの在庫で止める)。
@@ -51,7 +49,7 @@ on conflict (id) do nothing;
 
 -- 補償オプション (1〜6時間の料金は price_short)
 insert into public.options (id, name, price, price_short, price_type, category_ids, kind, exclusive_group, sort, extra) values
-  ('OP101', '免責補償制度 (CDW)',   1650, 1100, 'per_day', '{cat-rental}',  'cover', 'cover', 1, '{"description":"事故時の免責負担ゼロ (最大5万円)"}'),
+  ('OP101', '免責補償制度 (CDW)',   1650, 1100, 'per_day', '{cat-rental}',  'cover', 'cover', 1, '{"description":"事故時の免責負担ゼロ (最大10万円)"}'),
   ('OP102', '安心保証コース (PAP)', 3300, 2200, 'per_day', '{cat-rental}',  'cover', 'cover', 2, '{"description":"免責免除・NOC免除"}'),
   ('OP201', '免責補償制度 (CDW)',   3300, null, 'per_day', '{cat-kitchen}', 'cover', 'cover', 3, '{"description":"事故時の免責負担ゼロ (最大10万円)"}'),
   ('OP202', '安心保証コース (PAP)', 6600, null, 'per_day', '{cat-kitchen}', 'cover', 'cover', 4, '{"description":"免責免除・NOC免除"}')
@@ -109,7 +107,7 @@ insert into public.app_settings (key, value) values
       "shusei_club":    {"label": "守成クラブ会員割引", "amount": 3000, "minHours": 24, "proof": "守成クラブ会員であることが分かるもの", "categoryIds": ["cat-kitchen"]}
     },
     "cancellation": {
-      "classOf": {"コンパクト": "compact", "軽トラック": "compact", "SUV": "large", "ミニバン": "large"},
+      "classOf": {"コンパクト": "compact", "SUV": "large", "ミニバン": "large"},
       "categoryClass": {"cat-kitchen": "kitchen", "cat-appliance": "item"},
       "normal": {
         "compact": [{"minDays": 3, "pct": 0}, {"minDays": 1, "pct": 30}, {"minDays": 0, "pct": 50}],
@@ -139,11 +137,11 @@ insert into public.app_settings (key, value) values
     "oneHandoverAtATime": true,
     "writeEvents": true,
     "failOpen": false,
-    "locations": {"loc-kitami": {"calendarIds": []}, "loc-kushiro": {"calendarIds": []}}
+    "locations": {"loc-kitami": {"calendarIds": []}}
   }'),
 
   ('billing', '{"bankName":"","accountType":"普通","accountNo":"","holder":""}'),
-  ('site',    '{"shopName":"グロースレンタカー","company":"株式会社Skyward Growth","line":"https://lin.ee/PuLt0Ig","email":"daichi.fujimoto@skyward-growth.com"}')
+  ('site',    '{"shopName":"グロースレンタカー","company":"株式会社Skyward Growth","line":"https://lin.ee/PuLt0Ig","email":"info@skyward-growth.com"}')
 on conflict (key) do nothing;
 
 -- 公開中の法務文書 (内容を改定したら version を上げて新しい行を active にする)
@@ -151,7 +149,7 @@ on conflict (key) do nothing;
 --   cancel は 2026-10 版 (家電レンタルのキャンセル料の段階を追加)。
 --   item_clause (物品レンタル規約) は家電レンタルの予約で同意する (車両の予約は clause = 貸渡約款)。
 insert into public.legal_documents (id, version, title, url, effective_at) values
-  ('clause',      '2026-08', '貸渡約款',                   'clause.html',     '2026-08-01'),
+  ('clause',      '2026-10', '貸渡約款',                   'clause.html',     '2026-10-01'),
   ('item_clause', '2026-10', '物品レンタル規約',           'item-terms.html', '2026-10-01'),
   ('cancel',      '2026-10', 'キャンセル規定',             'law.html#cancel', '2026-10-01'),
   ('privacy',     '2026-08', 'プライバシーポリシー',       'privacy.html',    '2026-08-01'),

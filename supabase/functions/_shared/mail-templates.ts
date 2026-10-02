@@ -48,7 +48,7 @@ export const DEFAULT_SITE: SiteInfo = {
   shopName: 'グロースレンタカー',
   company: '株式会社Skyward Growth',
   line: 'https://lin.ee/PuLt0Ig',
-  email: 'daichi.fujimoto@skyward-growth.com',
+  email: 'info@skyward-growth.com',
   hours: '9:00〜19:00 (年中無休)'
 };
 

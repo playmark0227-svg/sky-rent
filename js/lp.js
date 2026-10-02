@@ -196,10 +196,11 @@
   function stats() {
     // 貸出車両の台数 (家電レンタルの受け取り窓口は車両ではないので数えない)
     const assets = S.assets({ activeOnly: true }).filter(a => !isItemCat(S.getCategory(a.categoryId))).length;
-    const locs = S.locations().length;
-    const el1 = $('#st-assets2'), el3 = $('#st-locs');
+    // 家電レンタルの品目数 (補償を除く、全車共通の装備オプション = 家電だけでも借りられるもの)
+    const items = S.list('options').filter(o => o.active !== false && o.kind !== 'cover' && !(o.categoryIds && o.categoryIds.length)).length;
+    const el1 = $('#st-assets2'), el3 = $('#st-items');
     if (el1) el1.dataset.count = assets;
-    if (el3) el3.dataset.count = locs;
+    if (el3) el3.dataset.count = items;
   }
 
   // ===== カテゴリショーケース =====
@@ -260,7 +261,7 @@
     const sc = $('#lineup-scroller');
     if (!sc) return;
     // 目玉を選抜: 各カテゴリから1台ずつ + 人気車
-    const picks = ['V003', 'V004', 'V001', 'V002', 'V005', 'K001'];
+    const picks = ['V003', 'V004', 'V001', 'V002', 'K001', 'A001'];
     const assets = picks.map(id => S.getAsset(id)).filter(a => a && a.active !== false);
     sc.innerHTML = assets.map((a, i) => {
       const c = S.getCategory(a.categoryId);

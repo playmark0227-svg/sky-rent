@@ -239,12 +239,12 @@
     <h3>1.4 取り扱いカテゴリ（初期シード）</h3>
     <p class="sec-intro">現在の取り扱いは以下2カテゴリです。いずれも管理画面から追加・変更・無効化が可能です。</p>
     <div class="cat-grid">
-      <div class="cat-card"><span class="ci">🚗</span><b>一般レンタカー</b><small>コンパクト・SUV・ミニバン・軽トラック</small><br><span class="tag">車両</span></div>
+      <div class="cat-card"><span class="ci">🚗</span><b>一般レンタカー</b><small>コンパクト・SUV・ミニバン</small><br><span class="tag">車両</span></div>
       <div class="cat-card"><span class="ci">🍳</span><b>キッチンカー</b><small>移動販売・イベント出店向け</small><br><span class="tag">車両</span></div>
     </div>
     <p class="sec-intro">
-      初期シードには、一般レンタカー5台（日産ノート／日産ノート e-POWER／マツダCX-5／トヨタ シエンタ／軽トラック）と
-      キッチンカー1台の計6台を登録しています。
+      初期シードには、一般レンタカー4台（日産ノート／日産ノート e-POWER／マツダCX-5／トヨタ シエンタ）と
+      キッチンカー1台の計5台を登録しています。
       取り扱いを広げる際は、カテゴリ・車両ともに管理画面から追加できます（「1.2 最重要要件」参照）。
     </p>
   </section>
@@ -255,7 +255,7 @@
 
     <h3>2.1 運営前提</h3>
     <ul>
-      <li><strong>2拠点（北見本店・釧路店）</strong>での営業。各拠点に常駐スタッフは置かない<strong>非常駐運営</strong>を前提とする。</li>
+      <li><strong>1拠点（北見本店）</strong>での営業。各拠点に常駐スタッフは置かない<strong>非常駐運営</strong>を前提とする。</li>
       <li>全体の対応スタッフは<strong>2〜3名</strong>。少人数での運営を成立させるため、
         全拠点の状況を<strong>一画面で一元管理</strong>できること、および<strong>スマートフォン対応</strong>が必須。</li>
       <li>非常駐運営を補うため、予約受付・返却・入金状況の変化は<strong>メール自動通知／通知ログ</strong>で把握できる設計とする。</li>
@@ -273,8 +273,7 @@
         <tr><th class="num">#</th><th>拠点名</th><th>所在地</th><th>営業時間</th><th>定休日</th></tr>
       </thead>
       <tbody>
-        <tr><td class="num">1</td><td>北見本店</td><td>北海道北見市</td><td>9:00–19:00</td><td>年中無休</td></tr>
-        <tr><td class="num">2</td><td>釧路店</td><td>北海道釧路市</td><td>9:00–18:00</td><td>年中無休</td></tr>
+        <tr><td class="num">1</td><td>北見本店</td><td>北海道北見市若葉4丁目6</td><td>9:00–19:00（スタッフはご予約のお時間のみ）</td><td>年中無休</td></tr>
       </tbody>
     </table>
     </div>
@@ -301,7 +300,7 @@
         <tr>
           <td><strong>一般利用者（法人）</strong></td>
           <td>イベント・移動販売事業者、工事・運送業者、行政等</td>
-          <td>キッチンカーでのイベント出店・移動販売、軽トラックでの資材運搬、請求書払いでの継続利用</td>
+          <td>キッチンカーでのイベント出店・移動販売、請求書払いでの継続利用</td>
         </tr>
         <tr>
           <td><strong>自社スタッフ</strong></td>
@@ -382,7 +381,7 @@
       </thead>
       <tbody>
         <tr><td><strong>categories</strong></td><td>カテゴリ定義。種別（車両／物品）・アイコン・カスタム項目定義（EAV）を保持。現在の登録は車両カテゴリ2件と家電レンタル（物品）1件。</td></tr>
-        <tr><td><strong>locations</strong></td><td>拠点（北見本店・釧路店の2拠点）。営業時間・定休日・連絡先。</td></tr>
+        <tr><td><strong>locations</strong></td><td>拠点（北見本店のみ）。営業時間・定休日・連絡先。</td></tr>
         <tr><td><strong>assets</strong></td><td>貸出対象の統合マスタ。料金プラン・在庫数・必要免許・車検/点検期限・カスタム値。</td></tr>
         <tr><td><strong>options</strong></td><td>オプション。共通／カテゴリ専用の2階層、課金単位（1日あたり／1回あたり）、家電の在庫数。</td></tr>
         <tr><td><strong>members</strong></td><td>会員。ポイント残高・クーポン・請求書払い許可フラグ・利用履歴。</td></tr>
@@ -485,7 +484,7 @@
       <tbody>
         <tr>
           <td class="num">1</td><td><strong>ダッシュボード</strong></td>
-          <td>全拠点（北見・釧路）の本日の出発・返却、未処理予約、売上サマリを一画面で。スマホ対応。</td>
+          <td>全拠点（北見）の本日の出発・返却、未処理予約、売上サマリを一画面で。スマホ対応。</td>
           <td><span class="badge impl">○ 実装済</span> <code>dashboard.html</code>。拠点別サマリ・未処理アラート・売上・週次グラフ・自動通知ログを集約表示。</td>
         </tr>
         <tr>

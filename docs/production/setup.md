@@ -160,7 +160,7 @@ supabase db push --include-seed     # 本番に反映 (確認を聞かれたら 
 ダッシュボードの **SQL Editor** で次を実行し、結果を確認します。
 
 ```sql
-select id, name from public.locations;          -- 北見本店・釧路店 の2行
+select id, name from public.locations;          -- 北見本店 の1行
 select id, type from public.categories order by sort; -- cat-rental・cat-kitchen (vehicle)・cat-appliance (item) の3行
 select key from public.app_settings order by 1; -- billing, calendar, points, pricing_rules, site の5行
 select kind, count(*) from public.options group by kind; -- cover 4 (補償)・other 11 (装備)
@@ -298,7 +298,58 @@ select cron.schedule('skyrent-outbox-release', '*/10 * * * *', 'select public.ou
 > [!NOTE]
 > 在庫数 (各1台) は仮の値です。実際の保有数に合わせて、管理画面の **各種管理 → オプション管理** の「在庫数」で直してください
 > (空欄 = 数えない、0 = 貸し出さない)。家電レンタルの料金は装備オプションの料金そのもの (同じ行) です。
-> 釧路店で家電を受け取れるようにする・配送する などは今は対応していません ([現状監査 §10.5](current-state-audit.md#105-実装で新たに置いた業務ルール-要確認))。
+> 家電の配送などは今は対応していません ([現状監査 §10.5](current-state-audit.md#105-実装で新たに置いた業務ルール-要確認))。
+
+### 2-7. 既に seed を入れた本番に 2026-10 のサイト変更を反映する
+
+これから初めて 2-3 を行う場合は不要です (seed に入っています)。既に seed を入れた本番では、
+`supabase db push` のあとに Supabase の **SQL Editor** で次を1回実行します (2回実行しても結果は同じです)。
+
+- 貸出拠点を **北見本店だけ** にする (釧路店は非公開。釧路店の車両とこれからの予約は北見本店へ)
+- 北見本店の所在地を「北海道北見市若葉4丁目6」、営業時間の欄に「スタッフはご予約のお時間のみ」
+- **軽トラック** の取扱いをやめる (予約の記録が残るので、削除せず非公開)
+- 免責補償制度 (CDW・レンタカー) の説明を「免責 最大10万円」に
+- お問い合わせ先のメールを info@skyward-growth.com に
+- 貸渡約款を 2026-10 版にする (予約時の同意の対象。旧版を無効にしてから新しい版を入れる)
+
+```sql
+-- 北見本店のみ・軽トラック廃止・免責10万円・メール info・貸渡約款 2026-10 版
+-- 釧路店の廃止: 釧路店の車両と、これからの予約を北見本店へ移し、釧路店は非公開にする (過去の予約の記録は残す)
+update public.assets set location_id = 'loc-kitami' where location_id = 'loc-kushiro';
+update public.reservations set location_id = 'loc-kitami'
+ where location_id = 'loc-kushiro' and status in ('confirmed', 'in_use');
+update public.locations set active = false where id = 'loc-kushiro';
+update public.app_settings set value = value #- '{locations,loc-kushiro}' where key = 'calendar';
+-- 北見本店の所在地・営業時間 (スタッフはご予約のあるお時間のみ)
+update public.locations
+   set address = '北海道北見市若葉4丁目6', hours = '9:00-19:00 (スタッフはご予約のお時間のみ)'
+ where id = 'loc-kitami';
+-- 軽トラックの取扱い終了 (予約の記録が残るので削除せず非公開にする)
+update public.assets set active = false where id = 'V005';
+update public.categories
+   set description = '通勤・買い物・旅行・お仕事に。コンパクトからSUV・ミニバンまで。',
+       custom_field_defs = (
+         select jsonb_agg(case when d ->> 'key' = 'bodyType'
+                               then jsonb_set(d, '{options}', '["コンパクト","SUV","ミニバン"]'::jsonb) else d end
+                          order by i)
+         from jsonb_array_elements(custom_field_defs) with ordinality as t(d, i))
+ where id = 'cat-rental';
+update public.app_settings set value = value #- '{cancellation,classOf,軽トラック}' where key = 'pricing_rules';
+-- 免責補償制度 (CDW・レンタカー) の説明: 免責 最大10万円
+update public.options
+   set extra = jsonb_set(extra, '{description}', '"事故時の免責負担ゼロ (最大10万円)"'::jsonb)
+ where id = 'OP101';
+-- お問い合わせ先のメール
+update public.app_settings set value = jsonb_set(value, '{email}', '"info@skyward-growth.com"'::jsonb) where key = 'site';
+-- 貸渡約款 2026-10 版 (有効な行は id ごとに1件なので、旧版を先に無効にする)
+update public.legal_documents set active = false where id = 'clause' and active and version <> '2026-10';
+insert into public.legal_documents (id, version, title, url, effective_at)
+  values ('clause', '2026-10', '貸渡約款', 'clause.html', '2026-10-01')
+  on conflict (id, version) do update set active = true;
+```
+
+確認: `select id, active, address from public.locations;` が `loc-kitami | t | 北海道北見市若葉4丁目6` (と、ある場合は `loc-kushiro | f`)、
+`select id, version from public.legal_documents where active and id = 'clause';` が `clause | 2026-10` になっていれば完了です。
 
 ---
 
@@ -457,7 +508,7 @@ Supabase 標準のメール送信は、ごく少数のテスト用です。**本
 ### 5-1. 送信に使うドメインを決める
 
 - `github.io` からはメールを送れません。会社のドメインを使います。
-- **既存のメール (例: `daichi.fujimoto@skyward-growth.com`) に影響しないよう、サブドメインを推奨** します。例: `mail.skyward-growth.com`
+- **既存のメール (例: `info@skyward-growth.com`) に影響しないよう、サブドメインを推奨** します。例: `mail.skyward-growth.com`
 - 差出人は `noreply@mail.skyward-growth.com` のような送信専用アドレスにします (テンプレートに「返信不可・問い合わせは公式LINEへ」と記載済み)。
 
 ### 5-2. Resend に登録してドメインを追加する
@@ -566,7 +617,7 @@ Supabase 標準のメール送信は、ごく少数のテスト用です。**本
 
 1. 管理画面 (`manage/`) に管理者でログインし、サイドバーの **「Googleカレンダー連携」** を開きます。
 2. サービスアカウントのメールアドレスが表示されていれば、鍵 (6-4) は正しく登録されています。
-3. 拠点 (北見本店・釧路店) ごとに、6-5 で集めた **カレンダー ID** を登録します。
+3. 拠点 (北見本店) ごとに、6-5 で集めた **カレンダー ID** を登録します。
    - **1拠点に複数の担当者を登録できます。誰か1人でも空いていれば、その時間は予約できます。**
    - **予約の予定は、その拠点の「先頭」のカレンダーに書き込まれます。** 主担当の方を先頭にしてください。
    - 受け渡しを担当しない人のカレンダーや、予定を入れていない共用カレンダーは登録しないでください。
